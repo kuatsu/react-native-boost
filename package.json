@@ -44,7 +44,7 @@
     "@commitlint/cli": "^19.7.1",
     "@commitlint/config-conventional": "^17.0.2",
     "@eslint/js": "^9.21.0",
-    "@release-it/conventional-changelog": "^5.0.0",
+    "@release-it/conventional-changelog": "^10.0.0",
     "@types/babel__helper-module-imports": "^7.0.0",
     "@types/babel__helper-plugin-utils": "^7.0.0",
     "@types/node": "^20",
@@ -74,7 +74,10 @@
     },
     "plugins": {
       "@release-it/conventional-changelog": {
-        "preset": "angular"
+        "preset": {
+          "name": "angular"
+        },
+        "infile": "CHANGELOG.md"
       }
     }
   }
