@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "release": "release-it"
   },
   "repository": {
     "type": "git",
@@ -43,8 +44,26 @@
     "globals": "^16.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
+    "release-it": "^18.1.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.1",
     "vitest": "^3.0.6"
+  },
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}"
+    },
+    "npm": {
+      "publish": true
+    },
+    "github": {
+      "release": true
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular"
+      }
+    }
   }
 }
