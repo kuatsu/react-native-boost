@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "main": "dist/plugin.js",
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "yarn clean && esbuild src/plugin.ts --bundle --outfile=dist/plugin.js --sourcemap --platform=node",
+    "clean": "rm -rf plugin",
+    "build": "yarn clean && esbuild src/plugin.ts --bundle --outfile=plugin/index.js --platform=node",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
@@ -13,6 +13,14 @@
     "prepare": "husky",
     "release": "release-it"
   },
+  "files": [
+    "src",
+    "plugin",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "!**/.*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kuatsu/react-native-boost.git"

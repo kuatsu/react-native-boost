@@ -36,7 +36,7 @@ Optionally, you can configure the plugin to disable specific optimizations:
 module.exports = {
   plugins: [
     [
-      'module:react-native-boost',
+      'react-native-boost/plugin',
       {
         optimizations: {
           text: false,
@@ -47,9 +47,13 @@ module.exports = {
 };
 ```
 
-## Quick Start
+## How It Works
 
-The plugin works automatically once installed. Here's an example of how it optimizes your code:
+Several standard components in React Native are actually wrappers around their native counterparts. These wrappers often only handle edge cases and aren't needed in most cases. However, they add additional runtime overhead and depth to the component tree, which can lead to performance bottlenecks.
+
+React Native Boost replaces these wrapper components directly with their respective native components, flattening the component tree. It intelligently analyzes your code and only optimizes components that are used in a way where they can be optimized without breaking the app.
+
+Here's an example of how it works:
 
 ```jsx
 // Your original code 🐌
@@ -73,12 +77,6 @@ const MyComponent = () => (
   </View>
 );
 ```
-
-## How It Works
-
-Several standard components in React Native are actually wrappers around their native counterparts. These wrappers often only handle edge cases and aren't needed in most cases. However, they add additional runtime overhead and depth to the component tree, which can lead to performance bottlenecks.
-
-React Native Boost replaces these wrapper components directly with their respective native components, flattening the component tree. It intelligently analyzes your code and only optimizes components that are used in a way where they can be optimized without breaking the app.
 
 ## Contributing
 
