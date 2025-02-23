@@ -26,7 +26,7 @@ Then, add the plugin to your Babel configuration (`babel.config.js`):
 
 ```js
 module.exports = {
-  plugins: ['module:react-native-boost'],
+  plugins: ['react-native-boost/plugin'],
 };
 ```
 
