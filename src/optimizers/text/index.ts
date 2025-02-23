@@ -1,7 +1,8 @@
 import { NodePath, types as t } from '@babel/core';
 import { addNamed } from '@babel/helper-module-imports';
+import { Optimizer } from '../../types';
 
-export function textOptimizer(path: NodePath<t.JSXOpeningElement>): void {
+export const textOptimizer: Optimizer = (path) => {
   // Ensure we're processing a JSX element
   if (!t.isJSXIdentifier(path.node.name)) return;
 
@@ -45,7 +46,7 @@ export function textOptimizer(path: NodePath<t.JSXOpeningElement>): void {
   ) {
     parent.closingElement.name.name = nativeTextIdentifier.name;
   }
-}
+};
 
 function hasOnlyStringChildren(path: NodePath<t.JSXOpeningElement>, node: t.JSXElement): boolean {
   return node.children.every((child) => isStringNode(path, child));
