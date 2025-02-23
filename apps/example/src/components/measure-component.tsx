@@ -9,7 +9,6 @@ export interface BenchmarkProperties extends Benchmark {
   markerName: string;
 }
 export default function MeasureComponent(props: BenchmarkProperties) {
-  console.log('MeasureComponent', props.markerName);
   const optimizedViews = Array.from({ length: props.count }, (_, index) =>
     React.cloneElement(props.optimizedComponent as React.ReactElement, { key: `optimized-${index}` })
   );
