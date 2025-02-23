@@ -3,7 +3,7 @@ import { addNamed } from '@babel/helper-module-imports';
 import { Optimizer } from '../../types';
 
 export const textOptimizer: Optimizer = (path) => {
-  // Ensure we're processing a JSX element
+  // Ensure we're processing a JSX Text element
   if (!t.isJSXIdentifier(path.node.name)) return;
 
   const parent = path.parent;
@@ -99,11 +99,21 @@ const blacklistedProperties = new Set([
 
 function hasBlacklistedProperties(path: NodePath<t.JSXOpeningElement>): boolean {
   return path.node.attributes.some((attribute) => {
+    // Check if we can resolve the spread attribute
     if (t.isJSXSpreadAttribute(attribute)) {
       if (t.isIdentifier(attribute.argument)) {
         const binding = path.scope.getBinding(attribute.argument.name);
-        if (binding && t.isObjectExpression(binding.path.node)) {
-          return binding.path.node.properties.some((property) => {
+        let objectExpression: t.ObjectExpression | undefined;
+        if (binding) {
+          // If the binding node is a VariableDeclarator, use its initializer.
+          if (t.isVariableDeclarator(binding.path.node)) {
+            objectExpression = binding.path.node.init as t.ObjectExpression;
+          } else if (t.isObjectExpression(binding.path.node)) {
+            objectExpression = binding.path.node;
+          }
+        }
+        if (objectExpression && t.isObjectExpression(objectExpression)) {
+          return objectExpression.properties.some((property) => {
             if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
               return blacklistedProperties.has(property.key.name);
             }
