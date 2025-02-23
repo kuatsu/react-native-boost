@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.4](https://github.com/kuatsu/react-native-boost/compare/v0.0.3...v0.0.4) (2025-02-23)
+
+
+### Bug Fixes
+
+* re-add README to npm ([4f39ab5](https://github.com/kuatsu/react-native-boost/commit/4f39ab5162ab412a330aa60f0efa63604f94ec23))
+
 ## 0.0.3 (2025-02-23)
 
 
