@@ -67,7 +67,7 @@ const MyComponent = () => (
   </View>
 );
 
-// Automafically transformed to ✨
+// Automagically transformed to ✨
 import React from 'react';
 import { View } from 'react-native';
 import { NativeText } from 'react-native/Libraries/Text/TextNativeComponent';
