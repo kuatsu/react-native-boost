@@ -20,6 +20,8 @@ The example app in the `apps/example` directory is a benchmark for the performan
 
 ![Benchmark](./packages/react-native-boost/img/benchmark.png)
 
+The data is averaged over 10 runs on an iPhone 16 Pro Simulator running the app in development mode.
+
 ## Installation
 
 Install the package using your favorite package manager. Please **do not** install the package as a dev dependency. While the Babel plugin itself would work as a dev dependency, some optimizations import minimal helpers into your code, which requires the package to be installed as a regular dependency.
