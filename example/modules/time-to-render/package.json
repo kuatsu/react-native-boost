@@ -1,0 +1,19 @@
+{
+  "name": "react-native-time-to-render",
+  "version": "0.0.0",
+  "description": "Benchmarks the time to render",
+  "main": "src/index",
+  "codegenConfig": {
+    "name": "RNTimeToRenderSpec",
+    "type": "modules",
+    "jsSrcsDir": "src"
+  },
+  "author": "Kuatsu App Agency <hello@kuatsu.de>",
+  "license": "MIT",
+  "homepage": "#readme",
+  "create-react-native-library": {
+    "type": "turbo-module",
+    "languages": "kotlin-objc",
+    "version": "0.48.2"
+  }
+}

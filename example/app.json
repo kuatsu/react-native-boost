@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "React Native Boost",
+    "name": "RN Boost",
     "slug": "react-native-boost-example",
     "version": "0.0.1",
     "orientation": "portrait",
@@ -13,13 +13,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kuatsu-mkrause.react-native-boost-example"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.kuatsumkrause.reactnativeboostexample"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -10156,6 +10156,7 @@ __metadata:
     expo-status-bar: ~2.0.1
     react: 18.3.1
     react-native: 0.76.7
+    react-native-time-to-render: "file:./modules/time-to-render"
     typescript: ^5.3.3
   languageName: unknown
   linkType: soft
@@ -10197,6 +10198,13 @@ __metadata:
       optional: true
   languageName: unknown
   linkType: soft
+
+"react-native-time-to-render@file:./modules/time-to-render::locator=react-native-boost-example%40workspace%3Aexample":
+  version: 0.0.0
+  resolution: "react-native-time-to-render@file:./modules/time-to-render#./modules/time-to-render::hash=c80924&locator=react-native-boost-example%40workspace%3Aexample"
+  checksum: 5a9cafe35e4e17ca84ae930aee1f5b7b4badba9d19dc4d3b636152713f70e4733eef263675f2d1e6299f4c532e8674bd1474ae6ce62f24b0376ed941a4b08267
+  languageName: node
+  linkType: hard
 
 "react-native@npm:0.76.7":
   version: 0.76.7
