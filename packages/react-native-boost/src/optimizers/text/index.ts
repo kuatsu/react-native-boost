@@ -2,6 +2,7 @@ import { NodePath, types as t } from '@babel/core';
 import { addNamed } from '@babel/helper-module-imports';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
+import { shouldIgnoreOptimization } from '../../utils/common';
 
 export const textOptimizer: Optimizer = (path, log = () => {}) => {
   // Ensure we're processing a JSX Text element
@@ -12,6 +13,11 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
 
   const elementName = path.node.name.name;
   if (elementName !== 'Text') return;
+
+  // If the component is preceded by an ignore comment, do not optimize.
+  if (shouldIgnoreOptimization(path)) {
+    return;
+  }
 
   // Ensure Text element comes from react-native
   const binding = path.scope.getBinding(elementName);

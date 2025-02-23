@@ -50,6 +50,13 @@ module.exports = {
 };
 ```
 
+You can also skip optimization for a specific comment using a decorator comment above the component's opening tag:
+
+```jsx
+// @boost-ignore
+<Text>This will not be optimized.</Text>
+```
+
 ## How It Works
 
 Several standard components in React Native are actually wrappers around their native counterparts. These wrappers often only handle edge cases and aren't needed in most cases. However, they add additional runtime overhead and depth to the component tree, which can lead to performance bottlenecks.
