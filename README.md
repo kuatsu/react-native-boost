@@ -14,6 +14,12 @@ A powerful Babel plugin that automatically optimizes React Native apps through s
 - 🧪 Works seamlessly with Expo
 - 🎨 Configurable optimization strategies
 
+## Benchmark
+
+The example app in the `apps/example` directory is a benchmark for the performance of the plugin. It compares the render time of 1,000 Text components with and without React Native Boost.
+
+![Benchmark](./packages/react-native-boost/img/benchmark.png)
+
 ## Installation
 
 Install the package using your favorite package manager. Please **do not** install the package as a dev dependency. While the Babel plugin itself would work as a dev dependency, some optimizations import minimal helpers into your code, which requires the package to be installed as a regular dependency.
