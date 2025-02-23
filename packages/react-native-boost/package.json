@@ -2,7 +2,7 @@
   "name": "react-native-boost",
   "description": "🚀 Boost your React Native app's performance with a single line of code",
   "version": "0.0.5",
-  "main": "dist/plugin.js",
+  "main": "plugin/index.js",
   "keywords": [
     "react-native",
     "ios",
