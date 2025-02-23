@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "clean": "rm -rf plugin",
-    "build": "yarn clean && esbuild src/plugin.ts --bundle --outfile=plugin/index.js --platform=node",
+    "build": "yarn clean && node scripts/esbuild.js",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
@@ -59,6 +59,7 @@
     "@types/node": "^20",
     "babel-plugin-tester": "^11.0.4",
     "esbuild": "^0.25.0",
+    "esbuild-node-externals": "^1.18.0",
     "globals": "^16.0.0",
     "release-it": "^18.1.2",
     "typescript": "^5.7.3",

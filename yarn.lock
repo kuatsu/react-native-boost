@@ -5644,6 +5644,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"esbuild-node-externals@npm:^1.18.0":
+  version: 1.18.0
+  resolution: "esbuild-node-externals@npm:1.18.0"
+  dependencies:
+    find-up: ^5.0.0
+  peerDependencies:
+    esbuild: 0.12 - 0.25
+  checksum: a94900e8128c459e6bc1bc960070b4b06fc0167814c25385507a206369d963778cc7512bd7053d1a3677d334f0144f17a22336c9e6503991fc1b4856ab422c88
+  languageName: node
+  linkType: hard
+
 "esbuild@npm:^0.24.2":
   version: 0.24.2
   resolution: "esbuild@npm:0.24.2"
@@ -10184,6 +10195,7 @@ __metadata:
     "@types/node": ^20
     babel-plugin-tester: ^11.0.4
     esbuild: ^0.25.0
+    esbuild-node-externals: ^1.18.0
     globals: ^16.0.0
     release-it: ^18.1.2
     typescript: ^5.7.3

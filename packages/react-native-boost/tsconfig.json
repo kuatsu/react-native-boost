@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {},
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "plugin", "fixtures"]
+  "exclude": ["node_modules", "plugin", "fixtures", "scripts"]
 }

@@ -7,7 +7,7 @@ import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 export default [
   { files: ['**/*.{js,mjs,cjs,ts}'] },
   { languageOptions: { globals: globals.node } },
-  { ignores: ['**/fixtures', '**/*.config.{js,mjs,cjs}'] },
+  { ignores: ['**/fixtures', '**/*.config.{js,mjs,cjs}', '**/scripts'] },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   eslintPluginUnicorn.configs.recommended,
