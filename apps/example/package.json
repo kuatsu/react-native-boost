@@ -4,16 +4,16 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "rm -rf android && yarn && expo run:android",
-    "ios": "rm -rf ios && yarn && expo run:ios",
-    "web": "yarn && expo start --web"
+    "android": "rm -rf android && expo run:android",
+    "ios": "rm -rf ios && expo run:ios",
+    "web": "expo start --web"
   },
   "dependencies": {
     "expo": "~52.0.37",
     "expo-status-bar": "~2.0.1",
     "react": "18.3.1",
     "react-native": "0.76.7",
-    "react-native-time-to-render": "file:./modules/time-to-render"
+    "react-native-time-to-render": "workspace:*"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

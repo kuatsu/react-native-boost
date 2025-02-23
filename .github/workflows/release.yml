@@ -54,7 +54,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Build package
-        run: yarn build
+        run: yarn package build
 
       - name: Set NPM token & GitHub config
         run: |
@@ -79,9 +79,9 @@ jobs:
       - name: Release
         run: |
           if [ -n "${{ inputs.release_type }}" ]; then
-            yarn release --increment ${{ inputs.release_type }}
+            yarn package release --increment ${{ inputs.release_type }}
           else
-            yarn release
+            yarn package release
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.CICD_PAT }}

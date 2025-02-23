@@ -14,7 +14,7 @@ export default [
   {
     rules: {
       'unicorn/no-null': 'off',
-      'unicorn/no-abbreviations': [
+      'unicorn/prevent-abbreviations': [
         'error',
         {
           allowList: {

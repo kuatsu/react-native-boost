@@ -1,7 +1,8 @@
 {
   "name": "react-native-time-to-render",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Benchmarks the time to render",
+  "private": true,
   "main": "src/index",
   "codegenConfig": {
     "name": "RNTimeToRenderSpec",
