@@ -1,28 +1,45 @@
 import React from 'react';
-import { useState } from 'react';
 import { TimeToRenderView } from 'react-native-time-to-render';
-import { Text } from 'react-native';
+import { Benchmark, BenchmarkStep } from '../types';
+import { View } from 'react-native';
 
-export default function MeasureComponent(props: {
-  children: React.ReactNode;
+export interface BenchmarkProperties extends Benchmark {
+  onRenderTimeChange: (renderTime: number) => void;
+  step: BenchmarkStep;
   markerName: string;
-  title: string;
-}): JSX.Element {
-  const [renderTime, setRenderTime] = useState<number | null>(null);
+}
+export default function MeasureComponent(props: BenchmarkProperties) {
+  console.log('MeasureComponent', props.markerName);
+  const optimizedViews = Array.from({ length: props.count }, (_, index) =>
+    React.cloneElement(props.optimizedComponent as React.ReactElement, { key: `optimized-${index}` })
+  );
+  const unoptimizedViews = Array.from({ length: props.count }, (_, index) =>
+    React.cloneElement(props.unoptimizedComponent as React.ReactElement, { key: `unoptimized-${index}` })
+  );
+
+  if (props.step === BenchmarkStep.Unoptimized) {
+    return (
+      <>
+        <TimeToRenderView
+          markerName={props.markerName}
+          onMarkerPainted={(event) => {
+            props.onRenderTimeChange(Math.round(event.nativeEvent.paintTime));
+          }}
+        />
+        <View style={{ display: 'none' }}>{unoptimizedViews}</View>
+      </>
+    );
+  }
+
   return (
     <>
-      {renderTime === null ? null : (
-        <Text>
-          Took {renderTime}ms to render {props.title}
-        </Text>
-      )}
-      {props.children}
       <TimeToRenderView
         markerName={props.markerName}
         onMarkerPainted={(event) => {
-          setRenderTime(Math.round(event.nativeEvent.paintTime));
+          props.onRenderTimeChange(Math.round(event.nativeEvent.paintTime));
         }}
       />
+      <View style={{ display: 'none' }}>{optimizedViews}</View>
     </>
   );
 }

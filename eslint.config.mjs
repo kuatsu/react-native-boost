@@ -15,6 +15,7 @@ export default [
     rules: {
       'unicorn/no-null': 'off',
       'unicorn/no-abusive-eslint-disable': 'off',
+      'unicorn/prefer-top-level-await': 'off',
       'unicorn/prevent-abbreviations': [
         'error',
         {
