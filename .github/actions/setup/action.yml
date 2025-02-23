@@ -1,0 +1,28 @@
+name: Setup
+description: Setup Node.js and install dependencies
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+
+    - name: Cache dependencies
+      id: yarn-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          **/node_modules
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
+
+    - name: Install dependencies
+      if: steps.yarn-cache.outputs.cache-hit != 'true'
+      run: |
+        # yarn install --cwd example --frozen-lockfile # TODO: re-enable once example has been added
+        # yarn install --cwd docs --frozen-lockfile # TODO: re-enable once docs have been added
+        yarn install --frozen-lockfile
+      shell: bash

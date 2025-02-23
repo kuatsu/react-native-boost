@@ -1,0 +1,103 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type (patch, minor, major, or a semver version)'
+        required: false
+        type: string
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup Mint package manager
+        uses: irgaly/setup-mint@v1
+
+      - name: Cache Mint packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.mint
+          key: ${{ runner.os }}-mint-${{ hashFiles('**/Mintfile') }}
+          restore-keys: |
+            ${{ runner.os }}-mint-
+
+      - name: Install SwiftFormat
+        run: |
+          mint install nicklockwood/SwiftFormat
+          echo "$HOME/.mint/bin" >> $GITHUB_PATH
+
+      - name: Lint files
+        run: yarn lint
+
+      - name: Run SwiftFormat
+        run: swiftformat --verbose ios
+
+      - name: Verify formatted code is unchanged
+        run: git diff --exit-code HEAD
+
+      - name: Typecheck files
+        run: yarn typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run unit tests
+        run: yarn test --maxWorkers=2 --coverage
+
+  build-release:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build package
+        run: yarn prepare
+
+      - name: Set NPM token & GitHub config
+        run: |
+          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+          git config user.name "Kuatsu CI/CD"
+          git config user.email "null@kuatsu.de"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Validate release type
+        if: ${{ inputs.release_type != '' }}
+        run: |
+          if [[ "${{ inputs.release_type }}" =~ ^(patch|minor|major)$ ]]; then
+            echo "Valid release type: ${{ inputs.release_type }}"
+          elif [[ "${{ inputs.release_type }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Valid semver version: ${{ inputs.release_type }}"
+          else
+            echo "Invalid input. Must be 'patch', 'minor', 'major', or a valid semver version (e.g., 1.2.3)."
+            exit 1
+          fi
+
+      - name: Release
+        run: |
+          if [ -n "${{ inputs.release_type }}" ]; then
+            yarn release --increment ${{ inputs.release_type }}
+          else
+            yarn release
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.CICD_PAT }}
