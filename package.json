@@ -2,7 +2,7 @@
   "name": "react-native-boost",
   "description": "🚀 Boost your React Native app's performance with a single line of code",
   "version": "0.0.1",
-  "main": "index.js",
+  "main": "dist/plugin.js",
   "scripts": {
     "clean": "rm -rf dist",
     "build": "yarn clean && esbuild src/plugin.ts --bundle --outfile=dist/plugin.js --sourcemap --platform=node",
