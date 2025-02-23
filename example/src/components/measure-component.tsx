@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { TimeToRenderView } from 'react-native-time-to-render';
 import { Text } from 'react-native';
 
-export default function MeasureComponent(properties: {
+export default function MeasureComponent(props: {
   children: React.ReactNode;
   markerName: string;
   title: string;
@@ -13,12 +13,12 @@ export default function MeasureComponent(properties: {
     <>
       {renderTime === null ? null : (
         <Text>
-          Took {renderTime}ms to render {properties.title}
+          Took {renderTime}ms to render {props.title}
         </Text>
       )}
-      {properties.children}
+      {props.children}
       <TimeToRenderView
-        markerName={properties.markerName}
+        markerName={props.markerName}
         onMarkerPainted={(event) => {
           setRenderTime(Math.round(event.nativeEvent.paintTime));
         }}
