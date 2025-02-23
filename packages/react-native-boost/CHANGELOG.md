@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.5](https://github.com/kuatsu/react-native-boost/compare/v0.0.4...v0.0.5) (2025-02-23)
+
+
+### Features
+
+* minify bundle ([8fd6687](https://github.com/kuatsu/react-native-boost/commit/8fd66878599af4313d428687557bac22a832fd78))
+
 ## [0.0.4](https://github.com/kuatsu/react-native-boost/compare/v0.0.3...v0.0.4) (2025-02-23)
 
 
