@@ -1,2 +1,4 @@
 import { Text } from "react-native";
-<Text {...props}>Hello, world!</Text>;
+function MyComponent(props) {
+  return <Text {...props}>Hello, world!</Text>;
+}
