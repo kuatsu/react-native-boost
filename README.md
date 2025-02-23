@@ -2,15 +2,15 @@
 
 ![npm bundle size](https://img.shields.io/bundlephobia/min/react-native-boost?style=flat-square) ![GitHub](https://img.shields.io/github/license/kuatsu/react-native-boost?style=flat-square) ![GitHub last commit](https://img.shields.io/github/last-commit/kuatsu/react-native-boost?style=flat-square)
 
-A powerful Babel plugin that automatically optimizes React Native apps by intelligently replacing standard components with their native counterparts. Through clever source code analysis, it identifies safe optimization opportunities, leading to significant performance improvements.
+A powerful Babel plugin that automatically optimizes React Native apps through source code analysis and optimization. It identifies safe micro-optimization opportunities, which can lead to significant performance improvements.
 
 > [!WARNING]
-> This project is highly experimental and under active development. **Your app might break** and the optimization strategies used might change significantly between versions. Use with caution!
+> This project is highly experimental and under active development. **Your app might break** and the optimization strategies used can change significantly between versions. Use with caution!
 
 - ⚡ Automatic performance optimization through source code analysis
-- 🔄 Direct & safe mapping of React Native components to native equivalents
+- 🔒 Safe optimizations that don't break your app
 - 🎯 Zero runtime overhead - all optimizations happen during build time
-- 📱 Compatible with both iOS and Android
+- 📱 Cross-platform compatible
 - 🧪 Works seamlessly with Expo
 - 🎨 Configurable optimization strategies
 
@@ -18,6 +18,8 @@ A powerful Babel plugin that automatically optimizes React Native apps by intell
 
 ```sh
 npm install --save-dev react-native-boost
+# or
+yarn add --dev react-native-boost
 ```
 
 Then, add the plugin to your Babel configuration (`babel.config.js`):
@@ -28,12 +30,29 @@ module.exports = {
 };
 ```
 
+Optionally, you can configure the plugin to disable specific optimizations:
+
+```js
+module.exports = {
+  plugins: [
+    [
+      'module:react-native-boost',
+      {
+        optimizations: {
+          text: false,
+        },
+      },
+    ],
+  ],
+};
+```
+
 ## Quick Start
 
 The plugin works automatically once installed. Here's an example of how it optimizes your code:
 
 ```jsx
-// Your original code
+// Your original code 🐌
 import React from 'react';
 import { View, Text } from 'react-native';
 
@@ -43,7 +62,7 @@ const MyComponent = () => (
   </View>
 );
 
-// Automatically transformed to
+// Automafically transformed to ✨
 import React from 'react';
 import { View } from 'react-native';
 import { NativeText } from 'react-native/Libraries/Components/Text/NativeText';
@@ -57,11 +76,9 @@ const MyComponent = () => (
 
 ## How It Works
 
-react-native-boost analyzes your code during the build process and:
+Several standard components in React Native are actually wrappers around their native counterparts. These wrappers often only handle edge cases and aren't needed in most cases. However, they add additional runtime overhead and depth to the component tree, which can lead to performance bottlenecks.
 
-- Identifies React Native components with optimization opportunities
-- Verifies that the usage of the component meets the criteria for optimization
-- Transforms the imports and component usage to their native, more performant equivalents
+React Native Boost replaces these wrapper components directly with their respective native components, flattening the component tree. It intelligently analyzes your code and only optimizes components that are used in a way where they can be optimized without breaking the app.
 
 ## Contributing
 
