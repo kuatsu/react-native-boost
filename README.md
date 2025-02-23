@@ -30,6 +30,8 @@ module.exports = {
 };
 ```
 
+That's it! No imports in your code, pod installing, or anything else is required.
+
 Optionally, you can configure the plugin to log optimized files to the console and disable specific optimizations:
 
 ```js
