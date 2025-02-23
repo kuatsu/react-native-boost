@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { Text } from 'react-native';
 <>
   <Text>Optimize this</Text>
   {/* @boost-ignore */}

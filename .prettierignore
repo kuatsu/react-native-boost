@@ -1,5 +1,4 @@
 node_modules
 yarn.lock
 .yarn
-fixtures
 CHANGELOG.md

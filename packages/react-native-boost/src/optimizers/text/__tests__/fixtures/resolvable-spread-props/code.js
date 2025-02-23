@@ -1,5 +1,5 @@
-import { Text } from "react-native";
+import { Text } from 'react-native';
 const props = {
-  children: 'Hello, world!'
+  children: 'Hello, world!',
 };
 <Text {...props} />;

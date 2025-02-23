@@ -1,2 +1,2 @@
-import { Text } from "react-native";
+import { Text } from 'react-native';
 <Text>Hello, world!</Text>;

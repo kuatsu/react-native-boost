@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { pluginTester } from 'babel-plugin-tester/pure';
+import { pluginTester } from 'babel-plugin-tester';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { textOptimizer } from '..';
 
