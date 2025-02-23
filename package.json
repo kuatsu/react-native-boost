@@ -1,9 +1,19 @@
 {
   "name": "react-native-boost",
   "description": "🚀 Boost your React Native app's performance with a single line of code",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "dist/plugin.js",
+  "keywords": [
+    "react-native",
+    "ios",
+    "android",
+    "performance",
+    "optimization",
+    "bundle",
+    "optimize"
+  ],
   "scripts": {
+    "example": "yarn workspace react-native-boost-example",
     "clean": "rm -rf plugin",
     "build": "yarn clean && esbuild src/plugin.ts --bundle --outfile=plugin/index.js --platform=node",
     "test": "vitest",
@@ -73,6 +83,9 @@
       "optional": true
     }
   },
+  "workspaces": [
+    "example"
+  ],
   "release-it": {
     "git": {
       "commitMessage": "chore: release ${version}",
