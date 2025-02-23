@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.1.0](https://github.com/kuatsu/react-native-boost/compare/v0.0.5...v0.1.0) (2025-02-23)
+
+
+### Bug Fixes
+
+* fixed `main` entry ([2727e69](https://github.com/kuatsu/react-native-boost/commit/2727e6965e2d6f7d5fbe308bf5ff5d4c63b8c06d))
+
+
+### Features
+
+* added ignore decorator comment ([3f7d0dc](https://github.com/kuatsu/react-native-boost/commit/3f7d0dc4a67623fee41f473ca588d6901c5b3e97))
+* allow text style prop ([e916da5](https://github.com/kuatsu/react-native-boost/commit/e916da5f6bfee0d5480b660fab70c6e0a67deace))
+
 ## [0.0.5](https://github.com/kuatsu/react-native-boost/compare/v0.0.4...v0.0.5) (2025-02-23)
 
 
