@@ -4,13 +4,32 @@ import { ensureArray } from './helpers';
 /**
  * Checks if the JSX element should be ignored based on a preceding comment.
  *
- * The function looks up the parent container's children, finds the current
- * JSX element, and then (ignoring whitespace-only nodes) inspects the previous
- * sibling for a comment that includes "@boost-ignore".
+ * The function looks up the JSXOpeningElement's own leading comments as well as
+ * the parent element's comments before falling back to inspect siblings.
  */
 export const shouldIgnoreOptimization = (path: NodePath<t.JSXOpeningElement>): boolean => {
-  // Get the JSX element by going up one level (opening element -> JSXElement)
+  // Check for @boost-ignore in the leading comments on the JSX opening element.
+  if (path.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))) {
+    return true;
+  }
+
+  // Check for @boost-ignore in the leading comments on the parent JSX element.
   const jsxElementPath = path.parentPath;
+  if (jsxElementPath.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))) {
+    return true;
+  }
+
+  // NEW: Check for @boost-ignore in the leading comments on the ObjectProperty (if it exists)
+  // This handles cases where the JSX element is used as a value inside an object literal.
+  const propertyPath = jsxElementPath.parentPath;
+  if (
+    propertyPath &&
+    propertyPath.isObjectProperty() &&
+    propertyPath.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))
+  ) {
+    return true;
+  }
+
   if (!jsxElementPath.parentPath) return false;
 
   // Get the container that holds this element (for example, a JSX fragment or JSX element)

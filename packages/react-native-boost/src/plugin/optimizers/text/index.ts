@@ -41,12 +41,9 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
     throw new PluginError('No file found in Babel hub');
   }
 
-  // Log the file's optimized status only once
-  if (!file.__optimized) {
-    const filename = file.opts?.filename || 'unknown file';
-    log(`Optimizing file: ${filename}`);
-    file.__optimized = true;
-  }
+  const filename = file.opts?.filename || 'unknown file';
+  const lineNumber = path.node.loc?.start.line ?? 'unknown line';
+  log(`Optimizing Text component in ${filename}:${lineNumber}`);
 
   // Optimize props
   optimizeStyleTag({ path, file });
