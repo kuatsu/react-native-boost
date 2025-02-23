@@ -1,5 +1,13 @@
 # Changelog
 
+# [0.2.0](https://github.com/kuatsu/react-native-boost/compare/v0.1.0...v0.2.0) (2025-02-23)
+
+
+### Features
+
+* **example:** added benchmark ([6e56b2a](https://github.com/kuatsu/react-native-boost/commit/6e56b2aaa5c9510d8be0a4898e86382ee637b0c3))
+* improved logging & [@boost-ignore](https://github.com/boost-ignore) decorator handling ([6f11cbb](https://github.com/kuatsu/react-native-boost/commit/6f11cbb5b1480b10cd20d2544fa334da1474f44b))
+
 # [0.1.0](https://github.com/kuatsu/react-native-boost/compare/v0.0.5...v0.1.0) (2025-02-23)
 
 
