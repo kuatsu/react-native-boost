@@ -10201,8 +10201,8 @@ __metadata:
 
 "react-native-time-to-render@file:./modules/time-to-render::locator=react-native-boost-example%40workspace%3Aexample":
   version: 0.0.0
-  resolution: "react-native-time-to-render@file:./modules/time-to-render#./modules/time-to-render::hash=c80924&locator=react-native-boost-example%40workspace%3Aexample"
-  checksum: 5a9cafe35e4e17ca84ae930aee1f5b7b4badba9d19dc4d3b636152713f70e4733eef263675f2d1e6299f4c532e8674bd1474ae6ce62f24b0376ed941a4b08267
+  resolution: "react-native-time-to-render@file:./modules/time-to-render#./modules/time-to-render::hash=f86034&locator=react-native-boost-example%40workspace%3Aexample"
+  checksum: 4dc72d7ce4c146f89ba3fc13badaea8fd2990d832a7c48014f72dafd7426d81e2b704c6291c40405d051fa7f4c3eeb2f47be401147becb1a819c33c6652815ee
   languageName: node
   linkType: hard
 

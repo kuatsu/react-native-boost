@@ -11,4 +11,5 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   eslintPluginUnicorn.configs.recommended,
+  { rules: { 'unicorn/no-null': 'off' } },
 ];
