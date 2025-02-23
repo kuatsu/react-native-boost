@@ -19,7 +19,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write .",
-    "release": "release-it"
+    "release": "release-it",
+    "prepack": "cp ../../README.md ./README.md",
+    "postpack": "rm ./README.md"
   },
   "files": [
     "src",
