@@ -16,5 +16,9 @@
     "type": "turbo-module",
     "languages": "kotlin-objc",
     "version": "0.48.2"
+  },
+  "scripts": {
+    "lint": "eslint src/**/*.{js,ts,jsx,tsx}",
+    "format": "prettier --write ."
   }
 }
