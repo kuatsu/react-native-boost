@@ -1,8 +1,9 @@
 import { NodePath, types as t } from '@babel/core';
 import { addNamed } from '@babel/helper-module-imports';
-import { Optimizer } from '../../types';
+import { HubFile, Optimizer } from '../../types';
+import PluginError from '../../utils/plugin-error';
 
-export const textOptimizer: Optimizer = (path) => {
+export const textOptimizer: Optimizer = (path, log = () => {}) => {
   // Ensure we're processing a JSX Text element
   if (!t.isJSXIdentifier(path.node.name)) return;
 
@@ -27,10 +28,22 @@ export const textOptimizer: Optimizer = (path) => {
   if (!hasOnlyStringChildren(path, parent)) return;
   // TODO: Don't bail if the element has a style prop
 
-  // Add NativeTextComponent import (cached on file) so we only add it once per file
-  const file = (path.hub as unknown as { file: t.File }).file as t.File & {
-    __nativeTextImport?: t.Identifier;
-  };
+  // Extract the file from the Babel hub and add flags for logging & import caching
+  const hub = path.hub as unknown;
+  const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
+
+  if (!file) {
+    throw new PluginError('No file found in Babel hub');
+  }
+
+  // Log the file's optimized status only once
+  if (!file.__optimized) {
+    const filename = file.opts?.filename || 'unknown file';
+    log(`Optimizing file: ${filename}`);
+    file.__optimized = true;
+  }
+
+  // Add TextNativeComponent import (cached on file) so we only add it once per file
   if (!file.__nativeTextImport) {
     file.__nativeTextImport = addNamed(path, 'NativeText', 'react-native/Libraries/Text/TextNativeComponent');
   }
@@ -105,7 +118,7 @@ function hasBlacklistedProperties(path: NodePath<t.JSXOpeningElement>): boolean 
         const binding = path.scope.getBinding(attribute.argument.name);
         let objectExpression: t.ObjectExpression | undefined;
         if (binding) {
-          // If the binding node is a VariableDeclarator, use its initializer.
+          // If the binding node is a VariableDeclarator, use its initializer
           if (t.isVariableDeclarator(binding.path.node)) {
             objectExpression = binding.path.node.init as t.ObjectExpression;
           } else if (t.isObjectExpression(binding.path.node)) {

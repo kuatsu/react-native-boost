@@ -30,7 +30,7 @@ module.exports = {
 };
 ```
 
-Optionally, you can configure the plugin to disable specific optimizations:
+Optionally, you can configure the plugin to log optimized files to the console and disable specific optimizations:
 
 ```js
 module.exports = {
@@ -38,6 +38,7 @@ module.exports = {
     [
       'react-native-boost/plugin',
       {
+        verbose: true,
         optimizations: {
           text: false,
         },
