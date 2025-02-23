@@ -24,6 +24,6 @@ export type HubFile = t.File & {
   opts: {
     filename: string;
   };
-  __nativeTextImport?: t.Identifier;
+  __hasImports?: Record<string, t.Identifier>;
   __optimized?: boolean;
 };

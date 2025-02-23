@@ -9,17 +9,19 @@ A powerful Babel plugin that automatically optimizes React Native apps through s
 
 - ⚡ Automatic performance optimization through source code analysis
 - 🔒 Safe optimizations that don't break your app
-- 🎯 Zero runtime overhead - all optimizations happen during build time
+- 🎯 Virtually zero runtime overhead
 - 📱 Cross-platform compatible
 - 🧪 Works seamlessly with Expo
 - 🎨 Configurable optimization strategies
 
 ## Installation
 
+Install the package using your favorite package manager. Please **do not** install the package as a dev dependency. While the Babel plugin itself would work as a dev dependency, some optimizations import minimal helpers into your code, which requires the package to be installed as a regular dependency.
+
 ```sh
-npm install --save-dev react-native-boost
+npm install react-native-boost
 # or
-yarn add --dev react-native-boost
+yarn add react-native-boost
 ```
 
 Then, add the plugin to your Babel configuration (`babel.config.js`):

@@ -14,11 +14,13 @@ export default [
   {
     rules: {
       'unicorn/no-null': 'off',
+      'unicorn/no-abusive-eslint-disable': 'off',
       'unicorn/prevent-abbreviations': [
         'error',
         {
           allowList: {
             props: true,
+            Prop: true,
           },
         },
       ],

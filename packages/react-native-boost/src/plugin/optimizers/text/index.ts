@@ -32,7 +32,6 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   // Bail if the element has any blacklisted properties or non-string children props
   if (hasBlacklistedProperties(path)) return;
   if (!hasOnlyStringChildren(path, parent)) return;
-  // TODO: Don't bail if the element has a style prop
 
   // Extract the file from the Babel hub and add flags for logging & import caching
   const hub = path.hub as unknown;
@@ -49,11 +48,17 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
     file.__optimized = true;
   }
 
+  // Optimize props
+  optimizeStyleTag({ path, file });
+
   // Add TextNativeComponent import (cached on file) so we only add it once per file
-  if (!file.__nativeTextImport) {
-    file.__nativeTextImport = addNamed(path, 'NativeText', 'react-native/Libraries/Text/TextNativeComponent');
+  if (!file.__hasImports) {
+    file.__hasImports = {};
   }
-  const nativeTextIdentifier = file.__nativeTextImport;
+  if (!file.__hasImports.NativeText) {
+    file.__hasImports.NativeText = addNamed(path, 'NativeText', 'react-native/Libraries/Text/TextNativeComponent');
+  }
+  const nativeTextIdentifier = file.__hasImports.NativeText;
   path.node.name.name = nativeTextIdentifier.name;
 
   // If the element is not self-closing, update the closing element as well
@@ -113,8 +118,29 @@ const blacklistedProperties = new Set([
   'onStartShouldSetResponder',
   'pressRetentionOffset',
   'suppressHighlighting',
-  'style',
 ]);
+
+function optimizeStyleTag({ path, file }: { path: NodePath<t.JSXOpeningElement>; file: HubFile }) {
+  let shouldImportFlattenTextStyle = false;
+  const nameHint = '_flattenTextStyle';
+
+  for (const [index, attribute] of path.node.attributes.entries()) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
+      shouldImportFlattenTextStyle = true;
+
+      if (t.isJSXExpressionContainer(attribute.value) && !t.isJSXEmptyExpression(attribute.value.expression)) {
+        path.node.attributes[index] = t.jsxSpreadAttribute(
+          t.callExpression(t.identifier(nameHint), [attribute.value.expression])
+        );
+      }
+    }
+  }
+
+  if (shouldImportFlattenTextStyle && !file.__hasImports?.flattenTextStyle) {
+    if (!file.__hasImports) file.__hasImports = {};
+    file.__hasImports.flattenTextStyle = addNamed(path, 'flattenTextStyle', 'react-native-boost', { nameHint });
+  }
+}
 
 function hasBlacklistedProperties(path: NodePath<t.JSXOpeningElement>): boolean {
   return path.node.attributes.some((attribute) => {
