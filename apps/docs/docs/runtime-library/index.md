@@ -26,7 +26,7 @@ If a falsy or invalid style is passed, the function returns an empty object.
 ### Example
 
 ```javascript
-import { flattenTextStyle } from 'react-native-boost/runtime';
+import { flattenTextStyle } from 'react-native-boost';
 
 const style = {
   fontWeight: 500,
