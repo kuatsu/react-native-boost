@@ -46,6 +46,7 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   log(`Optimizing Text component in ${filename}:${lineNumber}`);
 
   // Optimize props
+  fixNegativeNumberOfLines({ path, log });
   optimizeStyleTag({ path, file });
 
   // Add TextNativeComponent import (cached on file) so we only add it once per file
@@ -115,7 +116,42 @@ const blacklistedProperties = new Set([
   'onStartShouldSetResponder',
   'pressRetentionOffset',
   'suppressHighlighting',
+  'selectionColor',
 ]);
+
+function fixNegativeNumberOfLines({
+  path,
+  log,
+}: {
+  path: NodePath<t.JSXOpeningElement>;
+  log: (message: string) => void;
+}) {
+  for (const attribute of path.node.attributes) {
+    if (
+      t.isJSXAttribute(attribute) &&
+      t.isJSXIdentifier(attribute.name, { name: 'numberOfLines' }) &&
+      attribute.value &&
+      t.isJSXExpressionContainer(attribute.value)
+    ) {
+      let originalValue: number | undefined;
+      if (t.isNumericLiteral(attribute.value.expression)) {
+        originalValue = attribute.value.expression.value;
+      } else if (
+        t.isUnaryExpression(attribute.value.expression) &&
+        attribute.value.expression.operator === '-' &&
+        t.isNumericLiteral(attribute.value.expression.argument)
+      ) {
+        originalValue = -attribute.value.expression.argument.value;
+      }
+      if (originalValue !== undefined && originalValue < 0) {
+        log(
+          `Warning: 'numberOfLines' in <Text> must be a non-negative number, received: ${originalValue}. The value will be set to 0.`
+        );
+        attribute.value.expression = t.numericLiteral(0);
+      }
+    }
+  }
+}
 
 function optimizeStyleTag({ path, file }: { path: NodePath<t.JSXOpeningElement>; file: HubFile }) {
   let shouldImportFlattenTextStyle = false;
