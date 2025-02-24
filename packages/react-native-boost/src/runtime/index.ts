@@ -112,3 +112,5 @@ export function normalizeAccessibilityProperties(props: Record<string, any>): Re
 }
 
 export * from './types';
+export * from './components/native-text';
+export * from './components/native-view';
