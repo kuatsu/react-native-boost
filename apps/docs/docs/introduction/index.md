@@ -56,3 +56,7 @@ yarn start --clear
 That's it! You do not need to import React Native Boost into your code, install native dependencies, or do anything else. The plugin will now ✨ automagically ✨ optimize your code.
 
 <sup>1</sup> While the Babel plugin itself would work as a dev dependency, some optimizations import minimal helpers from our [runtime library](/docs/runtime-library) into your code, which requires the package to be installed as a regular dependency.
+
+## Platform Support
+
+React Native Boost is compatible with all common platforms that React Native supports, including iOS, Android, and Web. However, optimizations are only applied on native platforms supporting the native components that React Native Boost uses. For example, on Web, all optimizations fall back to the standard React Native components.
