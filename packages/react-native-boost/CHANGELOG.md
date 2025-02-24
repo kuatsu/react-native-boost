@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/kuatsu/react-native-boost/compare/v0.5.0...v0.5.1) (2025-02-24)
+
+
+### Bug Fixes
+
+* fixed text style flattening ([83ef501](https://github.com/kuatsu/react-native-boost/commit/83ef501aeaa30c7dc8a59a78e74c7a700fc4b4a3))
+
 # [0.5.0](https://github.com/kuatsu/react-native-boost/compare/v0.4.1...v0.5.0) (2025-02-24)
 
 
