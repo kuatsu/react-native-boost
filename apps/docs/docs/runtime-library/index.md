@@ -38,3 +38,31 @@ const processedStyle = flattenTextStyle(style);
 
 console.log(processedStyle);
 ```
+
+## `normalizeAccessibilityProperties`
+
+The `normalizeAccessibilityProperties` function maps accessibility-related props to the props expected by the native components.
+
+### Parameters
+
+- **props**: `Record<string, any>`
+  An object containing standard accessibility props and ARIA attributes.
+
+### Return Value
+
+Returns a new **object** with normalized accessibility properties, so that the props can be used by the native components.
+
+### Example
+
+```javascript
+import { normalizeAccessibilityProperties } from 'react-native-boost';
+
+const props = {
+  'aria-label': 'Submit button',
+  'accessibilityLabel': 'Submit button',
+};
+
+const normalizedProps = normalizeAccessibilityProperties(props);
+
+console.log(normalizedProps);
+```
