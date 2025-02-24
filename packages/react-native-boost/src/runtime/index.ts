@@ -1,5 +1,5 @@
 import { TextStyle } from 'react-native';
-import { flattenStyle } from 'react-native/Libraries/StyleSheet/flattenStyle';
+import flattenStyle from 'react-native/Libraries/StyleSheet/flattenStyle';
 import { GenericStyleProp } from './types';
 
 const propsCache = new WeakMap();
