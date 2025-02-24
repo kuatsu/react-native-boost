@@ -11,10 +11,15 @@ export interface PluginOptions {
    */
   optimizations?: {
     /**
-     * Whether or not to optimize the text component.
+     * Whether or not to optimize the Text component.
      * @default true
      */
     text?: boolean;
+    /**
+     * Whether or not to optimize the View component.
+     * @default true
+     */
+    view?: boolean;
   };
 }
 

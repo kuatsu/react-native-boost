@@ -70,3 +70,36 @@ export const shouldIgnoreOptimization = (path: NodePath<t.JSXOpeningElement>): b
   }
   return false;
 };
+
+export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blacklist: Set<string>): boolean => {
+  return path.node.attributes.some((attribute) => {
+    // Check if we can resolve the spread attribute
+    if (t.isJSXSpreadAttribute(attribute)) {
+      if (t.isIdentifier(attribute.argument)) {
+        const binding = path.scope.getBinding(attribute.argument.name);
+        let objectExpression: t.ObjectExpression | undefined;
+        if (binding) {
+          // If the binding node is a VariableDeclarator, use its initializer
+          if (t.isVariableDeclarator(binding.path.node)) {
+            objectExpression = binding.path.node.init as t.ObjectExpression;
+          } else if (t.isObjectExpression(binding.path.node)) {
+            objectExpression = binding.path.node;
+          }
+        }
+        if (objectExpression && t.isObjectExpression(objectExpression)) {
+          return objectExpression.properties.some((property) => {
+            if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
+              return blacklist.has(property.key.name);
+            }
+            return false;
+          });
+        }
+      }
+      // Bail if we can't resolve the spread attribute
+      return true;
+    }
+
+    // For other attribute types (e.g. namespaced), assume no blacklisting
+    return false;
+  });
+};

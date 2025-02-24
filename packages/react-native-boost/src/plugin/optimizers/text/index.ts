@@ -2,7 +2,37 @@ import { NodePath, types as t } from '@babel/core';
 import { addNamed } from '@babel/helper-module-imports';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { shouldIgnoreOptimization } from '../../utils/common';
+import { hasBlacklistedProperty, shouldIgnoreOptimization } from '../../utils/common';
+
+export const textBlacklistedProperties = new Set([
+  'accessible',
+  'accessibilityLabel',
+  'accessibilityState',
+  'allowFontScaling',
+  'aria-busy',
+  'aria-checked',
+  'aria-disabled',
+  'aria-expanded',
+  'aria-label',
+  'aria-selected',
+  'ellipsizeMode',
+  'id',
+  'nativeID',
+  'onLongPress',
+  'onPress',
+  'onPressIn',
+  'onPressOut',
+  'onResponderGrant',
+  'onResponderMove',
+  'onResponderRelease',
+  'onResponderTerminate',
+  'onResponderTerminationRequest',
+  'onStartShouldSetResponder',
+  'pressRetentionOffset',
+  'suppressHighlighting',
+  'selectable',
+  'selectionColor',
+]);
 
 export const textOptimizer: Optimizer = (path, log = () => {}) => {
   // Ensure we're processing a JSX Text element
@@ -30,7 +60,8 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   }
 
   // Bail if the element has any blacklisted properties or non-string children props
-  if (hasBlacklistedProperties(path)) return;
+  if (hasBlacklistedProperty(path, textBlacklistedProperties)) return;
+  if (hasInvalidChildren(path)) return;
   if (!hasOnlyStringChildren(path, parent)) return;
 
   // Extract the file from the Babel hub and add flags for logging & import caching
@@ -90,35 +121,6 @@ function isStringNode(path: NodePath<t.JSXOpeningElement>, child: t.Node): boole
   return false;
 }
 
-const blacklistedProperties = new Set([
-  'accessible',
-  'accessibilityLabel',
-  'accessibilityState',
-  'allowFontScaling',
-  'aria-busy',
-  'aria-checked',
-  'aria-disabled',
-  'aria-expanded',
-  'aria-label',
-  'aria-selected',
-  'ellipsizeMode',
-  'id',
-  'nativeID',
-  'onLongPress',
-  'onPress',
-  'onPressIn',
-  'onPressOut',
-  'onResponderGrant',
-  'onResponderMove',
-  'onResponderRelease',
-  'onResponderTerminate',
-  'onResponderTerminationRequest',
-  'onStartShouldSetResponder',
-  'pressRetentionOffset',
-  'suppressHighlighting',
-  'selectionColor',
-]);
-
 function fixNegativeNumberOfLines({
   path,
   log,
@@ -175,43 +177,17 @@ function optimizeStyleTag({ path, file }: { path: NodePath<t.JSXOpeningElement>;
   }
 }
 
-function hasBlacklistedProperties(path: NodePath<t.JSXOpeningElement>): boolean {
-  return path.node.attributes.some((attribute) => {
-    // Check if we can resolve the spread attribute
-    if (t.isJSXSpreadAttribute(attribute)) {
-      if (t.isIdentifier(attribute.argument)) {
-        const binding = path.scope.getBinding(attribute.argument.name);
-        let objectExpression: t.ObjectExpression | undefined;
-        if (binding) {
-          // If the binding node is a VariableDeclarator, use its initializer
-          if (t.isVariableDeclarator(binding.path.node)) {
-            objectExpression = binding.path.node.init as t.ObjectExpression;
-          } else if (t.isObjectExpression(binding.path.node)) {
-            objectExpression = binding.path.node;
-          }
-        }
-        if (objectExpression && t.isObjectExpression(objectExpression)) {
-          return objectExpression.properties.some((property) => {
-            if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
-              return blacklistedProperties.has(property.key.name);
-            }
-            return false;
-          });
-        }
-      }
-      // Bail if we can't resolve the spread attribute
-      return true;
-    }
+function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>): boolean {
+  for (const attribute of path.node.attributes) {
+    if (t.isJSXSpreadAttribute(attribute)) return false; // spread attributes are handled in hasBlacklistedProperty
 
     if (t.isJSXIdentifier(attribute.name) && attribute.value) {
       // For a "children" attribute, optimization is allowed only if it is a string
       if (attribute.name.name === 'children') {
         return isStringNode(path, attribute.value);
       }
-      return blacklistedProperties.has(attribute.name.name);
+      return textBlacklistedProperties.has(attribute.name.name);
     }
-
-    // For other attribute types (e.g. namespaced), assume no blacklisting
-    return false;
-  });
+  }
+  return false;
 }

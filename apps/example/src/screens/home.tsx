@@ -1,4 +1,4 @@
-import { Button, SafeAreaView, StyleSheet, Text } from 'react-native';
+import { Button, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useMemo, useState } from 'react';
 import { startMarker } from 'react-native-time-to-render';
 import { Benchmark, BenchmarkStep } from '../types';
@@ -12,6 +12,13 @@ const benchmarks = [
     // @boost-ignore
     unoptimizedComponent: <Text>Nice text</Text>,
     optimizedComponent: <Text>Nice text</Text>,
+  },
+  {
+    title: 'View',
+    count: 10_000,
+    // @boost-ignore
+    unoptimizedComponent: <View />,
+    optimizedComponent: <View />,
   },
 ] satisfies Benchmark[];
 

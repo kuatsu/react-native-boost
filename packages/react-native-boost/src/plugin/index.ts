@@ -2,6 +2,7 @@ import { declare } from '@babel/helper-plugin-utils';
 import { textOptimizer } from './optimizers/text';
 import { PluginOptions } from './types';
 import { log } from './utils/logger';
+import { viewOptimizer } from './optimizers/view';
 
 export default declare((api) => {
   api.assertVersion(7);
@@ -13,6 +14,7 @@ export default declare((api) => {
         const options = (state.opts ?? {}) as PluginOptions;
         const logger = options.verbose ? log : () => {};
         if (options.optimizations?.text !== false) textOptimizer(path, logger);
+        if (options.optimizations?.view !== false) viewOptimizer(path, logger);
       },
     },
   };
