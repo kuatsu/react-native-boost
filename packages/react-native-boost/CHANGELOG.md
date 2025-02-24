@@ -1,5 +1,13 @@
 # Changelog
 
+# [0.5.0](https://github.com/kuatsu/react-native-boost/compare/v0.4.1...v0.5.0) (2025-02-24)
+
+
+### Features
+
+* **example:** allow running benchmarks in production ([c21ada0](https://github.com/kuatsu/react-native-boost/commit/c21ada06e1d7ae79fb77512b272da79a15f9fa32))
+* optimize components with accessibility props ([d71d027](https://github.com/kuatsu/react-native-boost/commit/d71d027ec613b8baa96e22f155cec317e4c54e13))
+
 ## [0.4.1](https://github.com/kuatsu/react-native-boost/compare/v0.4.0...v0.4.1) (2025-02-24)
 
 # [0.4.0](https://github.com/kuatsu/react-native-boost/compare/v0.3.0...v0.4.0) (2025-02-24)
