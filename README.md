@@ -23,12 +23,10 @@ The documentation is available at [react-native-boost.oss.kuatsu.de](https://rea
 The example app in the `apps/example` directory is a benchmark for the performance of the plugin.
 
 <div align="center">
-  <img src="./apps/docs/docs/introduction/img/benchmark.png" width="500" />
-  <p>
-    <b>1,000 Text components</b>: Render time of 1,000 Text components with and without React Native Boost.<br/>
-    Measured in milliseconds on an iPhone 16 Pro running the example app in production mode and using New Architecture, lower is better.
-  </p>
+  <img src="./apps/docs/docs/introduction/img/benchmark-ios.png" width="500" />
 </div>
+
+More benchmarks are available in the [docs](https://react-native-boost.oss.kuatsu.de/docs/introduction/benchmarks).
 
 ## Installation
 
