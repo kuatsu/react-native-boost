@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.3.0](https://github.com/kuatsu/react-native-boost/compare/v0.2.0...v0.3.0) (2025-02-24)
+
+
+### Features
+
+* fix `numberOfLines` prop at build time ([58c2993](https://github.com/kuatsu/react-native-boost/commit/58c299393abaf3a9fcbb2ca933cfa02e4bf08fb3))
+
+
+### Reverts
+
+* **example:** removed console.log ([4facb6e](https://github.com/kuatsu/react-native-boost/commit/4facb6ed5c773e9b2fef28779d288b43b56612dc))
+* removed wrong rollup config ([b4b69c0](https://github.com/kuatsu/react-native-boost/commit/b4b69c01c90a5e11659569a22c5c23805f9df753))
+
 # [0.2.0](https://github.com/kuatsu/react-native-boost/compare/v0.1.0...v0.2.0) (2025-02-23)
 
 
