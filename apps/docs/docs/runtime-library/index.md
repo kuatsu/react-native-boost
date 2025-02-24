@@ -66,3 +66,29 @@ const normalizedProps = normalizeAccessibilityProperties(props);
 
 console.log(normalizedProps);
 ```
+
+## `NativeText`
+
+The `NativeText` component imports the native Text component from React Native on native platforms such as iOS and Android, and falls back to the standard Text component on web. This prevents bundling issues for react-native-web projects.
+
+### Example
+
+```javascript
+import { NativeText } from 'react-native-boost';
+
+<NativeText>Hello</NativeText>;
+```
+
+## `NativeView`
+
+The `NativeView` component imports the native View component from React Native on native platforms such as iOS and Android, and falls back to the standard View component on web. This prevents bundling issues for react-native-web projects.
+
+### Example
+
+```javascript
+import { NativeView, NativeText } from 'react-native-boost';
+
+<NativeView>
+  <NativeText>Hello</NativeText>
+</NativeView>;
+```

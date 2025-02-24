@@ -1,15 +1,30 @@
 import { vi, describe, it, expect } from 'vitest';
-
-vi.mock('react-native/Libraries/StyleSheet/flattenStyle', () => ({
-  default: (style: any) => style,
-}));
-
 import {
   flattenTextStyle,
   normalizeAccessibilityProperties,
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
 } from '..';
+
+vi.mock('../components/native-text', () => ({
+  NativeText: () => 'MockedNativeText',
+}));
+
+vi.mock('../components/native-view', () => ({
+  NativeView: () => 'MockedNativeView',
+}));
+
+vi.mock('react-native', () => ({
+  View: () => 'View',
+  Text: () => 'Text',
+  Platform: {
+    OS: 'ios',
+  },
+}));
+
+vi.mock('react-native/Libraries/StyleSheet/flattenStyle', () => ({
+  default: (style: any) => style,
+}));
 
 describe('flattenTextStyle', () => {
   it('returns empty object for falsy style', () => {

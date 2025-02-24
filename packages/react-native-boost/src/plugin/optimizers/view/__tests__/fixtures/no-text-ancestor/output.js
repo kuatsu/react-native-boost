@@ -1,4 +1,4 @@
-import _NativeView from 'react-native/Libraries/Components/View/ViewNativeComponent';
+import { NativeView as _NativeView } from 'react-native-boost';
 import { Text, View } from 'react-native';
 <>
   <_NativeView>

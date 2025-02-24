@@ -81,9 +81,9 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
   const viewNativeIdentifier = addFileImportHint({
     file,
     path,
-    importName: 'ViewNativeComponent',
-    moduleName: 'react-native/Libraries/Components/View/ViewNativeComponent',
-    importType: 'default',
+    importName: 'NativeView',
+    moduleName: 'react-native-boost',
+    importType: 'named',
     nameHint: 'NativeView',
   });
 

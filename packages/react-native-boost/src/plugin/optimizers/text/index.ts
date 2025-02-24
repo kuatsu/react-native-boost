@@ -159,7 +159,7 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
     nameHint: 'NativeText',
     path,
     importName: 'NativeText',
-    moduleName: 'react-native/Libraries/Text/TextNativeComponent',
+    moduleName: 'react-native-boost',
   });
   path.node.name.name = nativeTextIdentifier.name;
 
