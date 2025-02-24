@@ -5,7 +5,7 @@
 A powerful Babel plugin that automatically optimizes React Native apps through source code analysis and optimization. It identifies safe micro-optimization opportunities, which can lead to significant performance improvements.
 
 > [!WARNING]
-> This project is highly experimental and under active development. **Your app might break** and the optimization strategies used can change significantly between versions. Use with caution!
+> The library and its Babel plugin are still experimental. You should expect things to break. Please report any issues you encounter in the issues tab with reproducible examples, and use the library's ignore mechanisms to disable optimizations for problematic files or lines of code.
 
 - ⚡ Automatic performance optimization through source code analysis
 - 🔒 Safe optimizations that don't break your app
@@ -13,6 +13,10 @@ A powerful Babel plugin that automatically optimizes React Native apps through s
 - 📱 Cross-platform compatible
 - 🧪 Works seamlessly with Expo
 - 🎨 Configurable optimization strategies
+
+## Documentation
+
+The documentation is available at [react-native-boost.oss.kuatsu.de](https://react-native-boost.oss.kuatsu.de).
 
 ## Benchmark
 
@@ -44,64 +48,11 @@ module.exports = {
 };
 ```
 
-That's it! No imports in your code, pod installing, or anything else is required.
-
-Optionally, you can configure the plugin to ignore specific paths and files (supports minimatch wildcards), log optimized files to the console and disable specific optimizations:
-
-```js
-module.exports = {
-  plugins: [
-    [
-      'react-native-boost/plugin',
-      {
-        ignores: ['node_modules/', 'src/components/unoptimized/**/*.{tsx,jsx}']
-        verbose: true,
-        optimizations: {
-          text: false,
-        },
-      },
-    ],
-  ],
-};
-```
-
-You can also skip optimization for a specific comment using a decorator comment above the component's opening tag:
-
-```jsx
-// @boost-ignore
-<Text>This will not be optimized.</Text>
-```
+That's it! No imports in your code, pod installing, or anything else is required. Optionally, you can configure the plugin with a few options. See the [documentation](https://react-native-boost.oss.kuatsu.de/docs/babel-plugin/configure) for more information.
 
 ## How It Works
 
-Several standard components in React Native are actually wrappers around their native counterparts. These wrappers often only handle edge cases and aren't needed in most cases. However, they add additional runtime overhead and depth to the component tree, which can lead to performance bottlenecks.
-
-React Native Boost replaces these wrapper components directly with their respective native components, flattening the component tree. It intelligently analyzes your code and only optimizes components that are used in a way where they can be optimized without breaking the app.
-
-Here's an example of how it works:
-
-```jsx
-// Your original code 🐌
-import React from 'react';
-import { View, Text } from 'react-native';
-
-const MyComponent = () => (
-  <View>
-    <Text>Hello, World!</Text>
-  </View>
-);
-
-// Automagically transformed to ✨
-import React from 'react';
-import { View } from 'react-native';
-import { NativeText } from 'react-native/Libraries/Text/TextNativeComponent';
-
-const MyComponent = () => (
-  <View>
-    <NativeText>Hello, World!</NativeText>
-  </View>
-);
-```
+A technical rundown of how the plugin works can be found in the [docs](https://react-native-boost.oss.kuatsu.de/docs/introduction/how-it-works).
 
 ## Contributing
 

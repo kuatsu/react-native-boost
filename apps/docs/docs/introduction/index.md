@@ -22,7 +22,7 @@ The library and its Babel plugin are still experimental. You should expect thing
 
 Installation and setup is an incredibly simple process:
 
-1. Install the library and its dependencies using your favorite package manager:
+1. Install the library and its dependencies using your favorite package manager (**do not** install the package as a dev dependency<sup>1</sup>):
 
 ```bash
 npm install react-native-boost
@@ -48,3 +48,5 @@ yarn start --clear
 ```
 
 That's it! You do not need to import React Native Boost into your code, install native dependencies, or do anything else. The plugin will now ✨ automagically ✨ optimize your code.
+
+<sup>1</sup> While the Babel plugin itself would work as a dev dependency, some optimizations import minimal helpers from our [runtime library](/docs/runtime-library) into your code, which requires the package to be installed as a regular dependency.
