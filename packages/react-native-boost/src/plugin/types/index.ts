@@ -2,6 +2,10 @@ import { NodePath, types as t } from '@babel/core';
 
 export interface PluginOptions {
   /**
+   * Paths to ignore from optimization. Relative to the Babel configuration file.
+   */
+  ignores?: string[];
+  /**
    * Whether or not to log optimized files to the console.
    * @default false
    */

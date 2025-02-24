@@ -46,7 +46,7 @@ module.exports = {
 
 That's it! No imports in your code, pod installing, or anything else is required.
 
-Optionally, you can configure the plugin to log optimized files to the console and disable specific optimizations:
+Optionally, you can configure the plugin to ignore specific paths and files (supports minimatch wildcards), log optimized files to the console and disable specific optimizations:
 
 ```js
 module.exports = {
@@ -54,6 +54,7 @@ module.exports = {
     [
       'react-native-boost/plugin',
       {
+        ignores: ['node_modules/', 'src/components/unoptimized/**/*.{tsx,jsx}']
         verbose: true,
         optimizations: {
           text: false,

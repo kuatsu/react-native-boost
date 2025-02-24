@@ -1,5 +1,43 @@
 import { NodePath, types as t } from '@babel/core';
 import { ensureArray } from './helpers';
+import { HubFile } from '../types';
+import { minimatch } from 'minimatch';
+import path from 'node:path';
+import PluginError from './plugin-error';
+
+/**
+ * Checks if the file is in the list of ignored files.
+ *
+ * @param p - The path to the JSXOpeningElement.
+ * @param ignores - List of glob paths (absolute or relative to import.meta.dirname).
+ * @returns true if the file matches any of the ignore patterns.
+ */
+export const isIgnoredFile = (p: NodePath<t.JSXOpeningElement>, ignores: string[]): boolean => {
+  const hub = p.hub as unknown;
+  const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
+
+  if (!file) {
+    throw new PluginError('No file found in Babel hub');
+  }
+
+  const fileName = file.opts.filename;
+
+  // Use the current working directory which typically corresponds to the user's project root.
+  const baseDirectory = 'cwd' in file.opts ? (file.opts.cwd as string) : process.cwd();
+
+  // Iterate through the ignore patterns.
+  for (const pattern of ignores) {
+    // If the pattern is not absolute, join it with the baseDir
+    const absolutePattern = path.isAbsolute(pattern) ? pattern : path.join(baseDirectory, pattern);
+
+    // Check if the file name matches the glob pattern.
+    if (minimatch(fileName, absolutePattern, { dot: true })) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 /**
  * Checks if the JSX element should be ignored based on a preceding comment.
