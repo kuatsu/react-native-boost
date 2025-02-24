@@ -1,7 +1,7 @@
 import { vi, describe, it, expect } from 'vitest';
 
 vi.mock('react-native/Libraries/StyleSheet/flattenStyle', () => ({
-  flattenStyle: (style: any) => style,
+  default: (style: any) => style,
 }));
 
 import {
