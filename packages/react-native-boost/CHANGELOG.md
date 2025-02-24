@@ -1,5 +1,19 @@
 # Changelog
 
+# [0.4.0](https://github.com/kuatsu/react-native-boost/compare/v0.3.0...v0.4.0) (2025-02-24)
+
+
+### Bug Fixes
+
+* **docs:** fixed broken link ([a3dde5d](https://github.com/kuatsu/react-native-boost/commit/a3dde5d3c400d525028e18f4cdbcf88fcc373029))
+
+
+### Features
+
+* added `<View />` optimization support ([46ca834](https://github.com/kuatsu/react-native-boost/commit/46ca834b9d62f5a3abfca7061993f82cdae48deb))
+* added `ignores` config option ([7d58a9f](https://github.com/kuatsu/react-native-boost/commit/7d58a9f8db759d3babf747504645b9a4d6ee61bd))
+* **docs:** added documentation app w/ styled homepage ([9ce312b](https://github.com/kuatsu/react-native-boost/commit/9ce312b6b6dae38a9ccd3574e72806515a86fa21))
+
 # [0.3.0](https://github.com/kuatsu/react-native-boost/compare/v0.2.0...v0.3.0) (2025-02-24)
 
 
