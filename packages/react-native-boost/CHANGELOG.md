@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/kuatsu/react-native-boost/compare/v0.5.2...v0.5.3) (2025-02-24)
+
+
+### Bug Fixes
+
+* fixed react-native-web bundling ([56ab1b3](https://github.com/kuatsu/react-native-boost/commit/56ab1b3b0985f413691edd1ce3de9a02593f7ff8))
+
 ## [0.5.2](https://github.com/kuatsu/react-native-boost/compare/v0.5.1...v0.5.2) (2025-02-24)
 
 
