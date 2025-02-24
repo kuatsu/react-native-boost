@@ -1,8 +1,7 @@
 import { NodePath, types as t } from '@babel/core';
-import { addDefault } from '@babel/helper-module-imports';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { hasBlacklistedProperty, shouldIgnoreOptimization } from '../../utils/common';
+import { addFileImportHint, hasBlacklistedProperty, shouldIgnoreOptimization } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
   'accessible',
@@ -79,15 +78,14 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
   log(`Optimizing View component in ${filename}:${lineNumber}`);
 
   // Add ViewNativeComponent import (cached on the file) to prevent duplicate imports.
-  if (!file.__hasImports) {
-    file.__hasImports = {};
-  }
-  if (!file.__hasImports.ViewNativeComponent) {
-    file.__hasImports.NativeView = addDefault(path, 'react-native/Libraries/Components/View/ViewNativeComponent', {
-      nameHint: 'NativeView',
-    });
-  }
-  const viewNativeIdentifier = file.__hasImports.NativeView;
+  const viewNativeIdentifier = addFileImportHint({
+    file,
+    path,
+    importName: 'ViewNativeComponent',
+    moduleName: 'react-native/Libraries/Components/View/ViewNativeComponent',
+    importType: 'default',
+    nameHint: 'NativeView',
+  });
 
   // Replace the component with its native counterpart.
   path.node.name.name = viewNativeIdentifier.name;

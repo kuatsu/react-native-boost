@@ -36,3 +36,26 @@ export type HubFile = t.File & {
   __hasImports?: Record<string, t.Identifier>;
   __optimized?: boolean;
 };
+
+/**
+ * Options for adding a file import hint.
+ */
+export interface FileImportOptions {
+  file: HubFile;
+  /** The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'normalizeAccessibilityProps') */
+  nameHint: string;
+  /** The current Babel NodePath */
+  path: NodePath;
+  /**
+   * The named import string (e.g. 'normalizeAccessibilityProps'). Ignored if importType is "default".
+   */
+  importName: string;
+  /** The module to import from (e.g. 'react-native-boost') */
+  moduleName: string;
+  /**
+   * Determines which helper to use:
+   * - "named" (default) uses addNamed (requires importName)
+   * - "default" uses addDefault
+   */
+  importType?: 'named' | 'default';
+}

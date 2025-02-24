@@ -9,15 +9,15 @@
     "./package.json": "./package.json",
     ".": {
       "import": {
-        "default": "./dist/esm/index.mjs",
-        "types": "./dist/index.d.ts"
+        "types": "./dist/index.d.ts",
+        "default": "./dist/esm/index.mjs"
       },
       "default": "./dist/index.js"
     },
     "./plugin": {
       "import": {
-        "default": "./dist/plugin/esm/index.mjs",
-        "types": "./dist/plugin/index.d.ts"
+        "types": "./dist/plugin/index.d.ts",
+        "default": "./dist/plugin/esm/index.mjs"
       },
       "default": "./dist/plugin/index.js"
     }

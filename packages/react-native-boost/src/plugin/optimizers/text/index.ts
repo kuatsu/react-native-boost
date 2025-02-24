@@ -1,20 +1,16 @@
 import { NodePath, types as t } from '@babel/core';
-import { addNamed } from '@babel/helper-module-imports';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { hasBlacklistedProperty, shouldIgnoreOptimization } from '../../utils/common';
+import {
+  addFileImportHint,
+  buildPropertiesFromAttributes,
+  hasAccessibilityProperty,
+  hasBlacklistedProperty,
+  shouldIgnoreOptimization,
+} from '../../utils/common';
 
 export const textBlacklistedProperties = new Set([
-  'accessible',
-  'accessibilityLabel',
-  'accessibilityState',
   'allowFontScaling',
-  'aria-busy',
-  'aria-checked',
-  'aria-disabled',
-  'aria-expanded',
-  'aria-label',
-  'aria-selected',
   'ellipsizeMode',
   'id',
   'nativeID',
@@ -78,16 +74,93 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
 
   // Optimize props
   fixNegativeNumberOfLines({ path, log });
-  optimizeStyleTag({ path, file });
 
-  // Add TextNativeComponent import (cached on file) so we only add it once per file
-  if (!file.__hasImports) {
-    file.__hasImports = {};
+  // Process style and accessibility props
+  const originalAttributes = [...path.node.attributes];
+  let styleAttribute, styleExpr;
+  for (const attribute of originalAttributes) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
+      styleAttribute = attribute;
+      break;
+    }
   }
-  if (!file.__hasImports.NativeText) {
-    file.__hasImports.NativeText = addNamed(path, 'NativeText', 'react-native/Libraries/Text/TextNativeComponent');
+  if (
+    styleAttribute &&
+    styleAttribute.value &&
+    t.isJSXExpressionContainer(styleAttribute.value) &&
+    !t.isJSXEmptyExpression(styleAttribute.value.expression)
+  ) {
+    styleExpr = styleAttribute.value.expression;
   }
-  const nativeTextIdentifier = file.__hasImports.NativeText;
+  const hasA11y = hasAccessibilityProperty(path, originalAttributes);
+
+  if (styleExpr && hasA11y) {
+    // When both style and accessibility properties exist, we split them into two separate spread attributes
+
+    // Filter out the style attribute for accessibility props
+    const accessibilityAttributes = originalAttributes.filter((attribute) => {
+      if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
+        return false;
+      }
+      return true;
+    });
+
+    // Set up the accessibility import if needed
+    const normalizeIdentifier = addFileImportHint({
+      file,
+      nameHint: 'normalizeAccessibilityProps',
+      path,
+      importName: 'normalizeAccessibilityProps',
+      moduleName: 'react-native-boost',
+    });
+    const accessibilityObject = buildPropertiesFromAttributes(accessibilityAttributes);
+    const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
+
+    // Set up the style import if needed.
+    const flattenIdentifier = addFileImportHint({
+      file,
+      nameHint: 'flattenTextStyle',
+      path,
+      importName: 'flattenTextStyle',
+      moduleName: 'react-native-boost',
+    });
+    const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
+
+    // Use two separate JSX spread attributes so that accessibility and style props remain distinct.
+    path.node.attributes = [t.jsxSpreadAttribute(accessibilityExpr), t.jsxSpreadAttribute(flattenedStyleExpr)];
+  } else if (styleExpr) {
+    // Only style attribute is present.
+    const flattenIdentifier = addFileImportHint({
+      file,
+      nameHint: 'flattenTextStyle',
+      path,
+      importName: 'flattenTextStyle',
+      moduleName: 'react-native-boost',
+    });
+    const flattened = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
+    path.node.attributes = [t.jsxSpreadAttribute(flattened)];
+  } else if (hasA11y) {
+    // Only accessibility properties are present.
+    const normalizeIdentifier = addFileImportHint({
+      file,
+      nameHint: 'normalizeAccessibilityProps',
+      path,
+      importName: 'normalizeAccessibilityProps',
+      moduleName: 'react-native-boost',
+    });
+    const propsObject = buildPropertiesFromAttributes(originalAttributes);
+    const normalized = t.callExpression(t.identifier(normalizeIdentifier.name), [propsObject]);
+    path.node.attributes = [t.jsxSpreadAttribute(normalized)];
+  }
+
+  // Add TextNativeComponent import (cached on file) so we only add it once per file.
+  const nativeTextIdentifier = addFileImportHint({
+    file,
+    nameHint: 'NativeText',
+    path,
+    importName: 'NativeText',
+    moduleName: 'react-native/Libraries/Text/TextNativeComponent',
+  });
   path.node.name.name = nativeTextIdentifier.name;
 
   // If the element is not self-closing, update the closing element as well
@@ -106,17 +179,16 @@ function hasOnlyStringChildren(path: NodePath<t.JSXOpeningElement>, node: t.JSXE
 }
 
 function isStringNode(path: NodePath<t.JSXOpeningElement>, child: t.Node): boolean {
-  if (t.isJSXText(child)) return true;
+  if (t.isJSXText(child) || t.isStringLiteral(child)) return true;
 
   // Check for JSX expressions
   if (t.isJSXExpressionContainer(child)) {
     const expression = child.expression;
-
-    // If the expression is an identifier, look it up in the current scope
     if (t.isIdentifier(expression)) {
       const binding = path.scope.getBinding(expression.name);
       return binding ? t.isStringLiteral(binding.path.node) : false;
     }
+    if (t.isStringLiteral(expression)) return true;
   }
   return false;
 }
@@ -155,38 +227,19 @@ function fixNegativeNumberOfLines({
   }
 }
 
-function optimizeStyleTag({ path, file }: { path: NodePath<t.JSXOpeningElement>; file: HubFile }) {
-  let shouldImportFlattenTextStyle = false;
-  const nameHint = '_flattenTextStyle';
-
-  for (const [index, attribute] of path.node.attributes.entries()) {
-    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
-      shouldImportFlattenTextStyle = true;
-
-      if (t.isJSXExpressionContainer(attribute.value) && !t.isJSXEmptyExpression(attribute.value.expression)) {
-        path.node.attributes[index] = t.jsxSpreadAttribute(
-          t.callExpression(t.identifier(nameHint), [attribute.value.expression])
-        );
-      }
-    }
-  }
-
-  if (shouldImportFlattenTextStyle && !file.__hasImports?.flattenTextStyle) {
-    if (!file.__hasImports) file.__hasImports = {};
-    file.__hasImports.flattenTextStyle = addNamed(path, 'flattenTextStyle', 'react-native-boost', { nameHint });
-  }
-}
-
 function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>): boolean {
   for (const attribute of path.node.attributes) {
-    if (t.isJSXSpreadAttribute(attribute)) return false; // spread attributes are handled in hasBlacklistedProperty
+    if (t.isJSXSpreadAttribute(attribute)) continue; // Spread attributes are handled in hasBlacklistedProperty
 
     if (t.isJSXIdentifier(attribute.name) && attribute.value) {
       // For a "children" attribute, optimization is allowed only if it is a string
       if (attribute.name.name === 'children') {
-        return isStringNode(path, attribute.value);
+        if (!isStringNode(path, attribute.value)) {
+          return true;
+        }
+      } else if (textBlacklistedProperties.has(attribute.name.name)) {
+        return true;
       }
-      return textBlacklistedProperties.has(attribute.name.name);
     }
   }
   return false;
