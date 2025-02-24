@@ -30,7 +30,13 @@ npm install react-native-boost
 yarn add react-native-boost
 ```
 
-2. Add the Babel plugin to your project:
+2. If you're using Expo and don't have a `babel.config.js` file, run the following command:
+
+```bash
+npx expo customize babel.config.js
+```
+
+3. Add the Babel plugin to your project:
 
 ```js
 // babel.config.js
@@ -39,7 +45,7 @@ module.exports = {
 };
 ```
 
-3. Restart your React Native development server and clear the bundler cache:
+4. Restart your React Native development server and clear the bundler cache:
 
 ```bash
 npm start --clear
