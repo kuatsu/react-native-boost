@@ -8,7 +8,7 @@ The runtime library, imported via `react-native-boost`, is a small library that 
 
 ## `flattenTextStyle`
 
-The [`flattenTextStyle`](#flattenTextStyle) function is a utility used to flatten and process `<Text>` styles in React Native projects. It normalizes style properties and maps them to their native counterparts.
+The `flattenTextStyle` function is a utility used to flatten and process `<Text>` styles in React Native projects. It normalizes style properties and maps them to their native counterparts.
 
 ### Parameters
 
@@ -18,6 +18,7 @@ The [`flattenTextStyle`](#flattenTextStyle) function is a utility used to flatte
 ### Return Value
 
 Returns an **object** containing:
+
 - A `style` property with the flattened and normalized style, as well as properties such as `selectable` and `textAlignVertical` mapped to their native counterparts.
 
 If a falsy or invalid style is passed, the function returns an empty object.
@@ -30,7 +31,7 @@ import { flattenTextStyle } from 'react-native-boost/runtime';
 const style = {
   fontWeight: 500,
   userSelect: 'auto',
-  color: 'blue'
+  color: 'blue',
 };
 
 const processedStyle = flattenTextStyle(style);
