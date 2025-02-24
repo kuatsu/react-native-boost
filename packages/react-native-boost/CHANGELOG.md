@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/kuatsu/react-native-boost/compare/v0.5.1...v0.5.2) (2025-02-24)
+
+
+### Bug Fixes
+
+* allow text string children from variables ([622a201](https://github.com/kuatsu/react-native-boost/commit/622a2011f751f9f28cdda19bf7ea676f537b1fbf))
+
 ## [0.5.1](https://github.com/kuatsu/react-native-boost/compare/v0.5.0...v0.5.1) (2025-02-24)
 
 
