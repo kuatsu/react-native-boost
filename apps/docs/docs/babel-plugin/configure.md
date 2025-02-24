@@ -1,0 +1,53 @@
+---
+sidebar_position: 1
+---
+
+# Configure the plugin
+
+The Babel plugin, imported via `react-native-boost/plugin`, is the heart of the library. It's responsible for analyzing your code and applying optimizations to it.
+
+While the plugin is configured to be used out of the box, you can configure it to your needs. This may be necessary if you want to disable optimizations for a specific file, or even disable individual optimizers completely.
+
+## Example configuration
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      'react-native-boost/plugin',
+      {
+        verbose: true,
+        ignores: ['node_modules/**'],
+        optimizers: {
+          text: true,
+          view: false,
+        },
+      },
+    ],
+  ],
+};
+```
+
+## Configuration options
+
+### `verbose`
+
+Enables verbose logging of performed optimizations, including the filename and line number of the component that was optimized. Defaults to `false`.
+
+### `ignores`
+
+An array of glob patterns to ignore when performing optimizations. Defaults to an empty array (no files are ignored).
+
+:::warning
+
+By default, the plugin does not ignore any files. This means that the plugin will also recursively scan your `node_modules` directory and optimize code in there as well. If you only want to optimize code in your own project, you should add the glob pattern `node_modules/**` to the `ignores` array.
+
+:::
+
+### `optimizers`
+
+An object specifying which optimizers to enable or disable. The keys are the names of the optimizers, and the values are booleans indicating whether to enable or disable them. By default, all optimizers are enabled. The following optimizers are available:
+
+- `text`
+- `view`

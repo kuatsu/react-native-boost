@@ -19,7 +19,7 @@ A powerful Babel plugin that automatically optimizes React Native apps through s
 The example app in the `apps/example` directory is a benchmark for the performance of the plugin.
 
 <div align="center">
-  <img src="./packages/react-native-boost/img/benchmark.png" width="500" />
+  <img src="./apps/docs/docs/getting-started/img/benchmark.png" width="500" />
   <p>
     <b>1,000 Text components</b>: Render time of 1,000 Text components with and without React Native Boost.<br/>
     Measured in milliseconds on an iPhone 16 Pro in development mode and using New Architecture, lower is better.

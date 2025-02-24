@@ -8977,24 +8977,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"docs@workspace:apps/docs":
-  version: 0.0.0-use.local
-  resolution: "docs@workspace:apps/docs"
-  dependencies:
-    "@docusaurus/core": 3.7.0
-    "@docusaurus/module-type-aliases": 3.7.0
-    "@docusaurus/preset-classic": 3.7.0
-    "@docusaurus/tsconfig": 3.7.0
-    "@docusaurus/types": 3.7.0
-    "@mdx-js/react": ^3.0.0
-    clsx: ^2.0.0
-    prism-react-renderer: ^2.3.0
-    react: ^19.0.0
-    react-dom: ^19.0.0
-    typescript: ~5.6.2
-  languageName: unknown
-  linkType: soft
-
 "dom-converter@npm:^0.2.0":
   version: 0.2.0
   resolution: "dom-converter@npm:0.2.0"
@@ -17120,6 +17102,24 @@ __metadata:
   checksum: 4c32061b2fc10689d5d8ba11ead71b69e4c8a55fcfeafb551a6747b1a7b496c4f2d8dbb5d023f5cafc2a9aea9d14582bdb324d11e6f9b8c3049d45b74439203f
   languageName: node
   linkType: hard
+
+"react-native-boost-docs@workspace:apps/docs":
+  version: 0.0.0-use.local
+  resolution: "react-native-boost-docs@workspace:apps/docs"
+  dependencies:
+    "@docusaurus/core": 3.7.0
+    "@docusaurus/module-type-aliases": 3.7.0
+    "@docusaurus/preset-classic": 3.7.0
+    "@docusaurus/tsconfig": 3.7.0
+    "@docusaurus/types": 3.7.0
+    "@mdx-js/react": ^3.0.0
+    clsx: ^2.0.0
+    prism-react-renderer: ^2.3.0
+    react: ^19.0.0
+    react-dom: ^19.0.0
+    typescript: ~5.6.2
+  languageName: unknown
+  linkType: soft
 
 "react-native-boost-example@workspace:apps/example":
   version: 0.0.0-use.local

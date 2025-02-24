@@ -9,6 +9,7 @@
     "format": "yarn workspaces foreach -A -p run format",
     "typecheck": "yarn workspaces foreach -A -p run typecheck",
     "example": "yarn workspace react-native-boost-example",
+    "docs": "yarn workspace react-native-boost-docs",
     "package": "yarn workspace react-native-boost",
     "prepare": "husky"
   },
