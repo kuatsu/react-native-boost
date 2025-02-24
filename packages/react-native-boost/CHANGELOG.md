@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.4.1](https://github.com/kuatsu/react-native-boost/compare/v0.4.0...v0.4.1) (2025-02-24)
+
 # [0.4.0](https://github.com/kuatsu/react-native-boost/compare/v0.3.0...v0.4.0) (2025-02-24)
 
 

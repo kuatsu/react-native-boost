@@ -1,7 +1,7 @@
 {
   "name": "react-native-boost",
   "description": "🚀 Boost your React Native app's performance with a single line of code",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "dist/index.js",
   "module": "dist/esm/index.mjs",
   "types": "dist/index.d.ts",
