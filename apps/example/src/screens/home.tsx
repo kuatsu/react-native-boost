@@ -42,7 +42,7 @@ export default function HomeScreen() {
       return 'Last Step';
     }
     return 'Next Step';
-  }, [currentStep, runBenchmark, currentBenchmark]);
+  }, [currentStep, runBenchmark, currentBenchmark, progress]);
 
   const markerName = useMemo(
     () => getMarkerName(benchmarks[currentBenchmark].title, currentStep),
@@ -56,7 +56,7 @@ export default function HomeScreen() {
 
   const handleRenderTimeChange = (renderTime: number) => {
     setRunBenchmark(false);
-    console.log(`${benchmarks[currentBenchmark].title} render time: ${renderTime}ms`);
+
     const newResults =
       currentBenchmark === 0 && currentStep === BenchmarkStep.Unoptimized
         ? { [currentBenchmark]: { unoptimized: renderTime, optimized: 0 } }
@@ -73,17 +73,8 @@ export default function HomeScreen() {
       if (currentBenchmark < benchmarks.length - 1) {
         setCurrentBenchmark(currentBenchmark + 1);
       } else {
+        // All benchmarks have run; restart the cycle.
         setCurrentBenchmark(0);
-        console.log(
-          Object.entries(newResults)
-            .map(
-              ([key, value]) =>
-                `${benchmarks[Number(key)].title}: ${value.unoptimized}ms -> ${value.optimized}ms (${Number(
-                  (1 - value.optimized / value.unoptimized) * 100
-                ).toFixed(2)}%)`
-            )
-            .join('\n')
-        );
       }
     }
   };
@@ -92,6 +83,24 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <Text>Step {`${progress[0]} / ${progress[1]}`}</Text>
       <Button title={buttonTitle} onPress={(event) => handleRun(event.nativeEvent.timestamp)} />
+
+      {/* Results display below the button */}
+      <View style={styles.resultsContainer}>
+        <Text style={styles.resultsText}>
+          {Object.keys(results).length > 0
+            ? Object.entries(results)
+                .sort((a, b) => Number(a[0]) - Number(b[0]))
+                .map(([key, value]) => {
+                  const index = Number(key);
+                  const percent =
+                    value.unoptimized === 0 ? 'N/A' : ((1 - value.optimized / value.unoptimized) * 100).toFixed(2);
+                  return `${benchmarks[index].title}: ${value.unoptimized}ms -> ${value.optimized}ms (${percent}%)`;
+                })
+                .join('\n')
+            : ''}
+        </Text>
+      </View>
+
       {runBenchmark && (
         <MeasureComponent
           key={markerName}
@@ -111,5 +120,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  resultsContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  resultsText: {
+    minHeight: benchmarks.length * 16,
+    textAlign: 'center',
   },
 });
