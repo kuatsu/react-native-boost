@@ -23,6 +23,6 @@ runs:
       if: steps.yarn-cache.outputs.cache-hit != 'true'
       run: |
         yarn install --cwd apps/example --frozen-lockfile
-        # yarn install --cwd apps/docs --frozen-lockfile # TODO: re-enable once docs have been added
+        yarn install --cwd apps/docs --frozen-lockfile
         yarn install --frozen-lockfile
       shell: bash
