@@ -186,7 +186,10 @@ function isStringNode(path: NodePath<t.JSXOpeningElement>, child: t.Node): boole
     const expression = child.expression;
     if (t.isIdentifier(expression)) {
       const binding = path.scope.getBinding(expression.name);
-      return binding ? t.isStringLiteral(binding.path.node) : false;
+      if (binding && binding.path.node && t.isVariableDeclarator(binding.path.node)) {
+        return !!binding.path.node.init && t.isStringLiteral(binding.path.node.init);
+      }
+      return false;
     }
     if (t.isStringLiteral(expression)) return true;
   }
