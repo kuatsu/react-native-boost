@@ -1,0 +1,61 @@
+:root {
+  /* Font family */
+  --ifm-font-family-base: 'Lato', sans-serif;
+
+  /* Light Mode - Light Orange Tone */
+  --ifm-color-primary: #ff9800;
+  --ifm-color-primary-dark: #fb8c00;
+  --ifm-color-primary-darker: #f57c00;
+  --ifm-color-primary-darkest: #e65100;
+  --ifm-color-primary-light: #ffb74d;
+  --ifm-color-primary-lighter: #ffd54f;
+  --ifm-color-primary-lightest: #ffe082;
+
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+.hero--primary {
+  background-color: var(--ifm-color-primary-lighter);
+  color: #000;
+
+  h1 {
+    color: #fff;
+    text-shadow:
+      -1px 1px 0 black,
+      -2px 2px 0 black,
+      -3px 3px 0 black;
+  }
+}
+
+.hero__subtitle {
+  font-weight: 500;
+  font-size: 1.5rem;
+  max-width: 650px;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  /* Dark Mode - Soft Orange Palette for readability */
+  --ifm-color-primary: #ffcc80;
+  --ifm-color-primary-dark: #ffb74d;
+  --ifm-color-primary-darker: #ffa726;
+  --ifm-color-primary-darkest: #ff9800;
+  --ifm-color-primary-dark-bg: rgb(33, 21, 4);
+  --ifm-color-primary-light: #ffd54f;
+  --ifm-color-primary-lighter: #ffe082;
+  --ifm-color-primary-lightest: #fff3e0;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  .hero--primary {
+    background-color: var(--ifm-color-primary-dark-bg);
+    color: #fff;
+
+    h1 {
+      text-shadow:
+        -1px 1px 0 var(--ifm-color-primary),
+        -2px 2px 0 var(--ifm-color-primary),
+        -3px 3px 0 var(--ifm-color-primary);
+    }
+  }
+}

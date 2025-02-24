@@ -1,0 +1,25 @@
+.heroBanner {
+  padding: 12rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroContentContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
