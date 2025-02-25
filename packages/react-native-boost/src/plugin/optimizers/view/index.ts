@@ -64,7 +64,7 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
   const parent = path.parent as t.JSXElement;
 
   // Replace the Text component with NativeText
-  replaceWithNativeComponent(path, parent, file, 'NativeView', 'View', 'react-native-boost');
+  replaceWithNativeComponent(path, parent, file, 'NativeView');
 };
 
 /**

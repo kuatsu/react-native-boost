@@ -1,6 +1,7 @@
 import { NodePath, types as t } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import { FileImportOptions, HubFile } from '../../types';
+import { RUNTIME_MODULE_NAME } from '../constants';
 
 /**
  * Adds a hint to the file object to ensure that a specific import is added only once and cached on the file object.
@@ -41,7 +42,6 @@ export function addFileImportHint({
  * @param parent - The parent JSX element.
  * @param file - The Babel file object.
  * @param nativeComponentName - The name of the native component to import.
- * @param originalComponentName - The name of the original component being replaced.
  * @param moduleName - The module to import the native component from.
  * @returns The identifier for the imported native component.
  */
@@ -49,9 +49,7 @@ export const replaceWithNativeComponent = (
   path: NodePath<t.JSXOpeningElement>,
   parent: t.JSXElement,
   file: HubFile,
-  nativeComponentName: string,
-  originalComponentName: string,
-  moduleName: string
+  nativeComponentName: string
 ): t.Identifier => {
   // Add native component import (cached on file) to prevent duplicate imports
   const nativeIdentifier = addFileImportHint({
@@ -59,9 +57,12 @@ export const replaceWithNativeComponent = (
     nameHint: nativeComponentName,
     path,
     importName: nativeComponentName,
-    moduleName,
+    moduleName: RUNTIME_MODULE_NAME,
     importType: 'named',
   });
+
+  // Get the current name of the component, which may be aliased (i.e. Text -> RNText)
+  const currentName = (path.node.name as t.JSXIdentifier).name;
 
   // Replace the component with its native counterpart
   const jsxName = path.node.name as t.JSXIdentifier;
@@ -72,7 +73,7 @@ export const replaceWithNativeComponent = (
     !path.node.selfClosing &&
     parent.closingElement &&
     t.isJSXIdentifier(parent.closingElement.name) &&
-    parent.closingElement.name.name === originalComponentName
+    parent.closingElement.name.name === currentName
   ) {
     parent.closingElement.name.name = nativeIdentifier.name;
   }

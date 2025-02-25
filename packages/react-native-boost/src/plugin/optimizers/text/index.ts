@@ -12,6 +12,7 @@ import {
   replaceWithNativeComponent,
   isStringNode,
 } from '../../utils/common';
+import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
   'allowFontScaling',
@@ -61,7 +62,7 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   processProps(path, file, originalAttributes);
 
   // Replace the Text component with NativeText
-  replaceWithNativeComponent(path, parent, file, 'NativeText', 'Text', 'react-native-boost');
+  replaceWithNativeComponent(path, parent, file, 'NativeText');
 };
 
 /**
@@ -176,7 +177,7 @@ function processProps(
       nameHint: 'normalizeAccessibilityProps',
       path,
       importName: 'normalizeAccessibilityProps',
-      moduleName: 'react-native-boost',
+      moduleName: RUNTIME_MODULE_NAME,
     });
     const accessibilityObject = buildPropertiesFromAttributes(accessibilityAttributes);
     const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
@@ -187,7 +188,7 @@ function processProps(
       nameHint: 'flattenTextStyle',
       path,
       importName: 'flattenTextStyle',
-      moduleName: 'react-native-boost',
+      moduleName: RUNTIME_MODULE_NAME,
     });
     const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
 
@@ -200,7 +201,7 @@ function processProps(
       nameHint: 'flattenTextStyle',
       path,
       importName: 'flattenTextStyle',
-      moduleName: 'react-native-boost',
+      moduleName: RUNTIME_MODULE_NAME,
     });
     const flattened = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
     path.node.attributes = [t.jsxSpreadAttribute(flattened)];
@@ -211,7 +212,7 @@ function processProps(
       nameHint: 'normalizeAccessibilityProps',
       path,
       importName: 'normalizeAccessibilityProps',
-      moduleName: 'react-native-boost',
+      moduleName: RUNTIME_MODULE_NAME,
     });
     const propsObject = buildPropertiesFromAttributes(originalAttributes);
     const normalized = t.callExpression(t.identifier(normalizeIdentifier.name), [propsObject]);

@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { accessibilityProperties } from '../constants';
+import { ACCESSIBILITY_PROPERTIES } from '../constants';
 
 /**
  * Checks if the JSX element has a blacklisted property.
@@ -103,7 +103,7 @@ export const hasAccessibilityProperty = (
   for (const attribute of attributes) {
     if (t.isJSXAttribute(attribute)) {
       const key = attribute.name.name;
-      if (typeof key === 'string' && accessibilityProperties.has(key)) {
+      if (typeof key === 'string' && ACCESSIBILITY_PROPERTIES.has(key)) {
         return true;
       }
     } else if (t.isJSXSpreadAttribute(attribute)) {
@@ -112,7 +112,7 @@ export const hasAccessibilityProperty = (
           if (
             t.isObjectProperty(property) &&
             t.isIdentifier(property.key) &&
-            accessibilityProperties.has(property.key.name)
+            ACCESSIBILITY_PROPERTIES.has(property.key.name)
           ) {
             return true;
           }
@@ -126,7 +126,7 @@ export const hasAccessibilityProperty = (
               if (
                 t.isObjectProperty(property) &&
                 t.isIdentifier(property.key) &&
-                accessibilityProperties.has(property.key.name)
+                ACCESSIBILITY_PROPERTIES.has(property.key.name)
               ) {
                 return true;
               }

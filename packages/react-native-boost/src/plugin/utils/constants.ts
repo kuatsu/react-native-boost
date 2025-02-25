@@ -1,7 +1,9 @@
+export const RUNTIME_MODULE_NAME = 'react-native-boost';
+
 /**
  * The set of accessibility properties that need to be normalized.
  */
-export const accessibilityProperties = new Set([
+export const ACCESSIBILITY_PROPERTIES = new Set([
   'accessibilityLabel',
   'aria-label',
   'accessibilityState',
