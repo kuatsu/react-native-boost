@@ -3,7 +3,7 @@ import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import {
   hasBlacklistedProperty,
-  shouldIgnoreOptimization,
+  isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
@@ -43,7 +43,7 @@ export const viewBlacklistedProperties = new Set([
 ]);
 
 export const viewOptimizer: Optimizer = (path, log = () => {}) => {
-  if (shouldIgnoreOptimization(path)) return;
+  if (isIgnoredLine(path)) return;
   if (!isValidJSXComponent(path, 'View')) return;
   if (!isReactNativeImport(path, 'View')) return;
   if (hasBlacklistedProperty(path, viewBlacklistedProperties)) return;

@@ -6,7 +6,7 @@ import {
   buildPropertiesFromAttributes,
   hasAccessibilityProperty,
   hasBlacklistedProperty,
-  shouldIgnoreOptimization,
+  isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
@@ -35,7 +35,7 @@ export const textBlacklistedProperties = new Set([
 ]);
 
 export const textOptimizer: Optimizer = (path, log = () => {}) => {
-  if (shouldIgnoreOptimization(path)) return;
+  if (isIgnoredLine(path)) return;
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
   if (hasBlacklistedProperty(path, textBlacklistedProperties)) return;
