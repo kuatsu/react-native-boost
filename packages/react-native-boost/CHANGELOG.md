@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/kuatsu/react-native-boost/compare/v0.5.3...v0.5.4) (2025-02-25)
+
+
+### Bug Fixes
+
+* fixed optimizing aliased imports ([2eee88b](https://github.com/kuatsu/react-native-boost/commit/2eee88bce014744a13f75ea08d386fba61c5be7c))
+
 ## [0.5.3](https://github.com/kuatsu/react-native-boost/compare/v0.5.2...v0.5.3) (2025-02-24)
 
 
