@@ -22,6 +22,7 @@ export default [
           allowList: {
             props: true,
             Prop: true,
+            Props: true,
           },
         },
       ],
