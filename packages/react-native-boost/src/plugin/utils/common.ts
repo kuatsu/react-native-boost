@@ -5,6 +5,7 @@ import { minimatch } from 'minimatch';
 import path from 'node:path';
 import PluginError from './plugin-error';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
+import { accessibilityProperties } from './constants';
 
 /**
  * Adds a hint to the file object to ensure that a specific import is added only once and cached on the file object.
@@ -152,7 +153,12 @@ export const shouldIgnoreOptimization = (path: NodePath<t.JSXOpeningElement>): b
  */
 export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blacklist: Set<string>): boolean => {
   return path.node.attributes.some((attribute) => {
-    // Check if we can resolve the spread attribute
+    // Check direct attributes (e.g., onPress={handler})
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && blacklist.has(attribute.name.name)) {
+      return true;
+    }
+
+    // Check spread attributes (e.g., {...props})
     if (t.isJSXSpreadAttribute(attribute)) {
       if (t.isIdentifier(attribute.argument)) {
         const binding = path.scope.getBinding(attribute.argument.name);
@@ -178,7 +184,7 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
       return true;
     }
 
-    // For other attribute types (e.g. namespaced), assume no blacklisting
+    // For other attribute types, assume no blacklisting
     return false;
   });
 };
@@ -225,21 +231,6 @@ export const buildPropertiesFromAttributes = (attributes: (t.JSXAttribute | t.JS
     ...arguments_,
   ]);
 };
-
-/**
- * The set of accessibility properties that need to be normalized.
- */
-export const accessibilityProperties = new Set([
-  'accessibilityLabel',
-  'aria-label',
-  'accessibilityState',
-  'aria-busy',
-  'aria-checked',
-  'aria-disabled',
-  'aria-expanded',
-  'aria-selected',
-  'accessible',
-]);
 
 /**
  * Checks if the JSX element has an accessibility property.
@@ -293,4 +284,92 @@ export const hasAccessibilityProperty = (
     }
   }
   return false;
+};
+
+/**
+ * Checks if the path represents a valid JSX component with the specified name.
+ *
+ * @param path - The NodePath to check.
+ * @param componentName - The name of the component to validate against.
+ * @returns true if the path is a valid JSX component with the specified name.
+ */
+export const isValidJSXComponent = (path: NodePath<t.JSXOpeningElement>, componentName: string): boolean => {
+  // Check if the node name is a JSX identifier
+  if (!t.isJSXIdentifier(path.node.name)) return false;
+
+  // Check if the parent is a JSX element
+  const parent = path.parent;
+  if (!t.isJSXElement(parent)) return false;
+
+  // Check if the element name matches the target component name
+  return path.node.name.name === componentName;
+};
+
+/**
+ * Checks if the component is imported from 'react-native'.
+ *
+ * @param path - The NodePath to check.
+ * @param componentName - The name of the component to validate.
+ * @returns true if the component is imported from 'react-native'.
+ */
+export const isReactNativeImport = (path: NodePath<t.JSXOpeningElement>, componentName: string): boolean => {
+  // Get the binding for the component name
+  const binding = path.scope.getBinding(componentName);
+  if (!binding) return false;
+
+  // Check if it's a module import
+  if (binding.kind === 'module') {
+    const parentNode = binding.path.parent;
+    // Verify it's imported from 'react-native'
+    return t.isImportDeclaration(parentNode) && parentNode.source.value === 'react-native';
+  }
+
+  return false;
+};
+
+/**
+ * Replaces a component with its native counterpart.
+ * This function handles both the opening and closing tags.
+ *
+ * @param path - The path to the JSXOpeningElement.
+ * @param parent - The parent JSX element.
+ * @param file - The Babel file object.
+ * @param nativeComponentName - The name of the native component to import.
+ * @param originalComponentName - The name of the original component being replaced.
+ * @param moduleName - The module to import the native component from.
+ * @returns The identifier for the imported native component.
+ */
+export const replaceWithNativeComponent = (
+  path: NodePath<t.JSXOpeningElement>,
+  parent: t.JSXElement,
+  file: HubFile,
+  nativeComponentName: string,
+  originalComponentName: string,
+  moduleName: string
+): t.Identifier => {
+  // Add native component import (cached on file) to prevent duplicate imports
+  const nativeIdentifier = addFileImportHint({
+    file,
+    nameHint: nativeComponentName,
+    path,
+    importName: nativeComponentName,
+    moduleName,
+    importType: 'named',
+  });
+
+  // Replace the component with its native counterpart
+  const jsxName = path.node.name as t.JSXIdentifier;
+  jsxName.name = nativeIdentifier.name;
+
+  // If the element is not self-closing, update the closing element as well
+  if (
+    !path.node.selfClosing &&
+    parent.closingElement &&
+    t.isJSXIdentifier(parent.closingElement.name) &&
+    parent.closingElement.name.name === originalComponentName
+  ) {
+    parent.closingElement.name.name = nativeIdentifier.name;
+  }
+
+  return nativeIdentifier;
 };

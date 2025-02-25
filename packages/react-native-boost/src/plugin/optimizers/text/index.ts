@@ -7,6 +7,9 @@ import {
   hasAccessibilityProperty,
   hasBlacklistedProperty,
   shouldIgnoreOptimization,
+  isValidJSXComponent,
+  isReactNativeImport,
+  replaceWithNativeComponent,
 } from '../../utils/common';
 
 export const textBlacklistedProperties = new Set([
@@ -31,34 +34,14 @@ export const textBlacklistedProperties = new Set([
 ]);
 
 export const textOptimizer: Optimizer = (path, log = () => {}) => {
-  // Ensure we're processing a JSX Text element
-  if (!t.isJSXIdentifier(path.node.name)) return;
-
-  const parent = path.parent;
-  if (!t.isJSXElement(parent)) return;
-
-  const elementName = path.node.name.name;
-  if (elementName !== 'Text') return;
-
-  // If the component is preceded by an ignore comment, do not optimize.
-  if (shouldIgnoreOptimization(path)) {
-    return;
-  }
-
-  // Ensure Text element comes from react-native
-  const binding = path.scope.getBinding(elementName);
-  if (!binding) return;
-  if (binding.kind === 'module') {
-    const parentNode = binding.path.parent;
-    if (!t.isImportDeclaration(parentNode) || parentNode.source.value !== 'react-native') {
-      return;
-    }
-  }
-
-  // Bail if the element has any blacklisted properties or non-string children props
+  if (shouldIgnoreOptimization(path)) return;
+  if (!isValidJSXComponent(path, 'Text')) return;
+  if (!isReactNativeImport(path, 'Text')) return;
   if (hasBlacklistedProperty(path, textBlacklistedProperties)) return;
-  if (hasInvalidChildren(path)) return;
-  if (!hasOnlyStringChildren(path, parent)) return;
+
+  // Verify that the Text only has string children
+  const parent = path.parent as t.JSXElement;
+  if (hasInvalidChildren(path, parent)) return;
 
   // Extract the file from the Babel hub and add flags for logging & import caching
   const hub = path.hub as unknown;
@@ -153,30 +136,9 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
     path.node.attributes = [t.jsxSpreadAttribute(normalized)];
   }
 
-  // Add TextNativeComponent import (cached on file) so we only add it once per file.
-  const nativeTextIdentifier = addFileImportHint({
-    file,
-    nameHint: 'NativeText',
-    path,
-    importName: 'NativeText',
-    moduleName: 'react-native-boost',
-  });
-  path.node.name.name = nativeTextIdentifier.name;
-
-  // If the element is not self-closing, update the closing element as well
-  if (
-    !path.node.selfClosing &&
-    parent.closingElement &&
-    t.isJSXIdentifier(parent.closingElement.name) &&
-    parent.closingElement.name.name === 'Text'
-  ) {
-    parent.closingElement.name.name = nativeTextIdentifier.name;
-  }
+  // Replace the Text component with NativeText
+  replaceWithNativeComponent(path, parent, file, 'NativeText', 'Text', 'react-native-boost');
 };
-
-function hasOnlyStringChildren(path: NodePath<t.JSXOpeningElement>, node: t.JSXElement): boolean {
-  return node.children.every((child) => isStringNode(path, child));
-}
 
 function isStringNode(path: NodePath<t.JSXOpeningElement>, child: t.Node): boolean {
   if (t.isJSXText(child) || t.isStringLiteral(child)) return true;
@@ -230,20 +192,29 @@ function fixNegativeNumberOfLines({
   }
 }
 
-function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>): boolean {
+/**
+ * Checks if the Text component has any invalid children or blacklisted properties.
+ * This function combines the checks for both attribute-based children and JSX children.
+ *
+ * @param path - The path to the JSXOpeningElement.
+ * @param parent - The parent JSX element.
+ * @returns true if the component has invalid children or blacklisted properties.
+ */
+function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>, parent: t.JSXElement): boolean {
   for (const attribute of path.node.attributes) {
     if (t.isJSXSpreadAttribute(attribute)) continue; // Spread attributes are handled in hasBlacklistedProperty
 
-    if (t.isJSXIdentifier(attribute.name) && attribute.value) {
+    if (
+      t.isJSXIdentifier(attribute.name) &&
+      attribute.value &&
       // For a "children" attribute, optimization is allowed only if it is a string
-      if (attribute.name.name === 'children') {
-        if (!isStringNode(path, attribute.value)) {
-          return true;
-        }
-      } else if (textBlacklistedProperties.has(attribute.name.name)) {
-        return true;
-      }
+      attribute.name.name === 'children' &&
+      !isStringNode(path, attribute.value)
+    ) {
+      return true;
     }
   }
-  return false;
+
+  // Return true if any child is not a string node
+  return !parent.children.every((child) => isStringNode(path, child));
 }

@@ -1,7 +1,13 @@
 import { NodePath, types as t } from '@babel/core';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { addFileImportHint, hasBlacklistedProperty, shouldIgnoreOptimization } from '../../utils/common';
+import {
+  hasBlacklistedProperty,
+  shouldIgnoreOptimization,
+  isValidJSXComponent,
+  isReactNativeImport,
+  replaceWithNativeComponent,
+} from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
   'accessible',
@@ -37,32 +43,10 @@ export const viewBlacklistedProperties = new Set([
 ]);
 
 export const viewOptimizer: Optimizer = (path, log = () => {}) => {
-  // Ensure we're processing a JSX element identifier.
-  if (!t.isJSXIdentifier(path.node.name)) return;
-
-  const parent = path.parent;
-  if (!t.isJSXElement(parent)) return;
-
-  const elementName = path.node.name.name;
-  if (elementName !== 'View') return;
-
-  // Respect comments that disable optimization.
   if (shouldIgnoreOptimization(path)) return;
-
-  // Ensure the View element comes from react-native.
-  const binding = path.scope.getBinding(elementName);
-  if (!binding) return;
-  if (binding.kind === 'module') {
-    const parentNode = binding.path.parent;
-    if (!t.isImportDeclaration(parentNode) || parentNode.source.value !== 'react-native') {
-      return;
-    }
-  }
-
-  // Bail if any blacklisted props are present.
+  if (!isValidJSXComponent(path, 'View')) return;
+  if (!isReactNativeImport(path, 'View')) return;
   if (hasBlacklistedProperty(path, viewBlacklistedProperties)) return;
-
-  // Bail if a <TextAncestor /> component exists as an ancestor.
   if (hasTextAncestor(path)) return;
 
   // Extract the file from the Babel hub and add flags for logging & import caching.
@@ -77,28 +61,10 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
   const lineNumber = path.node.loc?.start.line ?? 'unknown line';
   log(`Optimizing View component in ${filename}:${lineNumber}`);
 
-  // Add ViewNativeComponent import (cached on the file) to prevent duplicate imports.
-  const viewNativeIdentifier = addFileImportHint({
-    file,
-    path,
-    importName: 'NativeView',
-    moduleName: 'react-native-boost',
-    importType: 'named',
-    nameHint: 'NativeView',
-  });
+  const parent = path.parent as t.JSXElement;
 
-  // Replace the component with its native counterpart.
-  path.node.name.name = viewNativeIdentifier.name;
-
-  // If the element is not self-closing, update the closing element as well.
-  if (
-    !path.node.selfClosing &&
-    parent.closingElement &&
-    t.isJSXIdentifier(parent.closingElement.name) &&
-    parent.closingElement.name.name === 'View'
-  ) {
-    parent.closingElement.name.name = viewNativeIdentifier.name;
-  }
+  // Replace the Text component with NativeText
+  replaceWithNativeComponent(path, parent, file, 'NativeView', 'View', 'react-native-boost');
 };
 
 /**
