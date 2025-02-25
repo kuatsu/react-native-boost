@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.5](https://github.com/kuatsu/react-native-boost/compare/v0.5.4...v0.5.5) (2025-02-25)
+
+
+### Bug Fixes
+
+* don't optimize views with indirect text ancestor (custom component) ([a8d5ced](https://github.com/kuatsu/react-native-boost/commit/a8d5ced7ee4047e9094571257389a2680bd6214e))
+
 ## [0.5.4](https://github.com/kuatsu/react-native-boost/compare/v0.5.3...v0.5.4) (2025-02-25)
 
 
