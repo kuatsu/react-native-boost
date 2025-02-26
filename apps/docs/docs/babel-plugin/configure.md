@@ -51,3 +51,20 @@ An object specifying which optimizers to enable or disable. The keys are the nam
 
 - `text`
 - `view`
+
+## Enable only in development / production mode
+
+Babel supports overriding / merging the configuration based on the environment. See the Babel documentation [here](https://babeljs.io/docs/options#env) and [here](https://babeljs.io/docs/options#envname).
+
+For example, to only enable React Native Boost in development mode, you can do the following:
+
+```js
+module.exports = {
+  // your existing configuration...
+  env: {
+    development: {
+      plugins: ['react-native-boost/plugin'],
+    },
+  },
+};
+```
