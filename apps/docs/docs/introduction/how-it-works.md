@@ -29,4 +29,4 @@ When the plugin has determined that a component can be optimized, it will replac
 
 By bypassing the JavaScript wrapper components, React Native Boost eliminates bloat like hooks, prop processing, context, and more. Additionally, it flattens the component tree by one level per component optimized. All of this leads to faster initial render times, especially on screens with many Text and View components.
 
-To give you an example, [here](https://github.com/facebook/react-native/blob/main/packages/react-native/Libraries/Text/Text.js) you can see React Native's `Text` component looks like. You can see that it has a lot of work before it renders the underlying native component – React Native Boost will often let you skip all of that.
+To give you an example, [here](https://github.com/facebook/react-native/blob/main/packages/react-native/Libraries/Text/Text.js) you can see what React Native's `Text` component looks like. You can see that it has a lot of work before it renders the underlying native component – React Native Boost will often let you skip all of that.
