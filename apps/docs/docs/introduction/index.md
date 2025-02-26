@@ -5,12 +5,12 @@ title: Introduction
 
 # React Native Boost
 
-**React Native Boost** is a powerful library that can improve your React Native app's performance by up to 50%. It consists of two parts:
+**React Native Boost** is a powerful library that can improve your React Native app's performance by statically analyzing your code and applying micro-optimizations. It consists of two parts:
 
-- A Babel plugin that performs static analysis on your code and applies micro-optimizations throughout your codebase.
+- A Babel plugin that analyzes the [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree) of your code and replaces standard React Native components with their underlying, more performant native counterparts.
 - A runtime library that is used by the Babel plugin to apply optimizations that can only be applied at runtime.
 
-The code analyzer is built to be very strict when it comes to where it applies optimizations. It will try to only apply optimizations that are guaranteed to not affect the app's behavior. If something breaks anyway, you're able to disable specific optimizations on a file-by-file or even line-by-line basis, ensuring the plugin can be adapted to your needs.
+The code analyzer is built to be very strict when it comes to where it applies optimizations. It will try to only apply optimizations that are guaranteed to not break the app or affect its behavior. If something does break, you're able to disable specific optimizations on a file-by-file or even line-by-line basis, ensuring the plugin can be adapted to your needs.
 
 :::warning
 
@@ -20,7 +20,7 @@ The library and its Babel plugin are still experimental. You should expect thing
 
 ## Getting Started
 
-Installation and setup is an incredibly simple process:
+Installation and setup is a very simple process:
 
 1. Install the library and its dependencies using your favorite package manager (**do not** install the package as a dev dependency<sup>1</sup>):
 
@@ -59,4 +59,4 @@ That's it! You do not need to import React Native Boost into your code, install 
 
 ## Platform Support
 
-React Native Boost is compatible with all common platforms that React Native supports, including iOS, Android, and Web. However, optimizations are only applied on native platforms supporting the native components that React Native Boost uses. For example, on Web, all optimizations fall back to the standard React Native components.
+React Native Boost is compatible with all common platforms that React Native supports, including iOS, Android, and Web. However, optimizations are only applied on native platforms supporting the native components that React Native Boost uses. On other platforms such as Web, all optimizations fall back to the standard React Native components.

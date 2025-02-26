@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'React Native Boost',
-  tagline: "A powerful plugin that boosts your React Native app's performance by up to 50% with a single line of code.",
+  tagline: "A powerful plugin that boosts your React Native app's performance with a single line of code.",
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here

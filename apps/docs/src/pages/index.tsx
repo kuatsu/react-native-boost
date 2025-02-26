@@ -31,7 +31,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`Boost your React Native App`}
-      description="A powerful tool that improves your React Native app's performance by up to 50% with one line of code.">
+      description="A powerful tool that improves your React Native app's performance with one line of code.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
