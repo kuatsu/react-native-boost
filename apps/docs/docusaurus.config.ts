@@ -123,6 +123,11 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
+    algolia: {
+      appId: 'N829OEV4PO',
+      apiKey: '33c6bcc5ad123166251991d3771f998d',
+      indexName: 'react-native-boost-oss-kuatsu',
+    },
   } satisfies Preset.ThemeConfig,
 };
 
