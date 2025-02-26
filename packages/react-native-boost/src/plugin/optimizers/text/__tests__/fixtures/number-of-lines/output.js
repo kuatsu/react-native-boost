@@ -1,4 +1,4 @@
-import { NativeText as _NativeText } from 'react-native-boost';
+import { NativeText as _NativeText } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText numberOfLines={10}>10 lines</_NativeText>;
 <_NativeText numberOfLines={0}>-10 lines</_NativeText>;

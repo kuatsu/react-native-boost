@@ -4,7 +4,11 @@ sidebar_position: 3
 
 # Runtime Library
 
-The runtime library, imported via `react-native-boost`, is a small library that is used by the Babel plugin to apply optimizations that can only be applied at runtime. While you can import the runtime library directly, we do not recommend doing so. The functions exported are mainly basic helper functions directly intended to be used by the Babel plugin and can change without prior notice. For the sake of completeness, we've documented them here, however.
+The runtime library, imported via `react-native-boost/runtime`, is a small library that is used by the Babel plugin to actually apply optimizations in your app. Other than re-exporting the native Text and View components (in order to avoid issues with `react-native-web`), the runtime library also exports a few helper functions that can be used by the Babel plugin. While you can import the runtime library directly, we do not recommend doing so. The exported functions and components are intended to be used directly by the Babel plugin and can change without prior notice. For the sake of completeness, we've documented them here, however.
+
+:::warning
+Currently, the runtime library can also be imported from `react-native-boost` (instead of `react-native-boost/runtime`) for backwards compatibility. However, this is deprecated and will be removed in a future version.
+:::
 
 ## `flattenTextStyle`
 
@@ -26,7 +30,7 @@ If a falsy or invalid style is passed, the function returns an empty object.
 ### Example
 
 ```javascript
-import { flattenTextStyle } from 'react-native-boost';
+import { flattenTextStyle } from 'react-native-boost/runtime';
 
 const style = {
   fontWeight: 500,
@@ -55,7 +59,7 @@ Returns a new **object** with normalized accessibility properties, so that the p
 ### Example
 
 ```javascript
-import { normalizeAccessibilityProperties } from 'react-native-boost';
+import { normalizeAccessibilityProperties } from 'react-native-boost/runtime';
 
 const props = {
   'aria-label': 'Submit button',
@@ -74,7 +78,7 @@ The `NativeText` component imports the native Text component from React Native o
 ### Example
 
 ```javascript
-import { NativeText } from 'react-native-boost';
+import { NativeText } from 'react-native-boost/runtime';
 
 <NativeText>Hello</NativeText>;
 ```
@@ -86,7 +90,7 @@ The `NativeView` component imports the native View component from React Native o
 ### Example
 
 ```javascript
-import { NativeView, NativeText } from 'react-native-boost';
+import { NativeView, NativeText } from 'react-native-boost/runtime';
 
 <NativeView>
   <NativeText>Hello</NativeText>

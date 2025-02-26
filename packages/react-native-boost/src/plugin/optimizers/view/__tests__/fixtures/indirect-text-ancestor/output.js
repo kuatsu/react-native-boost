@@ -1,4 +1,4 @@
-import { NativeView as _NativeView } from 'react-native-boost';
+import { NativeView as _NativeView } from 'react-native-boost/runtime';
 import { Text, View } from 'react-native';
 const Custom = ({ children }) => {
   return <Text>{children}</Text>;

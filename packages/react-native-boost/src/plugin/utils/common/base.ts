@@ -11,7 +11,7 @@ import { RUNTIME_MODULE_NAME } from '../constants';
  *   - nameHint: The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'normalizeAccessibilityProps')
  *   - path: The current Babel NodePath
  *   - importName: The named import string (e.g. 'normalizeAccessibilityProps'), used when importType is 'named'
- *   - moduleName: The module to import from (e.g. 'react-native-boost')
+ *   - moduleName: The module to import from (e.g. 'react-native-boost/runtime')
  *   - importType: Either 'named' (default) or 'default' to determine the type of import to use.
  *
  * @returns The identifier returned by addNamed or addDefault.

@@ -14,12 +14,29 @@
       },
       "default": "./dist/index.js"
     },
+    "./runtime": {
+      "import": {
+        "types": "./dist/runtime/index.d.ts",
+        "default": "./runtime.mjs"
+      },
+      "default": "./runtime.js"
+    },
     "./plugin": {
       "import": {
         "types": "./dist/plugin/index.d.ts",
-        "default": "./dist/plugin/esm/index.mjs"
+        "default": "./plugin.mjs"
       },
-      "default": "./dist/plugin/index.js"
+      "default": "./plugin.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "runtime": [
+        "dist/runtime/index.d.ts"
+      ],
+      "plugin": [
+        "dist/plugin/index.d.ts"
+      ]
     }
   },
   "keywords": [
@@ -45,6 +62,12 @@
   "files": [
     "src",
     "dist",
+    "runtime.d.ts",
+    "runtime.js",
+    "runtime.mjs",
+    "plugin.d.ts",
+    "plugin.js",
+    "plugin.mjs",
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__",

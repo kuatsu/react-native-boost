@@ -1,4 +1,4 @@
-import { flattenTextStyle as _flattenTextStyle, NativeText as _NativeText } from 'react-native-boost';
+import { flattenTextStyle as _flattenTextStyle, NativeText as _NativeText } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
   {..._flattenTextStyle({

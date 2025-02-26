@@ -39,7 +39,7 @@ Enables verbose logging of performed optimizations, including the filename and l
 
 An array of glob patterns to ignore when performing optimizations. Defaults to an empty array (no files are ignored).
 
-:::warning
+:::info
 
 By default, the plugin does not ignore any files. This means that the plugin will also recursively scan your `node_modules` directory and optimize code in there as well. If you only want to optimize code in your own project, you should add the glob pattern `node_modules/**` to the `ignores` array.
 

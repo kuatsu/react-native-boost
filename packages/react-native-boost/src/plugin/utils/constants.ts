@@ -1,4 +1,4 @@
-export const RUNTIME_MODULE_NAME = 'react-native-boost';
+export const RUNTIME_MODULE_NAME = 'react-native-boost/runtime';
 
 /**
  * The set of accessibility properties that need to be normalized.

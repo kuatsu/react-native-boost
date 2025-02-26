@@ -50,7 +50,7 @@ export interface FileImportOptions {
    * The named import string (e.g. 'normalizeAccessibilityProps'). Ignored if importType is "default".
    */
   importName: string;
-  /** The module to import from (e.g. 'react-native-boost') */
+  /** The module to import from (e.g. 'react-native-boost/runtime') */
   moduleName: string;
   /**
    * Determines which helper to use:
