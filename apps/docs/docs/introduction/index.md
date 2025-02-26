@@ -55,7 +55,7 @@ yarn start --clear
 
 That's it! You do not need to import React Native Boost into your code, install native dependencies, or do anything else. The plugin will now ✨ automagically ✨ optimize your code.
 
-<sup>1</sup> While the [Babel plugin](../babel-plugin/) itself would work as a dev dependency, the plugin requires that the [runtime library](../runtime-library/) can be imported from the app. The native components used by the plugin are not imported directly from `react-native`, but rather from the runtime library which re-exports them to avoid issues with non-native platforms like `react-native-web`.
+<sup>1</sup> While the Babel plugin itself would work as a dev dependency, the plugin requires that the [runtime library](/docs/runtime-library/) can be imported from the app. The native components used by the plugin are not imported directly from `react-native`, but rather from the runtime library which re-exports them to avoid issues with non-native platforms like `react-native-web`.
 
 ## Platform Support
 
