@@ -43,7 +43,7 @@ export const viewBlacklistedProperties = new Set([
   'style',
 ]);
 
-// Components to skip when checking for indirect Text ancestors
+// Components to skip when checking for indirect View ancestors
 const skipComponents = ['View', 'Fragment', 'ScrollView', 'FlatList'];
 
 export const viewOptimizer: Optimizer = (path, log = () => {}) => {
@@ -67,6 +67,6 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
 
   const parent = path.parent as t.JSXElement;
 
-  // Replace the Text component with NativeText
+  // Replace the View component with NativeView
   replaceWithNativeComponent(path, parent, file, 'NativeView');
 };
