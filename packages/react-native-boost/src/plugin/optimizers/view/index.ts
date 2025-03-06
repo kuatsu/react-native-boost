@@ -43,7 +43,7 @@ export const viewBlacklistedProperties = new Set([
   'style',
 ]);
 
-// Components to skip when checking for indirect View ancestors
+// Components to skip when checking for indirect Text ancestors
 const skipComponents = ['View', 'Fragment', 'ScrollView', 'FlatList'];
 
 export const viewOptimizer: Optimizer = (path, log = () => {}) => {
