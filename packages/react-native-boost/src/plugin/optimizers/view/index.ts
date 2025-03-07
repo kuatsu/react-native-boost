@@ -67,6 +67,6 @@ export const viewOptimizer: Optimizer = (path, log = () => {}) => {
 
   const parent = path.parent as t.JSXElement;
 
-  // Replace the Text component with NativeText
+  // Replace the View component with NativeView
   replaceWithNativeComponent(path, parent, file, 'NativeView');
 };
