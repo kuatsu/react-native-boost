@@ -40,6 +40,13 @@ yarn add react-native-boost
 
 Then, add the plugin to your Babel configuration (`babel.config.js`):
 
+#### Using RN-Integrate
+```sh
+npx react-native-integrate react-native-boost
+```
+
+#### Manual
+
 ```js
 module.exports = {
   plugins: ['react-native-boost/plugin'],
