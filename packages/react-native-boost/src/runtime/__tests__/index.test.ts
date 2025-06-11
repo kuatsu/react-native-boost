@@ -5,6 +5,7 @@ import {
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
 } from '..';
+import { TextStyle } from 'react-native';
 
 vi.mock('../components/native-text', () => ({
   NativeText: () => 'MockedNativeText',
@@ -42,22 +43,28 @@ describe('processTextStyle', () => {
   it('converts numeric fontWeight to string', () => {
     const style = { fontWeight: 400 } as const;
     const result = processTextStyle(style);
-    expect(result.style.fontWeight).toBe('400');
+    expect(result.style).toBeDefined();
+    expect(result.style).toBeInstanceOf(Object);
+    expect((result.style as TextStyle).fontWeight).toBe('400');
   });
 
   it('maps userSelect to selectable and removes userSelect from style', () => {
     const style = { userSelect: 'none', color: 'blue' } as const;
     const result = processTextStyle(style);
     expect(result.selectable).toBe(userSelectToSelectableMap['none']);
-    expect(result.style.userSelect).toBeUndefined();
-    expect(result.style.color).toBe('blue');
+    expect(result.style).toBeDefined();
+    expect(result.style).toBeInstanceOf(Object);
+    expect((result.style as TextStyle).userSelect).toBeUndefined();
+    expect((result.style as TextStyle).color).toBe('blue');
   });
 
   it('maps verticalAlign to textAlignVertical and removes verticalAlign from style', () => {
     const style = { verticalAlign: 'top', fontSize: 16 } as const;
     const result = processTextStyle(style);
-    expect(result.style.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['top']);
-    expect(result.style.verticalAlign).toBeUndefined();
+    expect(result.style).toBeDefined();
+    expect(result.style).toBeInstanceOf(Object);
+    expect((result.style as TextStyle).textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['top']);
+    expect((result.style as TextStyle).verticalAlign).toBeUndefined();
   });
 
   it('handles combination of properties', () => {
@@ -68,12 +75,14 @@ describe('processTextStyle', () => {
       margin: 10,
     } as const;
     const result = processTextStyle(style);
-    expect(result.style.fontWeight).toBe('700');
+    expect(result.style).toBeDefined();
+    expect(result.style).toBeInstanceOf(Object);
+    expect((result.style as TextStyle).fontWeight).toBe('700');
     expect(result.selectable).toBe(userSelectToSelectableMap['auto']);
-    expect(result.style.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['middle']);
-    expect(result.style.margin).toBe(10);
-    expect(result.style.userSelect).toBeUndefined();
-    expect(result.style.verticalAlign).toBeUndefined();
+    expect((result.style as TextStyle).textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['middle']);
+    expect((result.style as TextStyle).margin).toBe(10);
+    expect((result.style as TextStyle).userSelect).toBeUndefined();
+    expect((result.style as TextStyle).verticalAlign).toBeUndefined();
   });
 });
 
