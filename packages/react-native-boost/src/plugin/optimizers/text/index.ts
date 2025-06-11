@@ -15,7 +15,7 @@ import {
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { ACCESSIBILITY_PROPERTIES } from '../../utils/constants';
-import { extractStyleAttribute, extractSelectableAndUpdateStyle } from '../../utils/common/style';
+import { extractStyleAttribute, extractSelectableAndUpdateStyle } from '../../utils/common';
 
 export const textBlacklistedProperties = new Set([
   'id',
