@@ -107,7 +107,7 @@
     "babel-plugin-tester": "^11.0.4",
     "esbuild-node-externals": "^1.18.0",
     "globals": "^16.0.0",
-    "react-native": "0.76.7",
+    "react-native": "0.79.3",
     "release-it": "^18.1.2",
     "rollup": "^4.34.8",
     "rollup-plugin-dts": "^6.1.1",
