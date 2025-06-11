@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.6.0](https://github.com/kuatsu/react-native-boost/compare/v0.5.7...v0.6.0) (2025-06-11)
+
+
+### Bug Fixes
+
+* fixed bundling issues on web ([efd9933](https://github.com/kuatsu/react-native-boost/commit/efd9933604a6053d5b64cb9faec714c0e3987410))
+
 ## [0.5.7](https://github.com/kuatsu/react-native-boost/compare/v0.5.6...v0.5.7) (2025-06-11)
 
 ## [0.5.6](https://github.com/kuatsu/react-native-boost/compare/v0.5.5...v0.5.6) (2025-02-26)
