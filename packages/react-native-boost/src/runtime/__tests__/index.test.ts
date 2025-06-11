@@ -21,10 +21,9 @@ vi.mock('react-native', () => ({
   Platform: {
     OS: 'ios',
   },
-}));
-
-vi.mock('react-native/Libraries/StyleSheet/flattenStyle', () => ({
-  default: (style: any) => style,
+  StyleSheet: {
+    flatten: (style: any) => style,
+  },
 }));
 
 describe('processTextStyle', () => {

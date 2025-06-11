@@ -10,15 +10,15 @@ const benchmarks = [
     title: 'Text',
     count: 10_000,
     // @boost-ignore
-    unoptimizedComponent: <Text>Nice text</Text>,
-    optimizedComponent: <Text>Nice text</Text>,
+    unoptimizedComponent: <Text style={{ color: 'red' }}>Nice text</Text>,
+    optimizedComponent: <Text style={{ color: 'red' }}>Nice text</Text>,
   },
   {
     title: 'View',
     count: 10_000,
     // @boost-ignore
-    unoptimizedComponent: <View />,
-    optimizedComponent: <View />,
+    unoptimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
+    optimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
   },
 ] satisfies Benchmark[];
 

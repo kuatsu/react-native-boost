@@ -1,5 +1,4 @@
-import { TextProps, TextStyle } from 'react-native';
-import flattenStyle from 'react-native/Libraries/StyleSheet/flattenStyle';
+import { TextProps, TextStyle, StyleSheet } from 'react-native';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
@@ -15,7 +14,7 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
   props = {};
   propsCache.set(style, props);
 
-  style = flattenStyle(style);
+  style = StyleSheet.flatten(style) as TextStyle;
 
   if (!style) return {};
 
