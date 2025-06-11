@@ -19,7 +19,7 @@ module.exports = {
       {
         verbose: true,
         ignores: ['node_modules/**'],
-        optimizers: {
+        optimizations: {
           text: true,
           view: false,
         },
@@ -45,7 +45,7 @@ By default, the plugin does not ignore any files. This means that the plugin wil
 
 :::
 
-### `optimizers`
+### `optimizations`
 
 An object specifying which optimizers to enable or disable. The keys are the names of the optimizers, and the values are booleans indicating whether to enable or disable them. By default, all optimizers are enabled. The following optimizers are available:
 
