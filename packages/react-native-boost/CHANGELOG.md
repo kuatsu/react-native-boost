@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.2](https://github.com/kuatsu/react-native-boost/compare/v0.6.1...v0.6.2) (2025-06-11)
+
+
+### Bug Fixes
+
+* fixed react-native 0.79 style flattening ([7b7a5a4](https://github.com/kuatsu/react-native-boost/commit/7b7a5a4def44676382014dfc26f9df1bc989f81e)), closes [#10](https://github.com/kuatsu/react-native-boost/issues/10)
+
+
+### Reverts
+
+* remove unused package export ([973084e](https://github.com/kuatsu/react-native-boost/commit/973084ee58f9473ffff23a62051d6d99da641456))
+
 ## [0.6.1](https://github.com/kuatsu/react-native-boost/compare/v0.6.0...v0.6.1) (2025-06-11)
 
 
