@@ -14,3 +14,12 @@ export const ACCESSIBILITY_PROPERTIES = new Set([
   'aria-selected',
   'accessible',
 ]);
+
+// Maps the `userSelect` values to the corresponding boolean for the `selectable` prop
+export const USER_SELECT_STYLE_TO_SELECTABLE_PROP: Record<string, boolean> = {
+  auto: true,
+  text: true,
+  none: false,
+  contain: true,
+  all: true,
+};

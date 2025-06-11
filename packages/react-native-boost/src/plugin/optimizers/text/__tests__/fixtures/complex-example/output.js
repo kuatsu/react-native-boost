@@ -5,7 +5,11 @@ export default function TextBenchmark(props) {
     {
       length: props.count,
     },
-    (_, index) => <_NativeText key={index}>Nice text</_NativeText>
+    (_, index) => (
+      <_NativeText key={index} allowFontScaling={true} ellipsizeMode={'tail'}>
+        Nice text
+      </_NativeText>
+    )
   );
   const unoptimizedViews = Array.from(
     {
@@ -16,7 +20,12 @@ export default function TextBenchmark(props) {
       <Text key={index}>Nice text</Text>
     )
   );
-  if (props.status === 'pending') return <_NativeText>Pending...</_NativeText>;
+  if (props.status === 'pending')
+    return (
+      <_NativeText allowFontScaling={true} ellipsizeMode={'tail'}>
+        Pending...
+      </_NativeText>
+    );
   return (
     <View>
       {optimizedViews}

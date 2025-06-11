@@ -24,4 +24,6 @@ import { Text } from 'react-native';
       fontSize: 16,
     },
   ])}
+  allowFontScaling={true}
+  ellipsizeMode={'tail'}
 />;

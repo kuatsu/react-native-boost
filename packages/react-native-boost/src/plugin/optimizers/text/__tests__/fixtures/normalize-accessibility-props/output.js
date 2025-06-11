@@ -15,4 +15,6 @@ import { Text } from 'react-native';
       }
     )
   )}
+  allowFontScaling={true}
+  ellipsizeMode={'tail'}
 />;

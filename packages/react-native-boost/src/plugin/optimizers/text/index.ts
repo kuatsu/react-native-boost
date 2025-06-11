@@ -2,6 +2,7 @@ import { NodePath, types as t } from '@babel/core';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import {
+  addDefaultProperty,
   addFileImportHint,
   buildPropertiesFromAttributes,
   hasAccessibilityProperty,
@@ -13,10 +14,10 @@ import {
   isStringNode,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { ACCESSIBILITY_PROPERTIES } from '../../utils/constants';
+import { extractStyleAttribute, extractSelectableAndUpdateStyle } from '../../utils/common/style';
 
 export const textBlacklistedProperties = new Set([
-  'allowFontScaling', // TODO: don't need to bail if we make it default to true
-  'ellipsizeMode', // TODO: don't need to bail if we make it default to 'tail'
   'id',
   'nativeID',
   'onLongPress',
@@ -56,9 +57,10 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   log(`Optimizing Text component in ${filename}:${lineNumber}`);
 
   // Process props
-  const originalAttributes = [...path.node.attributes];
   fixNegativeNumberOfLines({ path, log });
-  processProps(path, file, originalAttributes);
+  addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
+  addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
+  processProps(path, file);
 
   // Replace the Text component with NativeText
   replaceWithNativeComponent(path, parent, file, 'NativeText');
@@ -129,48 +131,28 @@ function fixNegativeNumberOfLines({
 }
 
 /**
- * Extracts the style attribute from JSX attributes.
- */
-function extractStyleAttribute(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): {
-  styleAttribute?: t.JSXAttribute;
-  styleExpr?: t.Expression;
-} {
-  for (const attribute of attributes) {
-    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
-      if (
-        attribute.value &&
-        t.isJSXExpressionContainer(attribute.value) &&
-        !t.isJSXEmptyExpression(attribute.value.expression)
-      ) {
-        return {
-          styleAttribute: attribute,
-          styleExpr: attribute.value.expression,
-        };
-      }
-      return { styleAttribute: attribute };
-    }
-  }
-  return {};
-}
-
-/**
  * Processes style and accessibility attributes, replacing them with optimized versions.
  */
-function processProps(
-  path: NodePath<t.JSXOpeningElement>,
-  file: HubFile,
-  originalAttributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>
-) {
-  const { styleExpr } = extractStyleAttribute(originalAttributes);
-  const hasA11y = hasAccessibilityProperty(path, originalAttributes);
+function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
+  // Grab the up-to-date list of attributes
+  const currentAttributes = [...path.node.attributes];
 
-  if (styleExpr && hasA11y) {
-    // When both style and accessibility properties exist, we split them into two separate spread attributes
-    const accessibilityAttributes = originalAttributes.filter(
-      (attribute) => !(t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' }))
-    );
+  const { styleExpr, styleAttribute } = extractStyleAttribute(currentAttributes);
+  const hasA11y = hasAccessibilityProperty(path, currentAttributes);
 
-    // Set up the accessibility import
+  // ============================================
+  // 1. Prepare spread attributes (style / a11y)
+  // ============================================
+
+  const spreadAttributes: t.JSXSpreadAttribute[] = [];
+
+  // --- Accessibility ---
+  if (hasA11y) {
+    const accessibilityAttributes = currentAttributes.filter((attribute) => {
+      if (!t.isJSXAttribute(attribute)) return false;
+      return t.isJSXIdentifier(attribute.name) && ACCESSIBILITY_PROPERTIES.has(attribute.name.name as string);
+    });
+
     const normalizeIdentifier = addFileImportHint({
       file,
       nameHint: 'processAccessibilityProps',
@@ -178,10 +160,25 @@ function processProps(
       importName: 'processAccessibilityProps',
       moduleName: RUNTIME_MODULE_NAME,
     });
+
     const accessibilityObject = buildPropertiesFromAttributes(accessibilityAttributes);
     const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
+    spreadAttributes.push(t.jsxSpreadAttribute(accessibilityExpr));
+  }
 
-    // Set up the style import
+  // --- Style ---
+  let selectableAttribute: t.JSXAttribute | undefined;
+  if (styleExpr) {
+    // Attempt a compile-time extraction of `userSelect`
+    const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
+
+    if (selectableValue != null) {
+      selectableAttribute = t.jsxAttribute(
+        t.jsxIdentifier('selectable'),
+        t.jsxExpressionContainer(t.booleanLiteral(selectableValue))
+      );
+    }
+
     const flattenIdentifier = addFileImportHint({
       file,
       nameHint: 'processTextStyle',
@@ -190,31 +187,32 @@ function processProps(
       moduleName: RUNTIME_MODULE_NAME,
     });
     const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
-
-    // Use two separate JSX spread attributes
-    path.node.attributes = [t.jsxSpreadAttribute(accessibilityExpr), t.jsxSpreadAttribute(flattenedStyleExpr)];
-  } else if (styleExpr) {
-    // Only style attribute is present
-    const flattenIdentifier = addFileImportHint({
-      file,
-      nameHint: 'processTextStyle',
-      path,
-      importName: 'processTextStyle',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
-    const flattened = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
-    path.node.attributes = [t.jsxSpreadAttribute(flattened)];
-  } else if (hasA11y) {
-    // Only accessibility properties are present
-    const normalizeIdentifier = addFileImportHint({
-      file,
-      nameHint: 'processAccessibilityProps',
-      path,
-      importName: 'processAccessibilityProps',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
-    const propsObject = buildPropertiesFromAttributes(originalAttributes);
-    const normalized = t.callExpression(t.identifier(normalizeIdentifier.name), [propsObject]);
-    path.node.attributes = [t.jsxSpreadAttribute(normalized)];
+    spreadAttributes.push(t.jsxSpreadAttribute(flattenedStyleExpr));
   }
+
+  // ============================================
+  // 2. Collect the remaining (non-processed) attributes
+  // ============================================
+  const remainingAttributes: (t.JSXAttribute | t.JSXSpreadAttribute)[] = [];
+
+  for (const attribute of currentAttributes) {
+    // Skip the style attribute (we have replaced it with a spread)
+    if (styleAttribute && attribute === styleAttribute) continue;
+
+    // Skip accessibility attributes if we processed them
+    if (
+      hasA11y &&
+      t.isJSXAttribute(attribute) &&
+      t.isJSXIdentifier(attribute.name) &&
+      ACCESSIBILITY_PROPERTIES.has(attribute.name.name as string)
+    ) {
+      continue;
+    }
+
+    remainingAttributes.push(attribute);
+  }
+
+  path.node.attributes = [...spreadAttributes, selectableAttribute, ...remainingAttributes].filter(
+    (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
+  );
 }

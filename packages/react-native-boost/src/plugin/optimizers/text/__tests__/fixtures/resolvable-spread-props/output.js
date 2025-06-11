@@ -3,4 +3,4 @@ import { Text } from 'react-native';
 const props = {
   children: 'Hello, world!',
 };
-<_NativeText {...props} />;
+<_NativeText {...props} allowFontScaling={true} ellipsizeMode={'tail'} />;

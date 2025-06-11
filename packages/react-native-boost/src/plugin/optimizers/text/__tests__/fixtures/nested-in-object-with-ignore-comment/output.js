@@ -4,7 +4,11 @@ const benchmarks = [
   {
     title: 'Text',
     count: 10_000,
-    optimizedComponent: <_NativeText>Nice text</_NativeText>,
+    optimizedComponent: (
+      <_NativeText allowFontScaling={true} ellipsizeMode={'tail'}>
+        Nice text
+      </_NativeText>
+    ),
     // @boost-ignore
     unoptimizedComponent: <Text>Nice text</Text>,
   },

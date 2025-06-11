@@ -4,6 +4,8 @@ import { Text } from 'react-native';
   {..._processTextStyle({
     color: 'red',
   })}
+  allowFontScaling={true}
+  ellipsizeMode={'tail'}
 />;
 <_NativeText
   {..._processTextStyle([
@@ -14,4 +16,7 @@ import { Text } from 'react-native';
       fontSize: 16,
     },
   ])}
+  selectable={true}
+  allowFontScaling={true}
+  ellipsizeMode={'tail'}
 />;

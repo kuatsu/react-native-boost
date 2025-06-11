@@ -47,6 +47,67 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
 };
 
 /**
+ * Adds a default property to a JSX element if it's not already defined. It avoids adding a default
+ * if it cannot statically determine whether the property is already set.
+ *
+ * @param path - The path to the JSXOpeningElement.
+ * @param key - The property key.
+ * @param value - The default value expression.
+ */
+export const addDefaultProperty = (path: NodePath<t.JSXOpeningElement>, key: string, value: t.Expression) => {
+  let propertyIsFound = false;
+  let hasUnresolvableSpread = false;
+
+  for (const attribute of path.node.attributes) {
+    if (t.isJSXAttribute(attribute) && attribute.name.name === key) {
+      propertyIsFound = true;
+      break;
+    }
+
+    if (t.isJSXSpreadAttribute(attribute)) {
+      if (t.isObjectExpression(attribute.argument)) {
+        const propertyInSpread = attribute.argument.properties.some(
+          (p) =>
+            (t.isObjectProperty(p) && t.isIdentifier(p.key) && p.key.name === key) ||
+            (t.isObjectProperty(p) && t.isStringLiteral(p.key) && p.key.value === key)
+        );
+        if (propertyInSpread) {
+          propertyIsFound = true;
+          break;
+        }
+      } else if (t.isIdentifier(attribute.argument)) {
+        const binding = path.scope.getBinding(attribute.argument.name);
+        if (
+          binding?.path.node &&
+          t.isVariableDeclarator(binding.path.node) &&
+          t.isObjectExpression(binding.path.node.init)
+        ) {
+          const propertyInSpread = binding.path.node.init.properties.some(
+            (p) =>
+              (t.isObjectProperty(p) && t.isIdentifier(p.key) && p.key.name === key) ||
+              (t.isObjectProperty(p) && t.isStringLiteral(p.key) && p.key.value === key)
+          );
+          if (propertyInSpread) {
+            propertyIsFound = true;
+            break;
+          }
+        } else {
+          hasUnresolvableSpread = true;
+          break;
+        }
+      } else {
+        hasUnresolvableSpread = true;
+        break;
+      }
+    }
+  }
+
+  if (!propertyIsFound && !hasUnresolvableSpread) {
+    path.node.attributes.push(t.jsxAttribute(t.jsxIdentifier(key), t.jsxExpressionContainer(value)));
+  }
+};
+
+/**
  * Helper that builds an Object.assign expression out of the existing JSX attributes.
  * It handles both plain JSXAttributes and spread attributes.
  *
