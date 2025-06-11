@@ -86,17 +86,17 @@ export default [
     external,
     plugins: commonPlugins,
     output: [
-      { file: 'dist/index.js', format: 'cjs', sourcemap: true },
-      { file: 'dist/esm/index.mjs', format: 'esm', sourcemap: true },
+      { file: 'dist/runtime/index.js', format: 'cjs', sourcemap: true },
+      { file: 'dist/runtime/esm/index.mjs', format: 'esm', sourcemap: true },
     ],
   },
   {
-    input: 'src/runtime/index.ts',
+    input: 'src/runtime/index.web.ts',
     external,
     plugins: commonPlugins,
     output: [
-      { file: 'dist/runtime/index.js', format: 'cjs', sourcemap: true },
-      { file: 'dist/runtime/esm/index.mjs', format: 'esm', sourcemap: true },
+      { file: 'dist/runtime/index.web.js', format: 'cjs', sourcemap: true },
+      { file: 'dist/runtime/esm/index.web.mjs', format: 'esm', sourcemap: true },
     ],
   },
   // Plugin Code Build (CommonJS and ESM)
@@ -114,13 +114,13 @@ export default [
     input: 'src/runtime/index.ts',
     plugins: [dts()],
     external,
-    output: { file: 'dist/index.d.ts', format: 'esm' },
+    output: { file: 'dist/runtime/index.d.ts', format: 'esm' },
   },
   {
-    input: 'src/runtime/index.ts',
+    input: 'src/runtime/index.web.ts',
     plugins: [dts()],
     external,
-    output: { file: 'dist/runtime/index.d.ts', format: 'esm' },
+    output: { file: 'dist/runtime/index.web.d.ts', format: 'esm' },
   },
   // Plugin Type Declarations Bundle (creates a single file)
   {
