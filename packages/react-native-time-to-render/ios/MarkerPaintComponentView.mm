@@ -1,5 +1,4 @@
 #import "MarkerPaintComponentView.h"
-#import "RCTThirdPartyFabricComponentsProvider.h"
 #import "MarkerStore.h"
 
 #import <React/RCTConversions.h>
