@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/kuatsu/react-native-boost/compare/v0.6.0...v0.6.1) (2025-06-11)
+
+
+### Bug Fixes
+
+* fixed type errors in tests ([59e3925](https://github.com/kuatsu/react-native-boost/commit/59e392562331e7e150caad431adc5569f9b7a88d))
+
 # [0.6.0](https://github.com/kuatsu/react-native-boost/compare/v0.5.7...v0.6.0) (2025-06-11)
 
 
