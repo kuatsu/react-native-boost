@@ -67,6 +67,14 @@ const normalizedProps = normalizeAccessibilityProperties(props);
 console.log(normalizedProps);
 ```
 
+## `userSelectToSelectableMap`
+
+The `userSelectToSelectableMap` object maps values for the Text component's `userSelect` style property to the `selectable` prop, which the native Text component uses instead.
+
+## `verticalAlignToTextAlignVerticalMap`
+
+The `verticalAlignToTextAlignVerticalMap` object maps values for the Text component's `verticalAlign` style property to the `textAlignVertical` style property, which the native Text component uses instead.
+
 ## `NativeText`
 
 The `NativeText` component imports the native Text component from React Native on native platforms such as iOS and Android, and falls back to the standard Text component on web. This prevents bundling issues for react-native-web projects.
