@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Configure the plugin
+# Configure the Babel plugin
 
 The Babel plugin, imported via `react-native-boost/plugin`, is the heart of the library. It's responsible for analyzing your code and applying optimizations to it.
 

@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Runtime Library
 
-The runtime library, imported via `react-native-boost/runtime`, is a small library that is used by the Babel plugin to actually apply optimizations in your app. Other than re-exporting the native Text and View components (in order to avoid issues with `react-native-web`), the runtime library also exports a few helper functions that can be used by the Babel plugin. While you can import the runtime library directly, we do not recommend doing so. The exported functions and components are intended to be used directly by the Babel plugin and can change without prior notice. For the sake of completeness, we've documented them here, however.
+The runtime library, imported via `react-native-boost/runtime`, is a small library that is used by the Babel plugin to actually apply optimizations in your app. Other than re-exporting the native Text and View components (in order to avoid issues with `react-native-web`), the runtime library also exports a few helper functions that can be used by the Babel plugin. While you can import the runtime library directly, we do not recommend doing so in most cases. The exported functions and components are intended to be used directly by the Babel plugin and can change without prior notice. You may need to import from the runtime library in some cases, such as when [configuring Nativewind support](../configuration/nativewind.md). However, be aware of potential breaking changes when importing the runtime into your project yourself.
 
 ## `flattenTextStyle`
 
