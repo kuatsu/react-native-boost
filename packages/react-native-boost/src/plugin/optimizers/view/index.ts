@@ -11,36 +11,19 @@ import {
 } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
+  // TODO: process a11y props at runtime
   'accessible',
   'accessibilityLabel',
   'accessibilityState',
-  'allowFontScaling',
   'aria-busy',
   'aria-checked',
   'aria-disabled',
   'aria-expanded',
   'aria-label',
   'aria-selected',
-  'ellipsizeMode',
-  'disabled',
   'id',
   'nativeID',
-  'numberOfLines',
-  'onLongPress',
-  'onPress',
-  'onPressIn',
-  'onPressOut',
-  'onResponderGrant',
-  'onResponderMove',
-  'onResponderRelease',
-  'onResponderTerminate',
-  'onResponderTerminationRequest',
-  'onStartShouldSetResponder',
-  'pressRetentionOffset',
-  'selectable',
-  'selectionColor',
-  'suppressHighlighting',
-  'style',
+  'style', // TODO: process style at runtime
 ]);
 
 // Components to skip when checking for indirect Text ancestors

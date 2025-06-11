@@ -15,8 +15,8 @@ import {
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
-  'allowFontScaling',
-  'ellipsizeMode',
+  'allowFontScaling', // TODO: don't need to bail if we make it default to true
+  'ellipsizeMode', // TODO: don't need to bail if we make it default to 'tail'
   'id',
   'nativeID',
   'onLongPress',
@@ -31,8 +31,7 @@ export const textBlacklistedProperties = new Set([
   'onStartShouldSetResponder',
   'pressRetentionOffset',
   'suppressHighlighting',
-  'selectable',
-  'selectionColor',
+  'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
 export const textOptimizer: Optimizer = (path, log = () => {}) => {
