@@ -7,13 +7,6 @@
   "types": "dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/esm/index.mjs"
-      },
-      "default": "./dist/index.js"
-    },
     "./runtime": {
       "import": {
         "types": "./dist/runtime/index.d.ts",
