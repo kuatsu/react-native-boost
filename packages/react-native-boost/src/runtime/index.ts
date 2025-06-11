@@ -1,10 +1,11 @@
-import { TextStyle } from 'react-native';
+import { TextProps, TextStyle } from 'react-native';
 import flattenStyle from 'react-native/Libraries/StyleSheet/flattenStyle';
 import { GenericStyleProp } from './types';
+import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
 const propsCache = new WeakMap();
 
-export function flattenTextStyle(style: GenericStyleProp<TextStyle>) {
+export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<TextProps> {
   if (!style) return {};
 
   // Cache the computed props
@@ -38,31 +39,8 @@ export function flattenTextStyle(style: GenericStyleProp<TextStyle>) {
   return props;
 }
 
-// Maps the `userSelect` prop to the native `selectable` prop
-export const userSelectToSelectableMap = {
-  auto: true,
-  text: true,
-  none: false,
-  contain: true,
-  all: true,
-};
-
-// Maps the `verticalAlign` prop to the native `textAlignVertical` prop
-export const verticalAlignToTextAlignVerticalMap = {
-  auto: 'auto',
-  top: 'top',
-  bottom: 'bottom',
-  middle: 'center',
-};
-
-/**
- * Normalizes accessibility props.
- *
- * @param props - The props to normalize.
- * @returns The normalized props.
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function normalizeAccessibilityProperties(props: Record<string, any>): Record<string, any> {
+export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
   const {
     accessibilityLabel,
     ['aria-label']: ariaLabel,
@@ -112,5 +90,6 @@ export function normalizeAccessibilityProperties(props: Record<string, any>): Re
 }
 
 export * from './types';
+export * from './utils/constants';
 export * from './components/native-text';
 export * from './components/native-view';

@@ -42,12 +42,12 @@ export type HubFile = t.File & {
  */
 export interface FileImportOptions {
   file: HubFile;
-  /** The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'normalizeAccessibilityProps') */
+  /** The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'processAccessibilityProps') */
   nameHint: string;
   /** The current Babel NodePath */
   path: NodePath;
   /**
-   * The named import string (e.g. 'normalizeAccessibilityProps'). Ignored if importType is "default".
+   * The named import string (e.g. 'processAccessibilityProps'). Ignored if importType is "default".
    */
   importName: string;
   /** The module to import from (e.g. 'react-native-boost/runtime') */

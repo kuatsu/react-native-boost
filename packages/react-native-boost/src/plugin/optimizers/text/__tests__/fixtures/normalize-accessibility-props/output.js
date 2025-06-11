@@ -1,10 +1,10 @@
 import {
-  normalizeAccessibilityProps as _normalizeAccessibilityProps,
+  processAccessibilityProps as _processAccessibilityProps,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  {..._normalizeAccessibilityProps(
+  {..._processAccessibilityProps(
     Object.assign(
       {},
       {

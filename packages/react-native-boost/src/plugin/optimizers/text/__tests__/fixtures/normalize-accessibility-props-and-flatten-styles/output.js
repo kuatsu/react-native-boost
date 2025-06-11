@@ -1,11 +1,11 @@
 import {
-  normalizeAccessibilityProps as _normalizeAccessibilityProps,
-  flattenTextStyle as _flattenTextStyle,
+  processAccessibilityProps as _processAccessibilityProps,
+  processTextStyle as _processTextStyle,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  {..._normalizeAccessibilityProps(
+  {..._processAccessibilityProps(
     Object.assign(
       {},
       {
@@ -16,7 +16,7 @@ import { Text } from 'react-native';
       }
     )
   )}
-  {..._flattenTextStyle([
+  {..._processTextStyle([
     {
       color: 'red',
     },

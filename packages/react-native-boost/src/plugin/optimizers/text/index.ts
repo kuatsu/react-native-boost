@@ -174,9 +174,9 @@ function processProps(
     // Set up the accessibility import
     const normalizeIdentifier = addFileImportHint({
       file,
-      nameHint: 'normalizeAccessibilityProps',
+      nameHint: 'processAccessibilityProps',
       path,
-      importName: 'normalizeAccessibilityProps',
+      importName: 'processAccessibilityProps',
       moduleName: RUNTIME_MODULE_NAME,
     });
     const accessibilityObject = buildPropertiesFromAttributes(accessibilityAttributes);
@@ -185,9 +185,9 @@ function processProps(
     // Set up the style import
     const flattenIdentifier = addFileImportHint({
       file,
-      nameHint: 'flattenTextStyle',
+      nameHint: 'processTextStyle',
       path,
-      importName: 'flattenTextStyle',
+      importName: 'processTextStyle',
       moduleName: RUNTIME_MODULE_NAME,
     });
     const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
@@ -198,9 +198,9 @@ function processProps(
     // Only style attribute is present
     const flattenIdentifier = addFileImportHint({
       file,
-      nameHint: 'flattenTextStyle',
+      nameHint: 'processTextStyle',
       path,
-      importName: 'flattenTextStyle',
+      importName: 'processTextStyle',
       moduleName: RUNTIME_MODULE_NAME,
     });
     const flattened = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
@@ -209,9 +209,9 @@ function processProps(
     // Only accessibility properties are present
     const normalizeIdentifier = addFileImportHint({
       file,
-      nameHint: 'normalizeAccessibilityProps',
+      nameHint: 'processAccessibilityProps',
       path,
-      importName: 'normalizeAccessibilityProps',
+      importName: 'processAccessibilityProps',
       moduleName: RUNTIME_MODULE_NAME,
     });
     const propsObject = buildPropertiesFromAttributes(originalAttributes);
