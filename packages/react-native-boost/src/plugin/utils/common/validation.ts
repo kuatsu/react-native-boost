@@ -298,3 +298,50 @@ function hasComponentInExpression(expression: t.Expression, componentName: strin
 
   return false;
 }
+
+/**
+ * Checks if the component has an ancestor Link from 'expo-router' with an 'asChild' prop.
+ *
+ * @param path - The path to the JSXOpeningElement.
+ * @returns true if the component has a Link ancestor from expo-router with asChild prop.
+ */
+export const hasExpoRouterLinkAncestorWithAsChild = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  const linkAncestor = path.findParent((parentPath) => {
+    if (!t.isJSXElement(parentPath.node)) return false;
+
+    const openingElement = parentPath.node.openingElement;
+    if (!t.isJSXIdentifier(openingElement.name)) return false;
+
+    const componentName = openingElement.name.name;
+
+    // Check if this is a Link component
+    const binding = parentPath.scope.getBinding(componentName);
+    if (!binding || binding.kind !== 'module') return false;
+
+    const importDeclaration = binding.path.parent;
+    if (!t.isImportDeclaration(importDeclaration)) return false;
+
+    // Check if imported from 'expo-router'
+    if (importDeclaration.source.value !== 'expo-router') return false;
+
+    // Check if it's imported as 'Link'
+    if (t.isImportSpecifier(binding.path.node)) {
+      const imported = binding.path.node.imported;
+      if (t.isIdentifier(imported) && imported.name !== 'Link') return false;
+    } else if (t.isImportDefaultSpecifier(binding.path.node)) {
+      // For default imports, assume it could be Link
+      return false;
+    }
+
+    // Check if this Link has an 'asChild' prop
+    for (const attribute of openingElement.attributes) {
+      if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'asChild' })) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+
+  return !!linkAncestor;
+};
