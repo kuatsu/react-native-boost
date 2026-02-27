@@ -9,9 +9,9 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version-file: ${{ github.workspace }}/.nvmrc
+        node-version-file: .nvmrc
         cache: pnpm
-        cache-dependency-path: ${{ github.workspace }}/pnpm-lock.yaml
+        cache-dependency-path: pnpm-lock.yaml
 
     - name: Enable Corepack
       run: corepack enable
