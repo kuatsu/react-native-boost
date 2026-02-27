@@ -3,6 +3,8 @@ title: Getting Started
 description: Install React Native Boost to boost your app's performance with one line of code.
 ---
 
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
 ## Introduction
 
 React Native Boost consists of two pieces:
@@ -16,11 +18,36 @@ The analyzer is intentionally strict and skips any optimizations that could lead
 
 1. Install React Native Boost:
 
-```bash
-npm install react-native-boost
-# or
-yarn add react-native-boost
-```
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
+  <Tab value="npm">
+
+  ```bash
+  npm install react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="pnpm">
+
+  ```bash
+  pnpm add react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="yarn">
+
+  ```bash
+  yarn add react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="bun">
+
+  ```bash
+  bun add react-native-boost
+  ```
+
+  </Tab>
+</Tabs>
 
 2. If you use Expo and do not have a `babel.config.js` yet:
 
@@ -39,11 +66,36 @@ module.exports = {
 
 4. Restart the development server and clear cache:
 
-```bash
-npm start --clear
-# or
-yarn start --clear
-```
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
+  <Tab value="npm">
+
+  ```bash
+  npm start -- --clear
+  ```
+
+  </Tab>
+  <Tab value="pnpm">
+
+  ```bash
+  pnpm start -- --clear
+  ```
+
+  </Tab>
+  <Tab value="yarn">
+
+  ```bash
+  yarn start --clear
+  ```
+
+  </Tab>
+  <Tab value="bun">
+
+  ```bash
+  bun run start --clear
+  ```
+
+  </Tab>
+</Tabs>
 
 <Callout title="Runtime Dependency">
   The Babel plugin imports optimized components via `react-native-boost/runtime`, so `react-native-boost` must be
@@ -53,8 +105,6 @@ yarn start --clear
 ## Platform Support
 
 React Native Boost supports iOS and Android projects. On Web, React Native Boost safely falls back to the default components, providing full cross-platform support.
-
-## Documentation
 
 <Cards>
   <Card title="Configuration" href="/docs/configuration/configure" />
