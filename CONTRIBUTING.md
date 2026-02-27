@@ -14,9 +14,19 @@ pnpm install
 
 > While it's possible to use [`npm`](https://github.com/npm/cli), the tooling is built around [`pnpm`](https://pnpm.io/), so you'll have an easier time if you use `pnpm` for development.
 
-While developing, you can run the [example app](/example/) to test your changes. Any changes you make in your library's JavaScript code will be reflected in the example app without a rebuild. If you change any native code, then you'll need to rebuild the example app.
+While developing, you can run the [example app](/example/) to test your changes.
 
-To start the packager:
+To have package changes automatically reflected in the example app, run the package build watcher and Expo together:
+
+```sh
+pnpm dev
+```
+
+This runs `rollup -w` for `packages/react-native-boost` and `expo start` for `apps/example` in parallel.
+
+If you change native code, you'll still need to rebuild the example app.
+
+To start only the example app packager:
 
 ```sh
 pnpm example start
@@ -92,6 +102,7 @@ The `package.json` file contains various scripts for common tasks:
 - `pnpm typecheck`: type-check files with TypeScript.
 - `pnpm lint`: lint files with Oxlint.
 - `pnpm example start`: start the Metro server for the example app.
+- `pnpm dev`: start the example app and watch/rebuild `react-native-boost` package changes.
 - `pnpm example android`: run the example app on Android.
 - `pnpm example ios`: run the example app on iOS.
 

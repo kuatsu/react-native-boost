@@ -4,6 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start",
     "android": "rm -rf android && expo run:android",
     "ios": "rm -rf ios && expo run:ios",
     "web": "expo start --web"

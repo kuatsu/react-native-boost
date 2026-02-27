@@ -7,6 +7,7 @@
     "typecheck": "pnpm -r --parallel --if-present run typecheck",
     "test": "pnpm -r --parallel --if-present run test",
     "example": "pnpm --filter react-native-boost-example run",
+    "dev": "pnpm --parallel --stream --filter react-native-boost --filter react-native-boost-example run dev",
     "docs": "pnpm --filter react-native-boost-docs run",
     "package": "pnpm --filter react-native-boost run",
     "lint": "oxlint .",
