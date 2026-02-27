@@ -181,6 +181,7 @@ export const isReactNativeImport = (path: NodePath<t.JSXOpeningElement>, expecte
 };
 
 type AncestorClassification = 'safe' | 'text' | 'unknown';
+export type ViewAncestorClassification = AncestorClassification;
 type ScopeBinding = NonNullable<ReturnType<NodePath<t.Node>['scope']['getBinding']>>;
 
 type AncestorAnalysisContext = {
@@ -189,11 +190,8 @@ type AncestorAnalysisContext = {
   renderExpressionInProgress: WeakSet<t.Node>;
 };
 
-export const hasUnsafeViewAncestor = (path: NodePath<t.JSXOpeningElement>, allowUnknownAncestors = false): boolean => {
-  const classification = classifyViewAncestors(path);
-  if (classification === 'text') return true;
-  if (classification === 'unknown' && !allowUnknownAncestors) return true;
-  return false;
+export const getViewAncestorClassification = (path: NodePath<t.JSXOpeningElement>): ViewAncestorClassification => {
+  return classifyViewAncestors(path);
 };
 
 function classifyViewAncestors(path: NodePath<t.JSXOpeningElement>): AncestorClassification {

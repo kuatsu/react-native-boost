@@ -1,13 +1,15 @@
 import { types as t } from '@babel/core';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
+import { getFirstBailoutReason } from '../../utils/helpers';
 import {
   hasBlacklistedProperty,
   isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
-  hasUnsafeViewAncestor,
+  getViewAncestorClassification,
+  ViewAncestorClassification,
 } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
@@ -26,12 +28,51 @@ export const viewBlacklistedProperties = new Set([
   'style', // TODO: process style at runtime
 ]);
 
-export const viewOptimizer: Optimizer = (path, log = () => {}, options) => {
-  if (isIgnoredLine(path)) return;
+export const viewOptimizer: Optimizer = (path, logger, options) => {
   if (!isValidJSXComponent(path, 'View')) return;
-  if (!isReactNativeImport(path, 'View')) return;
-  if (hasBlacklistedProperty(path, viewBlacklistedProperties)) return;
-  if (hasUnsafeViewAncestor(path, options?.dangerouslyOptimizeViewWithUnknownAncestors === true)) return;
+
+  let ancestorClassification: ViewAncestorClassification | undefined;
+  const getAncestorClassification = () => {
+    if (!ancestorClassification) {
+      ancestorClassification = getViewAncestorClassification(path);
+    }
+
+    return ancestorClassification;
+  };
+
+  const skipReason = getFirstBailoutReason([
+    {
+      reason: 'line is marked with @boost-ignore',
+      shouldBail: () => isIgnoredLine(path),
+    },
+    {
+      reason: 'View is not imported from react-native',
+      shouldBail: () => !isReactNativeImport(path, 'View'),
+    },
+    {
+      reason: 'contains blacklisted props',
+      shouldBail: () => hasBlacklistedProperty(path, viewBlacklistedProperties),
+    },
+    {
+      reason: 'has Text ancestor',
+      shouldBail: () => getAncestorClassification() === 'text',
+    },
+    {
+      reason: 'has unresolved ancestor and dangerous optimization is disabled',
+      shouldBail: () =>
+        getAncestorClassification() === 'unknown' && options?.dangerouslyOptimizeViewWithUnknownAncestors !== true,
+    },
+  ]);
+
+  if (skipReason) {
+    logger.skipped({
+      component: 'View',
+      path,
+      reason: skipReason,
+    });
+
+    return;
+  }
 
   // Extract the file from the Babel hub
   const hub = path.hub as unknown;
@@ -41,9 +82,10 @@ export const viewOptimizer: Optimizer = (path, log = () => {}, options) => {
     throw new PluginError('No file found in Babel hub');
   }
 
-  const filename = file.opts?.filename || 'unknown file';
-  const lineNumber = path.node.loc?.start.line ?? 'unknown line';
-  log(`Optimizing View component in ${filename}:${lineNumber}`);
+  logger.optimized({
+    component: 'View',
+    path,
+  });
 
   const parent = path.parent as t.JSXElement;
 

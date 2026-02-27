@@ -1,6 +1,7 @@
 import { NodePath, types as t } from '@babel/core';
-import { HubFile, Optimizer } from '../../types';
+import { HubFile, Optimizer, PluginLogger } from '../../types';
 import PluginError from '../../utils/plugin-error';
+import { getFirstBailoutReason } from '../../utils/helpers';
 import {
   addDefaultProperty,
   addFileImportHint,
@@ -36,16 +37,43 @@ export const textBlacklistedProperties = new Set([
   'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
-export const textOptimizer: Optimizer = (path, log = () => {}) => {
-  if (isIgnoredLine(path)) return;
+export const textOptimizer: Optimizer = (path, logger) => {
   if (!isValidJSXComponent(path, 'Text')) return;
-  if (!isReactNativeImport(path, 'Text')) return;
-  if (hasBlacklistedProperty(path, textBlacklistedProperties)) return;
-  if (hasExpoRouterLinkParentWithAsChild(path)) return;
 
   // Verify that the Text only has string children
   const parent = path.parent as t.JSXElement;
-  if (hasInvalidChildren(path, parent)) return;
+
+  const skipReason = getFirstBailoutReason([
+    {
+      reason: 'line is marked with @boost-ignore',
+      shouldBail: () => isIgnoredLine(path),
+    },
+    {
+      reason: 'Text is not imported from react-native',
+      shouldBail: () => !isReactNativeImport(path, 'Text'),
+    },
+    {
+      reason: 'contains blacklisted props',
+      shouldBail: () => hasBlacklistedProperty(path, textBlacklistedProperties),
+    },
+    {
+      reason: 'is a direct child of expo-router Link with asChild',
+      shouldBail: () => hasExpoRouterLinkParentWithAsChild(path),
+    },
+    {
+      reason: 'contains non-string children',
+      shouldBail: () => hasInvalidChildren(path, parent),
+    },
+  ]);
+
+  if (skipReason) {
+    logger.skipped({
+      component: 'Text',
+      path,
+      reason: skipReason,
+    });
+    return;
+  }
 
   const hub = path.hub as unknown;
   const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
@@ -54,12 +82,13 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
     throw new PluginError('No file found in Babel hub');
   }
 
-  const filename = file.opts?.filename || 'unknown file';
-  const lineNumber = path.node.loc?.start.line ?? 'unknown line';
-  log(`Optimizing Text component in ${filename}:${lineNumber}`);
+  logger.optimized({
+    component: 'Text',
+    path,
+  });
 
   // Process props
-  fixNegativeNumberOfLines({ path, log });
+  fixNegativeNumberOfLines({ path, logger });
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
   processProps(path, file);
@@ -98,13 +127,7 @@ function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>, parent: t.JSXEl
 /**
  * Fixes negative numberOfLines values by setting them to 0.
  */
-function fixNegativeNumberOfLines({
-  path,
-  log,
-}: {
-  path: NodePath<t.JSXOpeningElement>;
-  log: (message: string) => void;
-}) {
+function fixNegativeNumberOfLines({ path, logger }: { path: NodePath<t.JSXOpeningElement>; logger: PluginLogger }) {
   for (const attribute of path.node.attributes) {
     if (
       t.isJSXAttribute(attribute) &&
@@ -123,9 +146,11 @@ function fixNegativeNumberOfLines({
         originalValue = -attribute.value.expression.argument.value;
       }
       if (originalValue !== undefined && originalValue < 0) {
-        log(
-          `Warning: 'numberOfLines' in <Text> must be a non-negative number, received: ${originalValue}. The value will be set to 0.`
-        );
+        logger.warning({
+          component: 'Text',
+          path,
+          message: `'numberOfLines' must be a non-negative number, received: ${originalValue}. The value will be set to 0.`,
+        });
         attribute.value.expression = t.numericLiteral(0);
       }
     }

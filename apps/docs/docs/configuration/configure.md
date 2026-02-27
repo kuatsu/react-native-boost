@@ -17,7 +17,8 @@ module.exports = {
     [
       'react-native-boost/plugin',
       {
-        verbose: true,
+        verbose: false,
+        silent: false,
         ignores: ['node_modules/**'],
         optimizations: {
           text: true,
@@ -33,7 +34,11 @@ module.exports = {
 
 ### `verbose`
 
-Enables verbose logging of performed optimizations, including the filename and line number of the component that was optimized. Defaults to `false`.
+Enables verbose logging for skipped components and their skip reasons. Optimized components are logged by default unless `silent` is enabled. Defaults to `false`.
+
+### `silent`
+
+Disables all plugin logs, including optimized components, skipped components, and warnings. Defaults to `false`.
 
 ### `ignores`
 
