@@ -136,6 +136,11 @@ jobs:
             release_github_make_latest="$github_make_latest_input"
           fi
 
+          if [[ ! "$release_npm_tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid npm tag '$release_npm_tag'. Use only letters, numbers, dots, underscores, and dashes."
+            exit 1
+          fi
+
           echo "RELEASE_NPM_TAG=$release_npm_tag" >> "$GITHUB_ENV"
           echo "RELEASE_GITHUB_MAKE_LATEST=$release_github_make_latest" >> "$GITHUB_ENV"
           echo "Release branch: $branch"
