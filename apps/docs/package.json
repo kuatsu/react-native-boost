@@ -13,8 +13,7 @@
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc",
-    "lint": "eslint src/**/*.{js,jsx,ts,tsx}",
-    "format": "prettier --write ."
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx}"
   },
   "dependencies": {
     "@docusaurus/core": "3.7.0",

@@ -20,8 +20,8 @@ jobs:
       - name: Lint files
         run: pnpm lint
 
-      - name: Run Prettier
-        run: pnpm format
+      - name: Test formatting
+        run: pnpm format --check
 
       - name: Verify formatted code is unchanged
         run: git diff --exit-code HEAD
