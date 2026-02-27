@@ -298,3 +298,105 @@ function hasComponentInExpression(expression: t.Expression, componentName: strin
 
   return false;
 }
+
+/**
+ * Checks whether the closest JSX element ancestor is expo-router Link with a truthy asChild prop.
+ *
+ * We only bail on Text optimization when Link is effectively slotting that Text as the clickable child.
+ */
+export const hasExpoRouterLinkParentWithAsChild = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  const textElementPath = path.parentPath;
+  if (!textElementPath.isJSXElement()) return false;
+
+  let ancestorPath: NodePath<t.Node> | null = textElementPath.parentPath;
+
+  while (ancestorPath) {
+    if (ancestorPath.isJSXElement()) {
+      if (!isExpoRouterLinkElement(ancestorPath)) return false;
+
+      return hasTruthyAsChildAttribute(ancestorPath.node.openingElement.attributes);
+    }
+
+    ancestorPath = ancestorPath.parentPath;
+  }
+
+  return false;
+};
+
+function isExpoRouterLinkElement(path: NodePath<t.JSXElement>): boolean {
+  const openingElementName = path.node.openingElement.name;
+
+  if (t.isJSXIdentifier(openingElementName)) {
+    const binding = path.scope.getBinding(openingElementName.name);
+    if (!binding || binding.kind !== 'module') return false;
+    if (!t.isImportSpecifier(binding.path.node)) return false;
+
+    const importDeclaration = binding.path.parent;
+    if (!t.isImportDeclaration(importDeclaration) || importDeclaration.source.value !== 'expo-router') return false;
+
+    const imported = binding.path.node.imported;
+    return t.isIdentifier(imported, { name: 'Link' }) || (t.isStringLiteral(imported) && imported.value === 'Link');
+  }
+
+  if (t.isJSXMemberExpression(openingElementName)) {
+    if (!t.isJSXIdentifier(openingElementName.object)) return false;
+    if (!t.isJSXIdentifier(openingElementName.property, { name: 'Link' })) return false;
+
+    const namespaceBinding = path.scope.getBinding(openingElementName.object.name);
+    if (!namespaceBinding || namespaceBinding.kind !== 'module') return false;
+    if (!t.isImportNamespaceSpecifier(namespaceBinding.path.node)) return false;
+
+    const importDeclaration = namespaceBinding.path.parent;
+    return t.isImportDeclaration(importDeclaration) && importDeclaration.source.value === 'expo-router';
+  }
+
+  return false;
+}
+
+function hasTruthyAsChildAttribute(attributes: (t.JSXAttribute | t.JSXSpreadAttribute)[]): boolean {
+  let asChildAttribute: t.JSXAttribute | undefined;
+
+  for (const attribute of attributes) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'asChild' })) {
+      asChildAttribute = attribute;
+    }
+  }
+
+  if (!asChildAttribute) return false;
+
+  return isJSXAttributeValueTruthy(asChildAttribute.value);
+}
+
+function isJSXAttributeValueTruthy(value: t.JSXAttribute['value']): boolean {
+  if (!value) return true;
+  if (t.isStringLiteral(value)) return value.value.length > 0;
+  if (t.isJSXElement(value) || t.isJSXFragment(value)) return true;
+
+  if (t.isJSXExpressionContainer(value)) {
+    const staticTruthiness = getStaticExpressionTruthiness(value.expression);
+    return staticTruthiness ?? true;
+  }
+
+  return true;
+}
+
+function getStaticExpressionTruthiness(expression: t.Expression | t.JSXEmptyExpression): boolean | undefined {
+  if (t.isJSXEmptyExpression(expression)) return false;
+  if (t.isBooleanLiteral(expression)) return expression.value;
+  if (t.isNullLiteral(expression)) return false;
+  if (t.isStringLiteral(expression)) return expression.value.length > 0;
+  if (t.isNumericLiteral(expression)) return expression.value !== 0 && !Number.isNaN(expression.value);
+  if (t.isBigIntLiteral(expression)) return expression.value !== '0';
+  if (t.isIdentifier(expression, { name: 'undefined' })) return false;
+
+  if (t.isTemplateLiteral(expression) && expression.expressions.length === 0) {
+    return (expression.quasis[0]?.value.cooked ?? '').length > 0;
+  }
+
+  if (t.isUnaryExpression(expression, { operator: '!' })) {
+    const staticTruthiness = getStaticExpressionTruthiness(expression.argument);
+    return staticTruthiness === undefined ? undefined : !staticTruthiness;
+  }
+
+  return undefined;
+}
