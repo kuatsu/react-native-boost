@@ -180,121 +180,415 @@ export const isReactNativeImport = (path: NodePath<t.JSXOpeningElement>, expecte
   return false;
 };
 
-/**
- * Checks if any ancestor element is of the specified component type or contains that component type.
- * This function handles both direct ancestors and custom components that may contain the specified component.
- *
- * @param path - The path to the JSXOpeningElement.
- * @param componentName - The name of the component to check for in ancestors.
- * @param skipComponents - Optional array of component names to skip when checking ancestors.
- * @returns true if any ancestor is or contains the specified component.
- */
-export function hasComponentAncestor(
-  path: NodePath<t.JSXOpeningElement>,
-  componentName: string,
-  skipComponents: string[] = ['Fragment']
-): boolean {
-  // Check for direct ancestors of the specified component type
-  const directAncestor = path.findParent((parentPath) => {
-    return (
-      t.isJSXElement(parentPath.node) && t.isJSXIdentifier(parentPath.node.openingElement.name, { name: componentName })
-    );
-  });
+type AncestorClassification = 'safe' | 'text' | 'unknown';
+type ScopeBinding = NonNullable<ReturnType<NodePath<t.Node>['scope']['getBinding']>>;
 
-  if (directAncestor) return true;
+type AncestorAnalysisContext = {
+  componentCache: WeakMap<t.Node, AncestorClassification>;
+  componentInProgress: WeakSet<t.Node>;
+  renderExpressionInProgress: WeakSet<t.Node>;
+};
 
-  // Check for indirect ancestors (custom components that contain the specified component)
-  return !!path.findParent((parentPath) => {
-    // Only check JSX elements
-    if (!t.isJSXElement(parentPath.node)) return false;
+export const hasUnsafeViewAncestor = (path: NodePath<t.JSXOpeningElement>, allowUnknownAncestors = false): boolean => {
+  const classification = classifyViewAncestors(path);
+  if (classification === 'text') return true;
+  if (classification === 'unknown' && !allowUnknownAncestors) return true;
+  return false;
+};
 
-    // Get the component name
-    const openingElement = parentPath.node.openingElement;
-    if (!t.isJSXIdentifier(openingElement.name)) return false;
+function classifyViewAncestors(path: NodePath<t.JSXOpeningElement>): AncestorClassification {
+  const context: AncestorAnalysisContext = {
+    componentCache: new WeakMap<t.Node, AncestorClassification>(),
+    componentInProgress: new WeakSet<t.Node>(),
+    renderExpressionInProgress: new WeakSet<t.Node>(),
+  };
 
-    const ancestorComponentName = openingElement.name.name;
+  let classification: AncestorClassification = 'safe';
+  let ancestorPath: NodePath<t.Node> | null = path.parentPath.parentPath;
 
-    // Skip the component we're looking for
-    if (ancestorComponentName === componentName) {
-      return false;
+  while (ancestorPath) {
+    if (ancestorPath.isJSXElement()) {
+      const ancestorClassification = classifyJSXElementAsAncestor(ancestorPath, context);
+      classification = mergeAncestorClassification(classification, ancestorClassification);
+
+      if (classification === 'text') return classification;
     }
 
-    // Skip components in the skipComponents list
-    if (skipComponents.includes(ancestorComponentName)) {
-      return false;
-    }
+    ancestorPath = ancestorPath.parentPath;
+  }
 
-    // Skip lowercase components (built-in HTML elements)
-    if (ancestorComponentName[0] === ancestorComponentName[0].toLowerCase()) {
-      return false;
-    }
-
-    // Try to find the component definition through variable binding
-    const binding = parentPath.scope.getBinding(ancestorComponentName);
-    if (!binding) return false;
-
-    // Now check the component definition for the specified component
-    if (t.isVariableDeclarator(binding.path.node)) {
-      const init = binding.path.node.init;
-
-      // Handle arrow functions or function expressions
-      if (t.isArrowFunctionExpression(init) || t.isFunctionExpression(init)) {
-        // Check the function body for the specified component
-        return t.isBlockStatement(init.body)
-          ? hasComponentInReturnStatement(init.body, componentName)
-          : hasComponentInExpression(init.body, componentName);
-      }
-    } else if (t.isFunctionDeclaration(binding.path.node)) {
-      // Handle function declarations
-      return hasComponentInReturnStatement(binding.path.node.body, componentName);
-    }
-
-    return false;
-  });
+  return classification;
 }
 
-/**
- * Check if a block statement contains a return statement with the specified component
- *
- * @param blockStatement - The block statement to check
- * @param componentName - The name of the component to look for
- * @returns true if the block statement contains a return with the specified component
- */
-function hasComponentInReturnStatement(blockStatement: t.BlockStatement, componentName: string): boolean {
-  for (const statement of blockStatement.body) {
-    if (
-      t.isReturnStatement(statement) &&
-      statement.argument &&
-      hasComponentInExpression(statement.argument, componentName)
-    ) {
-      return true;
-    }
+function classifyJSXElementAsAncestor(
+  path: NodePath<t.JSXElement>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  const openingElementName = path.node.openingElement.name;
+
+  if (t.isJSXIdentifier(openingElementName)) {
+    return classifyJSXIdentifierAsAncestor(path, openingElementName.name, context);
   }
+
+  if (t.isJSXMemberExpression(openingElementName)) {
+    return classifyJSXMemberExpressionAsAncestor(path, openingElementName);
+  }
+
+  return 'unknown';
+}
+
+function classifyJSXIdentifierAsAncestor(
+  path: NodePath<t.JSXElement>,
+  identifierName: string,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  if (identifierName === 'Fragment') return 'safe';
+
+  const binding = path.scope.getBinding(identifierName);
+  if (!binding) return 'unknown';
+
+  return classifyBindingAsAncestor(binding, context);
+}
+
+function classifyJSXMemberExpressionAsAncestor(
+  path: NodePath<t.JSXElement>,
+  expression: t.JSXMemberExpression
+): AncestorClassification {
+  if (!t.isJSXIdentifier(expression.object) || !t.isJSXIdentifier(expression.property)) {
+    return 'unknown';
+  }
+
+  const binding = path.scope.getBinding(expression.object.name);
+  if (!binding || binding.kind !== 'module' || !t.isImportNamespaceSpecifier(binding.path.node)) {
+    return 'unknown';
+  }
+
+  const importDeclaration = binding.path.parent;
+  if (!t.isImportDeclaration(importDeclaration)) return 'unknown';
+
+  if (importDeclaration.source.value === 'react-native') {
+    return expression.property.name === 'Text' ? 'text' : 'safe';
+  }
+
+  if (importDeclaration.source.value === 'react' && expression.property.name === 'Fragment') {
+    return 'safe';
+  }
+
+  return 'unknown';
+}
+
+function classifyBindingAsAncestor(binding: ScopeBinding, context: AncestorAnalysisContext): AncestorClassification {
+  if (binding.kind === 'module') {
+    return classifyModuleBindingAsAncestor(binding);
+  }
+
+  return classifyLocalBindingAsAncestor(binding, context);
+}
+
+function classifyModuleBindingAsAncestor(binding: ScopeBinding): AncestorClassification {
+  const importDeclaration = binding.path.parent;
+  if (!t.isImportDeclaration(importDeclaration)) return 'unknown';
+
+  const source = importDeclaration.source.value;
+  if (source === 'react-native') {
+    if (t.isImportSpecifier(binding.path.node)) {
+      const importedName = getImportSpecifierImportedName(binding.path.node);
+      if (!importedName) return 'unknown';
+      return importedName === 'Text' ? 'text' : 'safe';
+    }
+
+    if (t.isImportNamespaceSpecifier(binding.path.node)) {
+      return 'safe';
+    }
+
+    return 'unknown';
+  }
+
+  if (source === 'react' && t.isImportSpecifier(binding.path.node)) {
+    const importedName = getImportSpecifierImportedName(binding.path.node);
+    if (importedName === 'Fragment') return 'safe';
+  }
+
+  return 'unknown';
+}
+
+function classifyLocalBindingAsAncestor(
+  binding: ScopeBinding,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  const cacheKey = binding.path.node;
+  const cached = context.componentCache.get(cacheKey);
+  if (cached) return cached;
+
+  if (context.componentInProgress.has(cacheKey)) {
+    return 'unknown';
+  }
+
+  context.componentInProgress.add(cacheKey);
+
+  let classification: AncestorClassification;
+  if (binding.path.isFunctionDeclaration()) {
+    classification = analyzeFunctionComponent(binding.path, context);
+  } else if (binding.path.isVariableDeclarator()) {
+    classification = analyzeVariableDeclaratorComponent(binding.path, context);
+  } else {
+    classification = 'unknown';
+  }
+
+  context.componentInProgress.delete(cacheKey);
+  context.componentCache.set(cacheKey, classification);
+
+  return classification;
+}
+
+function analyzeVariableDeclaratorComponent(
+  path: NodePath<t.VariableDeclarator>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  const initPath = path.get('init');
+  if (!initPath.node) return 'unknown';
+
+  if (initPath.isArrowFunctionExpression() || initPath.isFunctionExpression()) {
+    return analyzeFunctionComponent(initPath, context);
+  }
+
+  if (initPath.isCallExpression()) {
+    return analyzeCallWrappedComponent(initPath, context);
+  }
+
+  if (initPath.isIdentifier()) {
+    const aliasBinding = path.scope.getBinding(initPath.node.name);
+    if (!aliasBinding) return 'unknown';
+
+    return classifyBindingAsAncestor(aliasBinding, context);
+  }
+
+  return 'unknown';
+}
+
+function analyzeCallWrappedComponent(
+  path: NodePath<t.CallExpression>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  if (!isReactMemoOrForwardRefCall(path)) return 'unknown';
+
+  const [firstArgumentPath] = path.get('arguments');
+  if (!firstArgumentPath?.node) return 'unknown';
+
+  if (firstArgumentPath.isArrowFunctionExpression() || firstArgumentPath.isFunctionExpression()) {
+    return analyzeFunctionComponent(firstArgumentPath, context);
+  }
+
+  if (firstArgumentPath.isIdentifier()) {
+    const wrappedComponentBinding = path.scope.getBinding(firstArgumentPath.node.name);
+    if (!wrappedComponentBinding) return 'unknown';
+
+    return classifyBindingAsAncestor(wrappedComponentBinding, context);
+  }
+
+  if (firstArgumentPath.isCallExpression()) {
+    return analyzeCallWrappedComponent(firstArgumentPath, context);
+  }
+
+  return 'unknown';
+}
+
+function isReactMemoOrForwardRefCall(path: NodePath<t.CallExpression>): boolean {
+  const calleePath = path.get('callee');
+
+  if (calleePath.isIdentifier()) {
+    if (!isMemoOrForwardRefName(calleePath.node.name)) return false;
+
+    const binding = path.scope.getBinding(calleePath.node.name);
+    return isReactImportBinding(binding);
+  }
+
+  if (calleePath.isMemberExpression()) {
+    const objectPath = calleePath.get('object');
+    const propertyPath = calleePath.get('property');
+
+    if (!objectPath.isIdentifier() || !propertyPath.isIdentifier()) return false;
+    if (!isMemoOrForwardRefName(propertyPath.node.name)) return false;
+
+    const objectBinding = path.scope.getBinding(objectPath.node.name);
+    return isReactImportBinding(objectBinding);
+  }
+
   return false;
 }
 
-/**
- * Check if an expression contains the specified component
- *
- * @param expression - The expression to check
- * @param componentName - The name of the component to look for
- * @returns true if the expression contains the specified component
- */
-function hasComponentInExpression(expression: t.Expression, componentName: string): boolean {
-  // If directly returning a JSX element
-  if (t.isJSXElement(expression)) {
-    // Check if it's the specified component
-    if (t.isJSXIdentifier(expression.openingElement.name, { name: componentName })) {
-      return true;
+function isMemoOrForwardRefName(name: string): boolean {
+  return name === 'memo' || name === 'forwardRef';
+}
+
+function isReactImportBinding(binding: ScopeBinding | undefined): binding is ScopeBinding {
+  if (!binding || binding.kind !== 'module') return false;
+
+  const importDeclaration = binding.path.parent;
+  return t.isImportDeclaration(importDeclaration) && importDeclaration.source.value === 'react';
+}
+
+function analyzeFunctionComponent(
+  path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  const bodyPath = path.get('body');
+
+  if (!bodyPath.isBlockStatement()) {
+    return analyzeRenderExpression(bodyPath as NodePath<t.Node>, context);
+  }
+
+  let classification: AncestorClassification = 'safe';
+
+  for (const statementPath of bodyPath.get('body')) {
+    if (!statementPath.isReturnStatement()) continue;
+
+    const argumentPath = statementPath.get('argument');
+    if (!argumentPath.node) continue;
+
+    const returnClassification = analyzeRenderExpression(argumentPath as NodePath<t.Node>, context);
+    classification = mergeAncestorClassification(classification, returnClassification);
+
+    if (classification === 'text') return classification;
+  }
+
+  return classification;
+}
+
+function analyzeRenderExpression(path: NodePath<t.Node>, context: AncestorAnalysisContext): AncestorClassification {
+  if (path.isJSXFragment()) {
+    return analyzeJSXChildren(path.get('children'), context);
+  }
+
+  let classification: AncestorClassification = 'safe';
+  let hasJSX = false;
+
+  path.traverse({
+    JSXOpeningElement(jsxPath) {
+      hasJSX = true;
+
+      const jsxElementPath = jsxPath.parentPath;
+      if (!jsxElementPath.isJSXElement()) {
+        classification = mergeAncestorClassification(classification, 'unknown');
+        return;
+      }
+
+      const jsxClassification = classifyJSXElementAsAncestor(jsxElementPath, context);
+      classification = mergeAncestorClassification(classification, jsxClassification);
+
+      if (classification === 'text') {
+        jsxPath.stop();
+      }
+    },
+  });
+
+  if (hasJSX) return classification;
+
+  if (path.isIdentifier()) {
+    return analyzeIdentifierRenderExpression(path, context);
+  }
+
+  if (path.isMemberExpression() && isPropsChildrenMemberExpression(path.node)) {
+    return 'safe';
+  }
+
+  if (
+    path.isNullLiteral() ||
+    path.isBooleanLiteral() ||
+    path.isNumericLiteral() ||
+    path.isStringLiteral() ||
+    path.isBigIntLiteral()
+  ) {
+    return 'safe';
+  }
+
+  return 'unknown';
+}
+
+function analyzeJSXChildren(
+  children: Array<NodePath<t.JSXText | t.JSXExpressionContainer | t.JSXSpreadChild | t.JSXElement | t.JSXFragment>>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  let classification: AncestorClassification = 'safe';
+
+  for (const childPath of children) {
+    if (childPath.isJSXElement()) {
+      const childClassification = classifyJSXElementAsAncestor(childPath, context);
+      classification = mergeAncestorClassification(classification, childClassification);
+    } else if (childPath.isJSXFragment()) {
+      const fragmentClassification = analyzeJSXChildren(childPath.get('children'), context);
+      classification = mergeAncestorClassification(classification, fragmentClassification);
+    } else if (childPath.isJSXExpressionContainer()) {
+      const expressionPath = childPath.get('expression');
+      if (!expressionPath.node || expressionPath.isJSXEmptyExpression()) continue;
+
+      const expressionClassification = analyzeRenderExpression(expressionPath as NodePath<t.Node>, context);
+      classification = mergeAncestorClassification(classification, expressionClassification);
+    } else if (childPath.isJSXSpreadChild()) {
+      classification = mergeAncestorClassification(classification, 'unknown');
     }
 
-    // Check if any children are the specified component
-    for (const child of expression.children) {
-      if (t.isJSXElement(child) && t.isJSXIdentifier(child.openingElement.name, { name: componentName })) {
-        return true;
-      }
+    if (classification === 'text') {
+      return classification;
     }
   }
 
-  return false;
+  return classification;
+}
+
+function analyzeIdentifierRenderExpression(
+  path: NodePath<t.Identifier>,
+  context: AncestorAnalysisContext
+): AncestorClassification {
+  if (path.node.name === 'children') return 'safe';
+
+  const binding = path.scope.getBinding(path.node.name);
+  if (!binding) return 'unknown';
+
+  if (binding.kind === 'param') {
+    return binding.identifier.name === 'children' ? 'safe' : 'unknown';
+  }
+
+  if (!binding.path.isVariableDeclarator()) return 'unknown';
+
+  const cacheKey = binding.path.node;
+  if (context.renderExpressionInProgress.has(cacheKey)) {
+    return 'unknown';
+  }
+
+  const initPath = binding.path.get('init');
+  if (!initPath.node) return 'unknown';
+
+  context.renderExpressionInProgress.add(cacheKey);
+  const classification = analyzeRenderExpression(initPath as NodePath<t.Node>, context);
+  context.renderExpressionInProgress.delete(cacheKey);
+
+  return classification;
+}
+
+function isPropsChildrenMemberExpression(expression: t.MemberExpression): boolean {
+  if (!t.isIdentifier(expression.object, { name: 'props' })) return false;
+  if (!t.isIdentifier(expression.property, { name: 'children' })) return false;
+  return !expression.computed;
+}
+
+function mergeAncestorClassification(
+  current: AncestorClassification,
+  next: AncestorClassification
+): AncestorClassification {
+  if (current === 'text' || next === 'text') return 'text';
+  if (current === 'unknown' || next === 'unknown') return 'unknown';
+  return 'safe';
+}
+
+function getImportSpecifierImportedName(specifier: t.ImportSpecifier): string | undefined {
+  if (t.isIdentifier(specifier.imported)) {
+    return specifier.imported.name;
+  }
+
+  if (t.isStringLiteral(specifier.imported)) {
+    return specifier.imported.value;
+  }
+
+  return undefined;
 }

@@ -52,6 +52,12 @@ An object specifying which optimizers to enable or disable. The keys are the nam
 - `text`
 - `view`
 
+### `dangerouslyOptimizeViewWithUnknownAncestors`
+
+By default, the View optimizer bails out when it cannot statically prove that all ancestor components are safe. This avoids incorrect optimizations when unresolved ancestors render a `Text` wrapper across file boundaries.
+
+Set this to `true` to opt back into aggressive behavior and optimize `View` even with unresolved ancestors. This can improve optimization coverage, but may introduce behavioral regressions if those unresolved ancestors render `Text`.
+
 ## Enable only in development / production mode
 
 Babel supports overriding / merging the configuration based on the environment. See the Babel documentation [here](https://babeljs.io/docs/options#env) and [here](https://babeljs.io/docs/options#envname).
