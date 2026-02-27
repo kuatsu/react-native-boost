@@ -1,3 +1,17 @@
 {
-  "pages": ["index", "introduction", "configuration", "runtime-library"]
+  "title": "React Native Boost",
+  "description": "Documentation for React Native Boost",
+  "root": true,
+  "pages": [
+    "index",
+    "---Information---",
+    "information/how-it-works",
+    "information/benchmarks",
+    "---Configuration---",
+    "configuration/configure",
+    "configuration/nativewind",
+    "configuration/boost-decorator",
+    "---Runtime Library---",
+    "runtime-library/index"
+  ]
 }

@@ -1,21 +1,66 @@
 ---
-title: React Native Boost
-description: A Babel plugin and runtime toolkit for safer React Native micro-optimizations.
+title: Getting Started
+description: Install React Native Boost to boost your app's performance with one line of code.
 ---
 
-React Native Boost improves React Native render performance by replacing safe `Text` and `View` usages with their native counterparts during compilation.
+React Native Boost consists of two pieces:
 
-It is designed to be safety-first: if the plugin cannot prove a transformation is safe, it skips it.
+- A Babel plugin that statically analyzes your AST and replaces safe `Text`/`View` usages with native components.
+- A runtime package used by the plugin for cross-platform-safe imports and helper utilities.
+
+The analyzer is intentionally strict. If a component usage might be unsafe, it is skipped.
 
 <Callout type="warn" title="Experimental">
-  React Native Boost is still experimental. If you hit issues, open a reproducible report on GitHub and use the plugin's
-  ignore/disable options for temporary workarounds.
+  The plugin is still experimental. Expect edge cases and report reproducible issues at
+  https://github.com/kuatsu/react-native-boost/issues.
 </Callout>
+
+## Getting Started
+
+1. Install React Native Boost (not as a dev dependency):
+
+```bash
+npm install react-native-boost
+# or
+yarn add react-native-boost
+```
+
+2. If you use Expo and do not have a `babel.config.js` yet:
+
+```bash
+npx expo customize babel.config.js
+```
+
+3. Add the plugin:
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: ['react-native-boost/plugin'],
+};
+```
+
+4. Restart the development server and clear cache:
+
+```bash
+npm start --clear
+# or
+yarn start --clear
+```
+
+<Callout title="Runtime Dependency">
+  The Babel plugin imports optimized components via `react-native-boost/runtime`, so `react-native-boost` must be
+  available at runtime.
+</Callout>
+
+## Platform Support
+
+React Native Boost supports iOS, Android, and Web projects. Optimizations are applied on native platforms where the
+native components are available; unsupported targets gracefully fall back to standard React Native components.
 
 ## Documentation
 
 <Cards>
-  <Card title="Introduction" href="/docs/introduction" />
   <Card title="Configuration" href="/docs/configuration/configure" />
   <Card title="Runtime Library" href="/docs/runtime-library" />
 </Cards>
