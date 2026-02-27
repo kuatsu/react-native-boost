@@ -1,0 +1,16 @@
+---
+title: "@boost-ignore Decorator"
+description: Skip optimization for a specific JSX element.
+---
+
+Use `@boost-ignore` to disable optimization on a specific element.
+
+If a line containing `@boost-ignore` appears immediately before a JSX opening tag, that component is skipped.
+
+## Example
+
+```jsx
+<Text>This will be optimized.</Text>
+{/* @boost-ignore */}
+<Text>This will not be optimized.</Text>
+```

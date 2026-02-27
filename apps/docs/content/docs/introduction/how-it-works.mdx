@@ -1,0 +1,31 @@
+---
+title: How It Works
+description: Understand how the Babel optimizer decides when transformations are safe.
+---
+
+React Native components such as `Text` and `View` are JavaScript wrappers around native implementations.
+Those wrappers handle many edge cases, but they also add runtime overhead.
+
+React Native Boost analyzes your code at build time and replaces only provably safe component usages with native
+equivalents from `react-native-boost/runtime`.
+
+## Static Analysis
+
+For each candidate component, the plugin verifies conditions such as:
+
+- Import source checks (for example, imported from `react-native`)
+- Prop compatibility checks
+- Ancestor and context safety checks
+- Children/structure checks
+
+If any safety requirement is not met, the component is left unchanged.
+
+## Why Runtime Imports Exist
+
+Optimized components are imported from `react-native-boost/runtime`, not directly from `react-native`, so web targets
+and non-native environments can gracefully fall back when native internals are unavailable.
+
+## Performance Impact
+
+When optimization is valid, React Native Boost bypasses wrapper logic, reduces component tree depth, and can improve
+initial render times on UI-heavy screens.

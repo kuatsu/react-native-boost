@@ -1,0 +1,58 @@
+---
+title: Nativewind Support
+description: Configure cssInterop for optimized components.
+---
+
+If your app uses Nativewind, configure `cssInterop` for optimized components from
+`react-native-boost/runtime`.
+
+## Example
+
+```jsx
+import { cssInterop } from 'nativewind';
+import { NativeText, NativeView } from 'react-native-boost/runtime';
+
+cssInterop(NativeText, { className: 'style' });
+cssInterop(NativeView, { className: 'style' });
+```
+
+This mirrors Nativewind's own mapping for `Text`/`View`.
+
+## Known Limitations
+
+### `select-*`
+
+Nativewind maps `select-*` classes to `userSelect`. Native `Text` does not accept `userSelect` directly and uses the
+`selectable` prop.
+
+#### Recommended Usage
+
+```jsx
+// Avoid
+<Text className="select-auto">Hello world</Text>
+
+// Use
+<Text selectable>Hello world</Text>
+// or
+<Text style={{ userSelect: 'auto' }}>Hello world</Text>
+```
+
+You can map values with `userSelectToSelectableMap` from the runtime package.
+
+### `align-*`
+
+Nativewind maps `align-*` classes to `verticalAlign`, while native `Text` expects `textAlignVertical`.
+
+#### Recommended Usage
+
+```jsx
+// Avoid
+<Text className="align-center">Hello world</Text>
+
+// Use
+<Text style={{ textAlignVertical: 'center' }}>Hello world</Text>
+// or
+<Text style={{ verticalAlign: 'middle' }}>Hello world</Text>
+```
+
+You can map values with `verticalAlignToTextAlignVerticalMap` from the runtime package.

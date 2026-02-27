@@ -1,0 +1,98 @@
+---
+title: Runtime Library
+description: Runtime exports used by the Babel plugin and advanced integrations.
+---
+
+`react-native-boost/runtime` is used by the Babel plugin to apply optimizations safely across platforms.
+
+Besides re-exporting optimized native components with web-safe fallbacks, it also exposes helper utilities.
+
+Direct usage is supported but generally not recommended unless needed for advanced integrations (for example,
+Nativewind setup).
+
+## `processTextStyle`
+
+Flattens and normalizes `Text` styles for optimized native components.
+
+### Parameters
+
+- `style`: `GenericStyleProp<TextStyle>`
+
+### Return Value
+
+Returns an object with normalized style and generated props such as `selectable` when relevant.
+
+If input is falsy/invalid, returns an empty object.
+
+### Example
+
+```ts
+import { processTextStyle } from 'react-native-boost/runtime';
+
+const style = {
+  fontWeight: 500,
+  userSelect: 'auto',
+  color: 'blue',
+};
+
+const props = processTextStyle(style);
+```
+
+## `processAccessibilityProps`
+
+Maps accessibility and ARIA props to the prop shape expected by native components.
+
+### Parameters
+
+- `props`: `Record<string, any>`
+
+### Return Value
+
+Returns a normalized props object compatible with optimized native components.
+
+### Example
+
+```ts
+import { processAccessibilityProps } from 'react-native-boost/runtime';
+
+const props = {
+  'aria-busy': true,
+  accessibilityLabel: 'Submit button',
+};
+
+const processedProps = processAccessibilityProps(props);
+```
+
+## `userSelectToSelectableMap`
+
+Maps `userSelect` style values to `selectable` prop values.
+
+## `verticalAlignToTextAlignVerticalMap`
+
+Maps `verticalAlign` style values to `textAlignVertical` values.
+
+## `NativeText`
+
+Loads native Text implementation on supported native platforms and falls back to standard `Text` on web.
+
+### Example
+
+```tsx
+import { NativeText } from 'react-native-boost/runtime';
+
+<NativeText>Hello</NativeText>;
+```
+
+## `NativeView`
+
+Loads native View implementation on supported native platforms and falls back to standard `View` on web.
+
+### Example
+
+```tsx
+import { NativeText, NativeView } from 'react-native-boost/runtime';
+
+<NativeView>
+  <NativeText>Hello</NativeText>
+</NativeView>;
+```

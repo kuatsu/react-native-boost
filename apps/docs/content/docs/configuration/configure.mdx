@@ -1,0 +1,89 @@
+---
+title: Configure the Babel Plugin
+description: Control logging, ignores, and optimization behavior.
+---
+
+The Babel plugin (`react-native-boost/plugin`) is the core of React Native Boost.
+
+Defaults are safe and usable out of the box, but you can tune behavior for your app or monorepo.
+
+## Example Configuration
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      'react-native-boost/plugin',
+      {
+        verbose: false,
+        silent: false,
+        ignores: ['node_modules/**'],
+        optimizations: {
+          text: true,
+          view: true,
+        },
+      },
+    ],
+  ],
+};
+```
+
+## Options
+
+### `verbose`
+
+Enables extra logs for skipped components and skip reasons.
+
+Optimized components are logged by default unless `silent` is enabled.
+
+Default: `false`
+
+### `silent`
+
+Disables all plugin logs (optimized, skipped, warnings).
+
+Default: `false`
+
+### `ignores`
+
+Array of glob patterns for files that should not be optimized.
+
+Default: `[]`
+
+<Callout title="Monorepo Note">
+  Ignore patterns are resolved from the Babel process working directory. In nested apps, you may need explicit parent
+  paths such as `../../node_modules/**` to ignore hoisted dependencies.
+</Callout>
+
+### `optimizations`
+
+Toggle individual optimizers.
+
+Supported keys:
+
+- `text`
+- `view`
+
+### `dangerouslyOptimizeViewWithUnknownAncestors`
+
+By default, the `View` optimizer bails out if ancestor safety cannot be proven statically.
+
+Set this to `true` to force optimization even with unresolved ancestors. This can improve optimization coverage but may
+introduce regressions if those ancestors render `Text` wrappers.
+
+## Environment-Specific Enablement
+
+You can enable React Native Boost by environment with Babel `env` config:
+
+```js
+module.exports = {
+  env: {
+    development: {
+      plugins: ['react-native-boost/plugin'],
+    },
+  },
+};
+```
+
+See Babel docs: https://babeljs.io/docs/options#env
