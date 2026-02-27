@@ -1,29 +1,38 @@
 import type { DocEntry, TypeTableProps } from 'fumadocs-typescript';
-import type { ReactNode } from 'react';
 import { typeGenerator } from '../../lib/type-generator';
-
-type HeadingLevel = 2 | 3 | 4 | 5 | 6;
+import { ReferenceSections, buildEntryToc, renderInlineCode, toSlug, type HeadingLevel } from './reference-sections';
 
 type AutoOptionSectionsProps = Pick<TypeTableProps, 'name' | 'path' | 'type'> & {
   headingLevel?: HeadingLevel;
   idPrefix?: string;
 };
 
-function toSlug(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+type AutoOptionSectionsTocProps = Pick<TypeTableProps, 'name' | 'path' | 'type'> & {
+  idPrefix?: string;
+  depth?: HeadingLevel;
+};
 
-  return slug.length > 0 ? slug : 'option';
+const optionEntriesCache = new Map<string, Promise<DocEntry[]>>();
+
+function getEntriesCacheKey({ path, name, type }: Pick<TypeTableProps, 'path' | 'name' | 'type'>): string {
+  return `${path ?? ''}|${name ?? ''}|${type ?? ''}`;
 }
 
-function toParagraphs(description: string): string[] {
-  return description
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.replaceAll('\n', ' ').trim())
-    .filter((paragraph) => paragraph.length > 0);
+async function getOptionEntries(props: Pick<TypeTableProps, 'path' | 'name' | 'type'>): Promise<DocEntry[]> {
+  const cacheKey = getEntriesCacheKey(props);
+  const cachedEntries = optionEntriesCache.get(cacheKey);
+  if (cachedEntries != null) {
+    return cachedEntries;
+  }
+
+  const entriesPromise = typeGenerator.generateTypeTable(props).then((docs) => docs.flatMap((doc) => doc.entries));
+  optionEntriesCache.set(cacheKey, entriesPromise);
+  return entriesPromise;
+}
+
+function resolveIdPrefix(props: Pick<TypeTableProps, 'name' | 'type'>, idPrefix?: string): string {
+  const prefixSource = props.name ?? props.type ?? 'options';
+  return idPrefix ?? toSlug(prefixSource);
 }
 
 function readTagValues(entry: DocEntry, tagName: string): string[] {
@@ -43,53 +52,22 @@ function readTagValues(entry: DocEntry, tagName: string): string[] {
   return values;
 }
 
-function renderInlineCode(value: string, keyPrefix: string): ReactNode {
-  const parts = value.split(/`([^`]+)`/g);
-
-  return parts.map((part, index) => {
-    if (index % 2 === 1) {
-      return <code key={`${keyPrefix}-code-${index}`}>{part}</code>;
-    }
-
-    return <span key={`${keyPrefix}-text-${index}`}>{part}</span>;
-  });
-}
-
 export async function AutoOptionSections({ headingLevel = 3, idPrefix, ...props }: AutoOptionSectionsProps) {
-  const docs = await typeGenerator.generateTypeTable(props);
-  const entries = docs.flatMap((doc) => doc.entries);
-
-  if (entries.length === 0) {
-    return <p>Could not generate options for this type.</p>;
-  }
-
-  const HeadingTag = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-  const prefixSource = props.name ?? props.type ?? 'options';
-  const resolvedIdPrefix = idPrefix ?? toSlug(prefixSource);
+  const entries = await getOptionEntries(props);
+  const resolvedIdPrefix = resolveIdPrefix(props, idPrefix);
 
   return (
-    <>
-      {entries.map((entry) => {
-        const descriptionParagraphs = toParagraphs(entry.description);
+    <ReferenceSections
+      entries={entries}
+      idPrefix={resolvedIdPrefix}
+      emptyMessage="Could not generate options for this type."
+      headingLevel={headingLevel}
+      renderMeta={(entry) => {
         const defaultValues = readTagValues(entry, 'default');
         const extraTags = entry.tags.filter((tag) => tag.name !== 'default');
 
         return (
-          <section key={entry.name} id={`${resolvedIdPrefix}-${toSlug(entry.name)}`} className="mt-8 first:mt-0">
-            <HeadingTag>
-              <code>{entry.name}</code>
-            </HeadingTag>
-
-            {descriptionParagraphs.length > 0 ? (
-              descriptionParagraphs.map((paragraph, index) => (
-                <p key={`${entry.name}-paragraph-${index}`}>
-                  {renderInlineCode(paragraph, `${entry.name}-paragraph-${index}`)}
-                </p>
-              ))
-            ) : (
-              <p>No description provided.</p>
-            )}
-
+          <>
             <ul>
               <li>
                 <strong>Type:</strong> <code>{entry.type}</code>
@@ -123,9 +101,20 @@ export async function AutoOptionSections({ headingLevel = 3, idPrefix, ...props 
                 </ul>
               </>
             ) : null}
-          </section>
+          </>
         );
-      })}
-    </>
+      }}
+    />
   );
+}
+
+export async function getAutoOptionSectionsToc({ idPrefix, depth = 3, ...props }: AutoOptionSectionsTocProps) {
+  const entries = await getOptionEntries(props);
+  const resolvedIdPrefix = resolveIdPrefix(props, idPrefix);
+
+  return buildEntryToc({
+    entries,
+    idPrefix: resolvedIdPrefix,
+    depth,
+  });
 }
