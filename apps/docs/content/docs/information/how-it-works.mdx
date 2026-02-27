@@ -6,7 +6,10 @@ description: Understand why React Native Boost makes your app faster, and how th
 React Native components such as `Text` and `View` are JavaScript wrappers around their native implementations.
 Those wrappers handle many edge cases, but they also add a considerable amount of runtime overhead.
 
-React Native Boost analyzes your code at build time and replaces these components with their native equivalents fully automatically using the [runtime library](/docs/runtime-library). The plugin performs static analysis on your code to determine when it's safe to optimize a component and when it's not.
+React Native Boost analyzes your code at build time and replaces these components with their native equivalents fully automatically. The plugin performs static analysis on your code to determine when it's safe to optimize a component and when it's not.
+
+Optimized components are imported from `react-native-boost/runtime`, not directly from `react-native`, which allows graceful fallback for web targets
+and other non-native environments when native internals are unavailable.
 
 ## Static Analysis
 
@@ -18,13 +21,3 @@ For each candidate component, the plugin verifies conditions such as:
 - Children/structure checks
 
 If any safety requirement is not met, the component is left unchanged in order to avoid behavioral changes or other bugs.
-
-## Why Runtime Imports Exist
-
-Optimized components are imported from `react-native-boost/runtime`, not directly from `react-native`, so web targets
-and other non-native environments can gracefully fall back when native internals are unavailable.
-
-## Performance Impact
-
-When optimization is performed, React Native Boost bypasses wrapper logic, reduces component tree depth, and can improve
-initial render times on UI-heavy screens.
