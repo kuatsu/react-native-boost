@@ -1,7 +1,7 @@
 import { declare } from '@babel/helper-plugin-utils';
-import { Optimizer } from '../types';
+import { Optimizer, PluginOptions } from '../types';
 
-export const generateTestPlugin = (optimizer: Optimizer) => {
+export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions = {}) => {
   return declare((api) => {
     api.assertVersion(7);
 
@@ -9,7 +9,7 @@ export const generateTestPlugin = (optimizer: Optimizer) => {
       name: 'react-native-boost',
       visitor: {
         JSXOpeningElement(path) {
-          optimizer(path);
+          optimizer(path, undefined, options);
         },
       },
     };

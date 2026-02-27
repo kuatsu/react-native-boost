@@ -13,3 +13,21 @@ pluginTester({
   },
   formatResult: formatTestResult,
 });
+
+pluginTester({
+  plugin: generateTestPlugin(viewOptimizer, {
+    dangerouslyOptimizeViewWithUnknownAncestors: true,
+  }),
+  title: 'view dangerous unknown ancestors',
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+  tests: [
+    {
+      title: 'optimizes View inside unresolved ancestor when enabled',
+      fixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/code.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/dangerous-output.js'),
+    },
+  ],
+});

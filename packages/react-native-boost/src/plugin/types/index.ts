@@ -25,9 +25,20 @@ export interface PluginOptions {
      */
     view?: boolean;
   };
+  /**
+   * Opt-in flag that allows View optimization when ancestor components cannot be statically resolved.
+   *
+   * This may introduce behavioral changes when unresolved ancestors render react-native Text wrappers.
+   * @default false
+   */
+  dangerouslyOptimizeViewWithUnknownAncestors?: boolean;
 }
 
-export type Optimizer = (path: NodePath<t.JSXOpeningElement>, log?: (message: string) => void) => void;
+export type Optimizer = (
+  path: NodePath<t.JSXOpeningElement>,
+  log?: (message: string) => void,
+  options?: PluginOptions
+) => void;
 
 export type HubFile = t.File & {
   opts: {

@@ -7,7 +7,7 @@ import {
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
-  hasComponentAncestor,
+  hasUnsafeViewAncestor,
 } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
@@ -26,15 +26,12 @@ export const viewBlacklistedProperties = new Set([
   'style', // TODO: process style at runtime
 ]);
 
-// Components to skip when checking for indirect Text ancestors
-const skipComponents = ['View', 'Fragment', 'ScrollView', 'FlatList'];
-
-export const viewOptimizer: Optimizer = (path, log = () => {}) => {
+export const viewOptimizer: Optimizer = (path, log = () => {}, options) => {
   if (isIgnoredLine(path)) return;
   if (!isValidJSXComponent(path, 'View')) return;
   if (!isReactNativeImport(path, 'View')) return;
   if (hasBlacklistedProperty(path, viewBlacklistedProperties)) return;
-  if (hasComponentAncestor(path, 'Text', skipComponents)) return;
+  if (hasUnsafeViewAncestor(path, options?.dangerouslyOptimizeViewWithUnknownAncestors === true)) return;
 
   // Extract the file from the Babel hub
   const hub = path.hub as unknown;

@@ -16,7 +16,7 @@ export default declare((api) => {
         const logger = options.verbose ? log : () => {};
         if (isIgnoredFile(path, options.ignores ?? [])) return;
         if (options.optimizations?.text !== false) textOptimizer(path, logger);
-        if (options.optimizations?.view !== false) viewOptimizer(path, logger);
+        if (options.optimizations?.view !== false) viewOptimizer(path, logger, options);
       },
     },
   };
