@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-require-imports,unicorn/prefer-module */
 
+import type { ComponentType } from 'react';
+import type { TextProps } from 'react-native';
+
 const reactNative = require('react-native');
 const isWeb = reactNative.Platform.OS === 'web';
 
@@ -10,4 +13,11 @@ if (isWeb || nativeText == null) {
   nativeText = reactNative.Text;
 }
 
-export const NativeText = nativeText;
+/**
+ * Native Text component with graceful fallback.
+ *
+ * @remarks
+ * Uses `unstable_NativeText` on supported native runtimes and falls back to `Text`
+ * on web or when the unstable export is unavailable.
+ */
+export const NativeText: ComponentType<TextProps> = nativeText;

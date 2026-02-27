@@ -4,6 +4,16 @@ import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from '
 
 const propsCache = new WeakMap();
 
+/**
+ * Normalizes `Text` style values for `NativeText`.
+ *
+ * @param style - Style prop passed to a text-like component.
+ * @returns Native-friendly text props. Returns an empty object when `style` is falsy or cannot be normalized.
+ * @remarks
+ * - Flattens style arrays via `StyleSheet.flatten`
+ * - Converts numeric `fontWeight` values to string values
+ * - Maps `userSelect` and `verticalAlign` to native-compatible props
+ */
 export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<TextProps> {
   if (!style) return {};
 
@@ -38,6 +48,16 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
   return props;
 }
 
+/**
+ * Normalizes accessibility and ARIA props for runtime native components.
+ *
+ * @param props - Accessibility and ARIA props.
+ * @returns Props with normalized accessibility fields.
+ * @remarks
+ * - Merges `aria-label` with `accessibilityLabel`
+ * - Merges ARIA state fields into `accessibilityState`
+ * - Defaults `accessible` to `true` when omitted
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
   const {
