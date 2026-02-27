@@ -118,7 +118,7 @@ describe('logger', () => {
     });
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
-    expect(String(consoleSpy.mock.calls[0][0])).toContain('\u001B[32moptimized\u001B[0m');
+    expect(String(consoleSpy.mock.calls[0][0])).toContain('\u001B[32m[optimized]\u001B[0m');
   });
 
   it('does not colorize when NO_COLOR is set', () => {
@@ -139,7 +139,7 @@ describe('logger', () => {
     });
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
-    expect(String(consoleSpy.mock.calls[0][0])).not.toContain('\u001B[32moptimized\u001B[0m');
+    expect(String(consoleSpy.mock.calls[0][0])).not.toContain('\u001B[32m[optimized]\u001B[0m');
   });
 });
 
