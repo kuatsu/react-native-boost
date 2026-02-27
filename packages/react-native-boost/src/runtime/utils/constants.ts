@@ -1,4 +1,6 @@
-// Maps the `userSelect` prop to the native `selectable` prop
+/**
+ * Maps CSS-like `userSelect` values to React Native's `selectable` prop.
+ */
 export const userSelectToSelectableMap = {
   auto: true,
   text: true,
@@ -7,7 +9,9 @@ export const userSelectToSelectableMap = {
   all: true,
 };
 
-// Maps the `verticalAlign` prop to the native `textAlignVertical` prop
+/**
+ * Maps CSS-like `verticalAlign` values to React Native's `textAlignVertical`.
+ */
 export const verticalAlignToTextAlignVerticalMap = {
   auto: 'auto',
   top: 'top',

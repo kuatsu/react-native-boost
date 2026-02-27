@@ -4,9 +4,6 @@
 
 A powerful Babel plugin that automatically optimizes React Native apps through static source code analysis. It replaces standard React Native components with their native counterparts where possible, leading to significant performance improvements.
 
-> [!WARNING]
-> The library and its Babel plugin are still experimental. You should expect things to break. Please report any issues you encounter in the issues tab with reproducible examples, and use the library's ignore mechanisms to disable optimizations for problematic files or lines of code.
-
 - ⚡ Automatic performance optimization through source code analysis
 - 🔒 Safe optimizations that don't break your app
 - 🎯 Virtually zero runtime overhead

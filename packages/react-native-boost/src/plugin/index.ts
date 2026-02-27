@@ -5,6 +5,8 @@ import { createLogger } from './utils/logger';
 import { viewOptimizer } from './optimizers/view';
 import { isIgnoredFile } from './utils/common';
 
+export type { PluginOptimizationOptions, PluginOptions } from './types';
+
 type PluginState = {
   opts?: PluginOptions;
   __reactNativeBoostLogger?: PluginLogger;

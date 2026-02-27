@@ -1,41 +1,54 @@
 import { NodePath, types as t } from '@babel/core';
 
+export interface PluginOptimizationOptions {
+  /**
+   * Whether to optimize the `Text` component.
+   * @default true
+   */
+  text?: boolean;
+  /**
+   * Whether to optimize the `View` component.
+   * @default true
+   */
+  view?: boolean;
+}
+
 export interface PluginOptions {
   /**
-   * Paths to ignore from optimization. Relative to the Babel configuration file.
+   * Paths to ignore from optimization.
+   *
+   * Patterns are resolved from Babel's current working directory.
+   * In nested monorepo apps, parent segments may be needed, for example `../../node_modules/**`.
+   * @default []
    */
   ignores?: string[];
   /**
-   * Enables verbose logging
+   * Enables verbose logging.
    *
+   * With `silent: false`, optimized components are logged by default.
    * When enabled, skipped components and their skip reasons are also logged.
    * @default false
    */
   verbose?: boolean;
   /**
    * Disables all plugin logs.
+   *
+   * When set to `true`, this overrides `verbose`.
    * @default false
    */
   silent?: boolean;
   /**
-   * The optimizations to apply to the plugin.
+   * Toggle individual optimizers.
+   *
+   * If omitted, all available optimizers are enabled.
    */
-  optimizations?: {
-    /**
-     * Whether or not to optimize the Text component.
-     * @default true
-     */
-    text?: boolean;
-    /**
-     * Whether or not to optimize the View component.
-     * @default true
-     */
-    view?: boolean;
-  };
+  optimizations?: PluginOptimizationOptions;
   /**
    * Opt-in flag that allows View optimization when ancestor components cannot be statically resolved.
    *
-   * This may introduce behavioral changes when unresolved ancestors render react-native Text wrappers.
+   * This increases optimization coverage, but may introduce behavioral differences
+   * when unresolved ancestors render React Native `Text` wrappers.
+   * Prefer targeted ignores first, and enable this only after verifying affected screens.
    * @default false
    */
   dangerouslyOptimizeViewWithUnknownAncestors?: boolean;

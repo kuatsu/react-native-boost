@@ -1,0 +1,84 @@
+---
+title: Troubleshooting
+description: Common setup and optimization issues, plus fast ways to diagnose them.
+---
+
+## Quick Diagnostic Flow
+
+1. Set `verbose: true` and `silent: false` in plugin config.
+2. Restart Metro with cache clear.
+3. Check skip reasons in logs.
+4. Compare with the coverage rules in [Optimization Coverage](/docs/information/optimization-coverage).
+
+## Common Issues
+
+### No optimization logs at all
+
+Likely causes:
+
+- Plugin not loaded in `babel.config.js`
+- `silent: true`
+- File matched by `ignores`
+
+Quick checks:
+
+```js
+module.exports = {
+  plugins: [
+    [
+      'react-native-boost/plugin',
+      {
+        verbose: true,
+        silent: false,
+      },
+    ],
+  ],
+};
+```
+
+```bash
+npm start -- --clear
+```
+
+### Skip reason: `contains blacklisted props`
+
+This is expected for unsupported prop sets.
+
+Typical cases:
+
+- `Text` with press/responder props
+- `View` with `style` or accessibility props
+
+Fix options:
+
+- Keep component as-is (recommended when semantics matter)
+- Move unsupported behavior to a different node when possible
+- Use `@boost-ignore` for explicit clarity
+
+### Skip reason: `has unresolved ancestor and dangerous optimization is disabled`
+
+`View` is inside an ancestor React Native Boost cannot statically classify.
+
+Options:
+
+- Keep default behavior (safest)
+- Refactor ancestor/component structure to be statically obvious
+- Enable `dangerouslyOptimizeViewWithUnknownAncestors` only if you can validate behavior carefully
+
+### Ignores do not work as expected in monorepos
+
+`ignores` are resolved from Babel's working directory.
+
+In nested apps, you may need explicit parent paths:
+
+```js
+ignores: ['../../node_modules/**'];
+```
+
+### Runtime import errors in app code
+
+The plugin injects imports from `react-native-boost/runtime`.
+
+If you installed `react-native-boost` as a dev dependency, runtime imports can fail in app builds.
+
+Fix: install it as a regular dependency.

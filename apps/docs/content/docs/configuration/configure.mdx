@@ -1,0 +1,58 @@
+---
+title: Configure the Babel Plugin
+description: Control logging, ignores, and optimization behavior.
+---
+
+The Babel plugin (`react-native-boost/plugin`) is the core of React Native Boost.
+
+Defaults are safe and usable out of the box, but you can tune behavior for your app.
+
+## Example Configuration
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      'react-native-boost/plugin',
+      {
+        verbose: false,
+        silent: false,
+        ignores: ['node_modules/**'],
+        optimizations: {
+          text: true,
+          view: true,
+        },
+      },
+    ],
+  ],
+};
+```
+
+## Plugin Options
+
+<AutoOptionSections path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" idPrefix="plugin-options" />
+
+## Plugin Optimization Options
+
+<AutoOptionSections
+  path="../../packages/react-native-boost/src/plugin/types/index.ts"
+  name="PluginOptimizationOptions"
+  idPrefix="plugin-optimization-options"
+/>
+
+## Environment-Specific Enablement
+
+You can enable React Native Boost by environment with Babel `env` config:
+
+```js
+module.exports = {
+  env: {
+    development: {
+      plugins: ['react-native-boost/plugin'],
+    },
+  },
+};
+```
+
+See Babel docs: https://babeljs.io/docs/options#env

@@ -7,3 +7,4 @@ onlyBuiltDependencies:
   - core-js-pure
   - deasync
   - esbuild
+  - sharp

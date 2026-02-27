@@ -1,0 +1,115 @@
+---
+title: Getting Started
+description: Install React Native Boost to boost your app's performance with one line of code.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+## Introduction
+
+React Native Boost consists of two pieces:
+
+- A Babel plugin that statically analyzes your source code and replaces safe `Text` and `View` components with their direct native counterparts, leading to significant performance improvements compared to the JS-based wrapper components.
+- A runtime package used by the plugin for cross-platform-safe imports and helper utilities.
+
+The analyzer is intentionally strict and skips any optimizations that could lead to behavioral changes or other bugs.
+
+## Getting Started
+
+1. Install React Native Boost:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
+  <Tab value="npm">
+
+  ```bash
+  npm install react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="pnpm">
+
+  ```bash
+  pnpm add react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="yarn">
+
+  ```bash
+  yarn add react-native-boost
+  ```
+
+  </Tab>
+  <Tab value="bun">
+
+  ```bash
+  bun add react-native-boost
+  ```
+
+  </Tab>
+</Tabs>
+
+2. If you use Expo and do not have a `babel.config.js` yet:
+
+```bash
+npx expo customize babel.config.js
+```
+
+3. Add the plugin:
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: ['react-native-boost/plugin'],
+};
+```
+
+4. Restart the development server and clear cache:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
+  <Tab value="npm">
+
+  ```bash
+  npm start -- --clear
+  ```
+
+  </Tab>
+  <Tab value="pnpm">
+
+  ```bash
+  pnpm start -- --clear
+  ```
+
+  </Tab>
+  <Tab value="yarn">
+
+  ```bash
+  yarn start --clear
+  ```
+
+  </Tab>
+  <Tab value="bun">
+
+  ```bash
+  bun run start --clear
+  ```
+
+  </Tab>
+</Tabs>
+
+<Callout title="Runtime Dependency">
+  The Babel plugin imports optimized components via `react-native-boost/runtime`, so `react-native-boost` must be
+  available at runtime and can therefore **not** be installed as a dev dependency.
+</Callout>
+
+## Platform Support
+
+React Native Boost supports iOS and Android projects. On Web, React Native Boost safely falls back to the default components, providing full cross-platform support.
+
+<Cards>
+  <Card title="How It Works" href="/docs/information/how-it-works" />
+  <Card title="Coverage & Bailouts" href="/docs/information/optimization-coverage" />
+  <Card title="Troubleshooting" href="/docs/information/troubleshooting" />
+  <Card title="Configuration" href="/docs/configuration/configure" />
+  <Card title="Runtime Library" href="/docs/runtime-library" />
+</Cards>
