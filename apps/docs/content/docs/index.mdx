@@ -3,21 +3,18 @@ title: Getting Started
 description: Install React Native Boost to boost your app's performance with one line of code.
 ---
 
+## Introduction
+
 React Native Boost consists of two pieces:
 
-- A Babel plugin that statically analyzes your AST and replaces safe `Text`/`View` usages with native components.
+- A Babel plugin that statically analyzes your source code and replaces safe `Text` and `View` components with their direct native counterparts, leading to significant performance improvements compared to the JS-based wrapper components.
 - A runtime package used by the plugin for cross-platform-safe imports and helper utilities.
 
-The analyzer is intentionally strict. If a component usage might be unsafe, it is skipped.
-
-<Callout type="warn" title="Experimental">
-  The plugin is still experimental. Expect edge cases and report reproducible issues at
-  https://github.com/kuatsu/react-native-boost/issues.
-</Callout>
+The analyzer is intentionally strict and skips any optimizations that could lead to behavioral changes or other bugs.
 
 ## Getting Started
 
-1. Install React Native Boost (not as a dev dependency):
+1. Install React Native Boost:
 
 ```bash
 npm install react-native-boost
@@ -50,13 +47,12 @@ yarn start --clear
 
 <Callout title="Runtime Dependency">
   The Babel plugin imports optimized components via `react-native-boost/runtime`, so `react-native-boost` must be
-  available at runtime.
+  available at runtime and can therefore **not** be installed as a dev dependency.
 </Callout>
 
 ## Platform Support
 
-React Native Boost supports iOS, Android, and Web projects. Optimizations are applied on native platforms where the
-native components are available; unsupported targets gracefully fall back to standard React Native components.
+React Native Boost supports iOS and Android projects. On Web, React Native Boost safely falls back to the default components, providing full cross-platform support.
 
 ## Documentation
 
