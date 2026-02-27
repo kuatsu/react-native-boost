@@ -90,16 +90,3 @@ Unresolvable spread props are treated as unsafe and cause bailouts.
 ```
 
 Same rule applies to `View`.
-
-## Skip Reasons You Will See in Logs
-
-When `verbose: true`, common reasons include:
-
-- `line is marked with @boost-ignore`
-- `Text is not imported from react-native`
-- `View is not imported from react-native`
-- `contains blacklisted props`
-- `contains non-string children`
-- `is a direct child of expo-router Link with asChild`
-- `has Text ancestor`
-- `has unresolved ancestor and dangerous optimization is disabled`
