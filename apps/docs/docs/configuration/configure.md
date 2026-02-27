@@ -19,7 +19,7 @@ module.exports = {
       {
         verbose: false,
         silent: false,
-        ignores: ['node_modules/**'],
+        ignores: ['node_modules/**'], // in monorepos you may want to add e.g. `../../node_modules/**` as well
         optimizations: {
           text: true,
           view: false,
