@@ -44,6 +44,8 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "pnpm clean && rollup -c",
+    "build:watch": "rollup -c -w",
+    "dev": "pnpm build:watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "release": "release-it",
