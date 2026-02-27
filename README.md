@@ -20,10 +20,10 @@ The documentation is available at [react-native-boost.oss.kuatsu.de](https://rea
 The app in the `apps/example` directory serves as a benchmark for the performance of the plugin.
 
 <div align="center">
-  <img src="./apps/docs/docs/introduction/img/benchmark-ios.png" width="500" />
+  <img src="./apps/docs/content/docs/information/img/benchmark-ios.png" width="500" />
 </div>
 
-More benchmarks are available in the [docs](https://react-native-boost.oss.kuatsu.de/docs/introduction/benchmarks).
+More benchmarks are available in the [docs](https://react-native-boost.oss.kuatsu.de/docs/information/benchmarks).
 
 ## Installation
 
@@ -59,11 +59,11 @@ yarn start --clear
 
 That's it! No imports in your code, rebuilding, or anything else is required.
 
-Optionally, you can configure the Babel plugin with a few options described in the [documentation](https://react-native-boost.oss.kuatsu.de/docs/babel-plugin/configure).
+Optionally, you can configure the Babel plugin with a few options described in the [documentation](https://react-native-boost.oss.kuatsu.de/docs/configuration/configure).
 
 ## How it works
 
-A technical rundown of how the plugin works can be found in the [docs](https://react-native-boost.oss.kuatsu.de/docs/introduction/how-it-works).
+A technical rundown of how the plugin works can be found in the [docs](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works).
 
 ## Contributing
 
