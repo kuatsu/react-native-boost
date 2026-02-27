@@ -5,7 +5,7 @@ description: Control logging, ignores, and optimization behavior.
 
 The Babel plugin (`react-native-boost/plugin`) is the core of React Native Boost.
 
-Defaults are safe and usable out of the box, but you can tune behavior for your app or monorepo.
+Defaults are safe and usable out of the box, but you can tune behavior for your app.
 
 ## Example Configuration
 
@@ -31,37 +31,15 @@ module.exports = {
 
 ## Plugin Options
 
-<AutoTypeTable path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" />
+<AutoOptionSections path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" />
 
 ## Optimizer Sub-options (PluginOptimizationOptions)
 
-`optimizations` supports these flags:
-
-<AutoTypeTable path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptimizationOptions" />
-
-## Practical Notes
-
-### Logging behavior
-
-- `silent` disables all logs.
-- With `silent: false`, optimized component logs are shown by default.
-- `verbose` adds skip-reason logs.
-
-### Monorepo `ignores`
-
-Ignore patterns are resolved from Babel's current working directory.
-
-<Callout title="Monorepo Note">
-  In nested apps, use explicit parent paths when needed, for example `../../node_modules/**`.
-</Callout>
-
-### Dangerous view optimization
-
-`dangerouslyOptimizeViewWithUnknownAncestors` can increase optimization coverage, but it can also introduce regressions.
-
-<Callout type="warn" title="Use cautiously">
-  Keep this disabled unless you have verified your component tree behavior and tested affected screens carefully.
-</Callout>
+<AutoOptionSections
+  path="../../packages/react-native-boost/src/plugin/types/index.ts"
+  name="PluginOptimizationOptions"
+  idPrefix="plugin-optimization-options"
+/>
 
 ## Environment-Specific Enablement
 
