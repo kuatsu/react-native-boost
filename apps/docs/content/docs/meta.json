@@ -6,6 +6,8 @@
     "index",
     "---Information---",
     "information/how-it-works",
+    "information/optimization-coverage",
+    "information/troubleshooting",
     "information/benchmarks",
     "---Configuration---",
     "configuration/configure",

@@ -1,0 +1,105 @@
+---
+title: Optimization Coverage
+description: What React Native Boost can optimize today, what it skips, and why.
+---
+
+React Native Boost is conservative by design. If it cannot prove an optimization is safe within the possibilities of a Babel plugin, it skips it. While this means it'll often skip optimizations that would be safe in practice, it also means that you can trust that optimizations that do happen are safe and won't cause behavioral changes or other regressions.
+
+## At a Glance
+
+| Component | Optimized when... | Common bailout reasons |
+| --- | --- | --- |
+| `Text` | Imported from `react-native`, no blacklisted props, string-safe children | `contains blacklisted props`, `contains non-string children`, `is a direct child of expo-router Link with asChild` |
+| `View` | Imported from `react-native`, no blacklisted props, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+
+## Global Bailouts
+
+These skip optimization before component-specific checks:
+
+- File path matches `ignores`
+- Line is marked with `@boost-ignore`
+
+<Callout title="No log for ignored files">
+  Files skipped via `ignores` are filtered before optimizer checks, so you will not see per-component skip logs for
+  those files.
+</Callout>
+
+## Text Coverage
+
+`Text` is optimized when all checks pass.
+
+### Text blacklisted props
+
+If any of these are present, the `Text` node is skipped:
+
+- Interaction/responder props (`onPress`, `onLongPress`, `onResponder*`, `pressRetentionOffset`, etc.)
+- `selectionColor`
+- `id`, `nativeID`
+
+### Text structure checks
+
+- Children must be string-safe.
+- `Text` is skipped when used as a direct child of `expo-router` `Link` with `asChild`.
+
+```tsx
+import { Link } from 'expo-router';
+import { Text } from 'react-native';
+
+<Link asChild>
+  <Text>Open profile</Text>
+</Link>;
+```
+
+## View Coverage
+
+`View` has stricter safety checks because `View` inside text-like ancestors can break layout/semantics.
+
+### View blacklisted props
+
+If any of these are present, the `View` node is skipped:
+
+- `style`
+- Accessibility props (`accessible`, `accessibilityLabel`, `accessibilityState`, `aria-*`)
+- `id`, `nativeID`
+
+### Ancestor safety checks
+
+`View` optimization depends on ancestor classification:
+
+- `safe`: optimize
+- `text`: skip (`has Text ancestor`)
+- `unknown`: skip by default
+
+Set `dangerouslyOptimizeViewWithUnknownAncestors: true` to optimize `unknown` ancestors too.
+
+<Callout type="warn" title="Dangerous Mode">
+  Enabling dangerous mode can increase optimization coverage, but it can also introduce regressions if unresolved
+  ancestors render Text wrappers.
+</Callout>
+
+## Spread Props: Resolvable vs Unresolvable
+
+Unresolvable spread props are treated as unsafe and cause bailouts.
+
+```tsx
+// Usually optimizable (resolvable object literal)
+<Text {...{ selectable: true }}>Hello</Text>
+
+// Usually skipped (cannot be statically resolved)
+<Text {...props}>Hello</Text>
+```
+
+Same rule applies to `View`.
+
+## Skip Reasons You Will See in Logs
+
+When `verbose: true`, common reasons include:
+
+- `line is marked with @boost-ignore`
+- `Text is not imported from react-native`
+- `View is not imported from react-native`
+- `contains blacklisted props`
+- `contains non-string children`
+- `is a direct child of expo-router Link with asChild`
+- `has Text ancestor`
+- `has unresolved ancestor and dangerous optimization is disabled`
