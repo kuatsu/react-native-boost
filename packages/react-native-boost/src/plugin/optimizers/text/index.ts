@@ -12,7 +12,7 @@ import {
   isReactNativeImport,
   replaceWithNativeComponent,
   isStringNode,
-  hasExpoRouterLinkAncestorWithAsChild,
+  hasExpoRouterLinkParentWithAsChild,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { ACCESSIBILITY_PROPERTIES } from '../../utils/constants';
@@ -41,7 +41,7 @@ export const textOptimizer: Optimizer = (path, log = () => {}) => {
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
   if (hasBlacklistedProperty(path, textBlacklistedProperties)) return;
-  if (hasExpoRouterLinkAncestorWithAsChild(path)) return;
+  if (hasExpoRouterLinkParentWithAsChild(path)) return;
 
   // Verify that the Text only has string children
   const parent = path.parent as t.JSXElement;
