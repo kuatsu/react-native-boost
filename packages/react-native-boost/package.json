@@ -46,7 +46,6 @@
     "build": "pnpm clean && rollup -c",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/**/*.ts",
     "release": "release-it",
     "prepack": "cp ../../README.md ./README.md",
     "postpack": "rm ./README.md"

@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/filename-case */
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
 
