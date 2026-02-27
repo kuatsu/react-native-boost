@@ -9,20 +9,20 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~5.0.4",
-    "expo": "^53.0.0",
-    "expo-status-bar": "~2.2.3",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.3",
-    "react-native-boost": "*",
-    "react-native-time-to-render": "*",
-    "react-native-web": "^0.20.0"
+    "@expo/metro-runtime": "~55.0.6",
+    "expo": "^55.0.3",
+    "expo-status-bar": "~55.0.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-boost": "workspace:*",
+    "react-native-time-to-render": "workspace:*",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/react": "~19.0.10",
-    "typescript": "~5.8.3"
+    "@types/react": "~19.2.14",
+    "typescript": "~5.9.3"
   },
   "private": true
 }

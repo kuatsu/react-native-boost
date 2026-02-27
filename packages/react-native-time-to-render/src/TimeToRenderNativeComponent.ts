@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/prevent-abbreviations, unicorn/filename-case */
 import type { ViewProps } from 'react-native';
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
 import { DirectEventHandler, Double } from 'react-native/Libraries/Types/CodegenTypes';

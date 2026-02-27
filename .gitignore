@@ -1,6 +1,6 @@
 *.tgz
 package-lock.json
-pnpm-lock.yaml
+yarn.lock
 
 # OSX
 
@@ -17,12 +17,8 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# Yarn
-.yarn/*
-!.yarn/releases
-!.yarn/plugins
-!.yarn/patches
-.pnp.*
+# pnpm
+.pnpm-store/
 
 # Turborepo
 .turbo/

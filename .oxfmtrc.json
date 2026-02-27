@@ -1,4 +1,5 @@
 {
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "printWidth": 120,
   "tabWidth": 2,
   "useTabs": false,
@@ -10,5 +11,7 @@
   "bracketSpacing": true,
   "bracketSameLine": true,
   "arrowParens": "always",
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "sortPackageJson": false,
+  "ignorePatterns": ["CHANGELOG.md", "apps/docs/**/*.md", "apps/docs/**/*.mdx", "apps/docs/.docusaurus/**"]
 }

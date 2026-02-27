@@ -7,6 +7,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -18,16 +21,13 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Lint files
-        run: yarn lint
+        run: pnpm lint
 
-      - name: Run Prettier
-        run: yarn format
-
-      - name: Verify formatted code is unchanged
-        run: git diff --exit-code HEAD
+      - name: Test formatting
+        run: pnpm format --check
 
       - name: Typecheck files
-        run: yarn typecheck
+        run: pnpm typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run tests
-        run: yarn test
+        run: pnpm test
 
   build-release:
     runs-on: ubuntu-latest
@@ -54,13 +54,13 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Build package
-        run: yarn package build
+        run: pnpm package build
 
-      - name: Set NPM token & GitHub config
+      - name: Configure Git and npm
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-          git config user.name "Kuatsu CI/CD"
-          git config user.email "null@kuatsu.de"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -79,9 +79,9 @@ jobs:
       - name: Release
         run: |
           if [ -n "${{ inputs.release_type }}" ]; then
-            yarn package release --increment ${{ inputs.release_type }}
+            pnpm package release --increment ${{ inputs.release_type }}
           else
-            yarn package release
+            pnpm package release
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.CICD_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}

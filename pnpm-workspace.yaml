@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - core-js
+  - core-js-pure
+  - deasync
+  - esbuild
