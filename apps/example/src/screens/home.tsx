@@ -23,26 +23,30 @@ const benchmarks = [
 ] satisfies Benchmark[];
 
 export default function HomeScreen() {
-  const [currentBenchmark, setCurrentBenchmark] = useState(0);
-  const [currentStep, setCurrentStep] = useState<BenchmarkStep>(BenchmarkStep.Unoptimized);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [runBenchmark, setRunBenchmark] = useState(false);
-  const [results, setResults] = useState<Record<number, { unoptimized: number; optimized: number }>>({});
+  const [results, setResults] = useState<Record<number, { unoptimized: number | null; optimized: number | null }>>({});
+
+  const totalSteps = benchmarks.length * 2;
+  const currentBenchmark = useMemo(() => Math.floor(currentStepIndex / 2), [currentStepIndex]);
+  const currentStep = useMemo<BenchmarkStep>(
+    () => (currentStepIndex % 2 === 0 ? BenchmarkStep.Unoptimized : BenchmarkStep.Optimized),
+    [currentStepIndex]
+  );
 
   const progress = useMemo<[number, number]>(() => {
-    const total = benchmarks.length * 2;
-    const current = currentBenchmark * 2 + (currentStep === BenchmarkStep.Unoptimized ? 0 : 1);
-    return [current, total];
-  }, [currentBenchmark, currentStep]);
+    return [currentStepIndex, totalSteps];
+  }, [currentStepIndex, totalSteps]);
 
   const buttonTitle = useMemo(() => {
-    if (currentBenchmark === 0 && progress[0] === 0) {
+    if (currentStepIndex === 0) {
       return 'Start Benchmark';
     }
-    if (currentBenchmark === benchmarks.length - 1) {
+    if (currentStepIndex === totalSteps - 1) {
       return 'Last Step';
     }
     return 'Next Step';
-  }, [currentStep, runBenchmark, currentBenchmark, progress]);
+  }, [currentStepIndex, totalSteps]);
 
   const markerName = useMemo(
     () => getMarkerName(benchmarks[currentBenchmark].title, currentStep),
@@ -57,26 +61,20 @@ export default function HomeScreen() {
   const handleRenderTimeChange = (renderTime: number) => {
     setRunBenchmark(false);
 
-    const newResults =
-      currentBenchmark === 0 && currentStep === BenchmarkStep.Unoptimized
-        ? { [currentBenchmark]: { unoptimized: renderTime, optimized: 0 } }
-        : {
-            ...results,
-            [currentBenchmark]: { ...results[currentBenchmark], [currentStep]: renderTime },
-          };
-    setResults(newResults);
+    setResults((previousResults) => {
+      const baseResults = currentStepIndex === 0 ? {} : previousResults;
+      const previousBenchmarkResult = baseResults[currentBenchmark] ?? { unoptimized: null, optimized: null };
 
-    if (currentStep === BenchmarkStep.Unoptimized) {
-      setCurrentStep(BenchmarkStep.Optimized);
-    } else {
-      setCurrentStep(BenchmarkStep.Unoptimized);
-      if (currentBenchmark < benchmarks.length - 1) {
-        setCurrentBenchmark(currentBenchmark + 1);
-      } else {
-        // All benchmarks have run; restart the cycle.
-        setCurrentBenchmark(0);
-      }
-    }
+      return {
+        ...baseResults,
+        [currentBenchmark]:
+          currentStep === BenchmarkStep.Unoptimized
+            ? { unoptimized: renderTime, optimized: null }
+            : { ...previousBenchmarkResult, optimized: renderTime },
+      };
+    });
+
+    setCurrentStepIndex((previousStepIndex) => (previousStepIndex + 1) % totalSteps);
   };
 
   return (
@@ -93,8 +91,13 @@ export default function HomeScreen() {
                 .map(([key, value]) => {
                   const index = Number(key);
                   const percent =
-                    value.unoptimized === 0 ? 'N/A' : ((1 - value.optimized / value.unoptimized) * 100).toFixed(2);
-                  return `${benchmarks[index].title}: ${value.unoptimized}ms -> ${value.optimized}ms (${percent}%)`;
+                    value.unoptimized === null || value.optimized === null || value.unoptimized === 0
+                      ? 'N/A'
+                      : `${((1 - value.optimized / value.unoptimized) * 100).toFixed(2)}%`;
+                  const unoptimizedText = value.unoptimized === null ? '--' : `${value.unoptimized}ms`;
+                  const optimizedText = value.optimized === null ? '--' : `${value.optimized}ms`;
+
+                  return `${benchmarks[index].title}: ${unoptimizedText} -> ${optimizedText} (${percent})`;
                 })
                 .join('\n')
             : ''}
