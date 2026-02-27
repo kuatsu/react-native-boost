@@ -1,8 +1,23 @@
 import { NodePath, types as t } from '@babel/core';
 
+export interface PluginOptimizationOptions {
+  /**
+   * Whether or not to optimize the Text component.
+   * @default true
+   */
+  text?: boolean;
+  /**
+   * Whether or not to optimize the View component.
+   * @default true
+   */
+  view?: boolean;
+}
+
 export interface PluginOptions {
   /**
-   * Paths to ignore from optimization. Relative to the Babel configuration file.
+   * Paths to ignore from optimization.
+   *
+   * Patterns are resolved from Babel's current working directory.
    */
   ignores?: string[];
   /**
@@ -20,18 +35,7 @@ export interface PluginOptions {
   /**
    * The optimizations to apply to the plugin.
    */
-  optimizations?: {
-    /**
-     * Whether or not to optimize the Text component.
-     * @default true
-     */
-    text?: boolean;
-    /**
-     * Whether or not to optimize the View component.
-     * @default true
-     */
-    view?: boolean;
-  };
+  optimizations?: PluginOptimizationOptions;
   /**
    * Opt-in flag that allows View optimization when ancestor components cannot be statically resolved.
    *

@@ -29,48 +29,39 @@ module.exports = {
 };
 ```
 
-## Options
+## Plugin Options
 
-### `verbose`
+<AutoTypeTable path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" />
 
-Enables extra logs for skipped components and skip reasons.
+## Optimizer Sub-options (PluginOptimizationOptions)
 
-Optimized components are logged by default unless `silent` is enabled.
+`optimizations` supports these flags:
 
-Default: `false`
+<AutoTypeTable path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptimizationOptions" />
 
-### `silent`
+## Practical Notes
 
-Disables all plugin logs (optimized, skipped, warnings).
+### Logging behavior
 
-Default: `false`
+- `silent` disables all logs.
+- With `silent: false`, optimized component logs are shown by default.
+- `verbose` adds skip-reason logs.
 
-### `ignores`
+### Monorepo `ignores`
 
-Array of glob patterns for files that should not be optimized.
-
-Default: `[]`
+Ignore patterns are resolved from Babel's current working directory.
 
 <Callout title="Monorepo Note">
-  Ignore patterns are resolved from the Babel process working directory. In monorepos, you may need explicit parent
-  paths such as `../../node_modules/**` to ignore hoisted dependencies.
+  In nested apps, use explicit parent paths when needed, for example `../../node_modules/**`.
 </Callout>
 
-### `optimizations`
+### Dangerous view optimization
 
-Toggle individual optimizers.
+`dangerouslyOptimizeViewWithUnknownAncestors` can increase optimization coverage, but it can also introduce regressions.
 
-Supported keys:
-
-- `text`
-- `view`
-
-### `dangerouslyOptimizeViewWithUnknownAncestors`
-
-By default, the `View` optimizer bails out if ancestor safety cannot be proven statically.
-
-Set this to `true` to force optimization even with unresolved ancestors. This can improve optimization coverage but may
-introduce regressions if those ancestors render `Text` wrappers.
+<Callout type="warn" title="Use cautiously">
+  Keep this disabled unless you have verified your component tree behavior and tested affected screens carefully.
+</Callout>
 
 ## Environment-Specific Enablement
 
