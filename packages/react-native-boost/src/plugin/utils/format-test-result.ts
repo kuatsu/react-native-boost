@@ -1,21 +1,13 @@
 import type { ResultFormatter } from 'babel-plugin-tester';
 import { format, type FormatOptions } from 'oxfmt';
+import oxfmtConfig from '../../../../../.oxfmtrc.json';
 
-const oxfmtOptions: FormatOptions = {
-  printWidth: 120,
-  tabWidth: 2,
-  useTabs: false,
-  semi: true,
-  singleQuote: true,
-  quoteProps: 'consistent',
-  jsxSingleQuote: false,
-  trailingComma: 'es5',
-  bracketSpacing: true,
-  bracketSameLine: true,
-  arrowParens: 'always',
-  endOfLine: 'lf',
-  sortPackageJson: false,
+type RootOxfmtConfig = FormatOptions & {
+  $schema?: string;
+  ignorePatterns?: string[];
 };
+
+const oxfmtOptions = buildOxfmtOptions(oxfmtConfig as RootOxfmtConfig);
 
 export const formatTestResult: ResultFormatter = async (code, options) => {
   const filepath = options?.filepath ?? 'output.js';
@@ -27,3 +19,11 @@ export const formatTestResult: ResultFormatter = async (code, options) => {
 
   return result.code;
 };
+
+function buildOxfmtOptions(config: RootOxfmtConfig): FormatOptions {
+  const { $schema, ignorePatterns, ...oxfmtOptions } = config;
+  void $schema;
+  void ignorePatterns;
+
+  return oxfmtOptions;
+}
