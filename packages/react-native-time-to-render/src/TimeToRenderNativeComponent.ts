@@ -1,5 +1,4 @@
-import type { ViewProps } from 'react-native';
-import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
+import { codegenNativeComponent, type ViewProps } from 'react-native';
 import { DirectEventHandler, Double } from 'react-native/Libraries/Types/CodegenTypes';
 
 export interface NativeProps extends ViewProps {
