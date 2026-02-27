@@ -1,4 +1,3 @@
 node_modules
-yarn.lock
-.yarn
+pnpm-lock.yaml
 CHANGELOG.md

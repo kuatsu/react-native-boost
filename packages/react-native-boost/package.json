@@ -43,7 +43,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "yarn clean && rollup -c",
+    "build": "pnpm clean && rollup -c",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
@@ -76,7 +76,7 @@
     "url": "https://github.com/kuatsu/react-native-boost/issues"
   },
   "homepage": "https://github.com/kuatsu/react-native-boost#readme",
-  "packageManager": "yarn@3.6.1",
+  "packageManager": "pnpm@10.28.2",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },

@@ -3,17 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "yarn workspaces foreach -A -p run build",
-    "lint": "yarn workspaces foreach -A -p run lint",
-    "test": "yarn workspaces foreach -A -p run test",
-    "format": "yarn workspaces foreach -A -p run format",
-    "typecheck": "yarn workspaces foreach -A -p run typecheck",
-    "example": "yarn workspace react-native-boost-example",
-    "docs": "yarn workspace react-native-boost-docs",
-    "package": "yarn workspace react-native-boost",
+    "build": "pnpm -r --parallel --if-present run build",
+    "typecheck": "pnpm -r --parallel --if-present run typecheck",
+    "test": "pnpm -r --parallel --if-present run test",
+    "example": "pnpm --filter react-native-cloud-storage-example run",
+    "docs": "pnpm --filter react-native-cloud-storage-docs run",
+    "package": "pnpm --filter react-native-cloud-storage run",
+    "lint": "pnpm -r --parallel --if-present run lint",
+    "format": "pnpm -r --parallel --if-present run format",
     "prepare": "husky"
   },
-  "packageManager": "yarn@3.6.1",
+  "packageManager": "pnpm@10.28.2",
   "devDependencies": {
     "@commitlint/cli": "^19.7.1",
     "@commitlint/config-conventional": "^17.0.2",
@@ -25,9 +25,5 @@
     "prettier": "^3.5.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.1"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  }
 }

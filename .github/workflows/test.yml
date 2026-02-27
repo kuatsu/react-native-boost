@@ -18,16 +18,16 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Lint files
-        run: yarn lint
+        run: pnpm lint
 
       - name: Run Prettier
-        run: yarn format
+        run: pnpm format
 
       - name: Verify formatted code is unchanged
         run: git diff --exit-code HEAD
 
       - name: Typecheck files
-        run: yarn typecheck
+        run: pnpm typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run tests
-        run: yarn test
+        run: pnpm test
 
   build:
     runs-on: ubuntu-latest
@@ -51,4 +51,4 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Build plugin
-        run: yarn package build
+        run: pnpm package build
