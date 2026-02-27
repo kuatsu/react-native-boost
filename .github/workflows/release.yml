@@ -6,6 +6,14 @@ on:
         description: 'Release type (patch, minor, major, or a semver version)'
         required: false
         type: string
+      npm_tag:
+        description: 'Optional npm dist-tag override (e.g. latest, v0, v1)'
+        required: false
+        type: string
+      github_make_latest:
+        description: 'Optional GitHub latest release override (true or false)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -76,12 +84,70 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve release strategy
+        run: |
+          branch="${{ github.ref_name }}"
+          release_type="${{ inputs.release_type }}"
+          npm_tag_input="${{ inputs.npm_tag }}"
+          github_make_latest_input="${{ inputs.github_make_latest }}"
+          package_version=$(node -p "require('./packages/react-native-boost/package.json').version")
+          package_major="${package_version%%.*}"
+
+          case "$github_make_latest_input" in
+            ""|true|false) ;;
+            *)
+              echo "Invalid github_make_latest input. Must be 'true' or 'false' when provided."
+              exit 1
+              ;;
+          esac
+
+          if [[ "$branch" =~ ^v([0-9]+)$ ]]; then
+            branch_major="${BASH_REMATCH[1]}"
+            release_npm_tag="${npm_tag_input:-v${branch_major}}"
+            release_github_make_latest="${github_make_latest_input:-false}"
+
+            if [[ "$package_major" != "$branch_major" ]]; then
+              echo "Branch $branch expects package major $branch_major, but package.json is $package_version."
+              exit 1
+            fi
+
+            if [[ -n "$release_type" ]]; then
+              if [[ "$release_type" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                release_major="${release_type%%.*}"
+                if [[ "$release_major" != "$branch_major" ]]; then
+                  echo "Explicit version $release_type does not match branch major $branch_major."
+                  exit 1
+                fi
+              elif [[ "$release_type" == "major" ]]; then
+                echo "Major increments are not allowed on maintenance branch $branch."
+                exit 1
+              fi
+            fi
+          elif [[ "$branch" == "main" || "$branch" == "master" ]]; then
+            release_npm_tag="${npm_tag_input:-latest}"
+            release_github_make_latest="${github_make_latest_input:-true}"
+          else
+            if [[ -z "$npm_tag_input" || -z "$github_make_latest_input" ]]; then
+              echo "Releases from branch '$branch' require explicit npm_tag and github_make_latest inputs."
+              exit 1
+            fi
+
+            release_npm_tag="$npm_tag_input"
+            release_github_make_latest="$github_make_latest_input"
+          fi
+
+          echo "RELEASE_NPM_TAG=$release_npm_tag" >> "$GITHUB_ENV"
+          echo "RELEASE_GITHUB_MAKE_LATEST=$release_github_make_latest" >> "$GITHUB_ENV"
+          echo "Release branch: $branch"
+          echo "npm tag: $release_npm_tag"
+          echo "GitHub make_latest: $release_github_make_latest"
+
       - name: Release
         run: |
           if [ -n "${{ inputs.release_type }}" ]; then
-            pnpm package release --increment ${{ inputs.release_type }}
+            pnpm package release --increment "${{ inputs.release_type }}" --npm.tag "$RELEASE_NPM_TAG" --github.makeLatest "$RELEASE_GITHUB_MAKE_LATEST"
           else
-            pnpm package release
+            pnpm package release --npm.tag "$RELEASE_NPM_TAG" --github.makeLatest "$RELEASE_GITHUB_MAKE_LATEST"
           fi
         env:
           GITHUB_TOKEN: ${{ github.token }}
