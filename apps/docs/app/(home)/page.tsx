@@ -10,7 +10,7 @@ export default function HomePage() {
           React Native Boost
         </p>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          Improve your app performance with one line of code.
+          Improve your app's performance with one line of code.
         </h1>
         <p className="mt-3 max-w-3xl text-fd-muted-foreground md:text-base">
           A Babel plugin that replaces analyzes your code and performs safe optimizations to reduce unnecessary runtime
