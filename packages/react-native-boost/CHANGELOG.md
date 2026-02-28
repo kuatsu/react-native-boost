@@ -1,5 +1,21 @@
 # Changelog
 
+# [0.7.0](https://github.com/kuatsu/react-native-boost/compare/v0.6.2...v0.7.0) (2026-02-28)
+
+
+### Bug Fixes
+
+* **example:** fix benchmark state machine ([5b05fbf](https://github.com/kuatsu/react-native-boost/commit/5b05fbf62fe17d6bb45cca172802955db789ef2e))
+* **example:** fix node_modules being optimized ([425e619](https://github.com/kuatsu/react-native-boost/commit/425e619944e6b3bb10cfa338b9389d2e2d0ce150))
+* **view:** bail on unknown ancestors by default and add opt-in flag ([#17](https://github.com/kuatsu/react-native-boost/issues/17)) ([52930d1](https://github.com/kuatsu/react-native-boost/commit/52930d1bf49e660132272e7e987cdaf2a6f3e59b))
+
+
+### Features
+
+* bail on less props ([1bb7758](https://github.com/kuatsu/react-native-boost/commit/1bb77587185fd6ab5d8d7cb238b5c4dea46553ff))
+* skip optimizing Text inside Expo Router Link with `asChild` ([#16](https://github.com/kuatsu/react-native-boost/issues/16)) ([d2c6dd9](https://github.com/kuatsu/react-native-boost/commit/d2c6dd9fce8b54a38f9a5aa1477ba2c5ca707323))
+* **text:** bail less, statically handle userSelect, improve spread prop ([5e93ae5](https://github.com/kuatsu/react-native-boost/commit/5e93ae545d63b9258f27f6831adfa6bba899a124))
+
 ## [0.6.2](https://github.com/kuatsu/react-native-boost/compare/v0.6.1...v0.6.2) (2025-06-11)
 
 
