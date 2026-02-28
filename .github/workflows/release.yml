@@ -7,7 +7,7 @@ on:
         required: false
         type: string
       npm_tag:
-        description: 'Optional npm dist-tag override (e.g. latest, v0, v1)'
+        description: 'Optional npm dist-tag override (e.g. latest, v0-latest, v1-latest)'
         required: false
         type: string
       github_make_latest:
@@ -68,7 +68,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+          printf "//registry.npmjs.org/:_authToken=%s\n" "$NPM_TOKEN" > ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -103,7 +103,7 @@ jobs:
 
           if [[ "$branch" =~ ^v([0-9]+)$ ]]; then
             branch_major="${BASH_REMATCH[1]}"
-            release_npm_tag="${npm_tag_input:-v${branch_major}}"
+            release_npm_tag="${npm_tag_input:-v${branch_major}-latest}"
             release_github_make_latest="${github_make_latest_input:-false}"
 
             if [[ "$package_major" != "$branch_major" ]]; then
@@ -140,6 +140,23 @@ jobs:
             echo "Invalid npm tag '$release_npm_tag'. Use only letters, numbers, dots, underscores, and dashes."
             exit 1
           fi
+
+          RELEASE_NPM_TAG="$release_npm_tag" node <<'NODE'
+          const path = require('node:path');
+          const { createRequire } = require('node:module');
+
+          const packageRoot = path.resolve('packages/react-native-boost');
+          const releaseItPackageJson = require.resolve('release-it/package.json', { paths: [packageRoot] });
+          const requireFromReleaseIt = createRequire(releaseItPackageJson);
+          const semver = requireFromReleaseIt('semver');
+          const tag = process.env.RELEASE_NPM_TAG;
+
+          if (semver.validRange(tag)) {
+            console.error(`Invalid npm tag '${tag}'. npm rejects dist-tags that parse as semver ranges.`);
+            console.error("Use something like 'v0-latest' or 'major-v0' instead.");
+            process.exit(1);
+          }
+          NODE
 
           echo "RELEASE_NPM_TAG=$release_npm_tag" >> "$GITHUB_ENV"
           echo "RELEASE_GITHUB_MAKE_LATEST=$release_github_make_latest" >> "$GITHUB_ENV"
