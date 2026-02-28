@@ -25,6 +25,15 @@ The app in the `apps/example` directory serves as a benchmark for the performanc
 
 More benchmarks are available in the [docs](https://react-native-boost.oss.kuatsu.de/docs/information/benchmarks).
 
+## Compatibility
+
+| `react-native-boost` | React Native     |
+| -------------------- | ---------------- |
+| `0.x`                | All versions[^1] |
+| `1.x`                | `>=0.83`         |
+
+[^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings.
+
 ## Installation
 
 Install the package using your favorite package manager. Please **do not** install the package as a dev dependency. While the Babel plugin itself would work as a dev dependency, it relies on importing the runtime library (`react-native-boost/runtime`) into your code, which requires the package to be installed as a regular dependency. Read more [here](https://react-native-boost.oss.kuatsu.de/docs/runtime-library/).
