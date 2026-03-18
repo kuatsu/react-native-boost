@@ -1,5 +1,12 @@
 # Changelog
 
+# [1.1.0](https://github.com/kuatsu/react-native-boost/compare/v1.0.0...v1.1.0) (2026-03-18)
+
+
+### Features
+
+* add `[@boost-force](https://github.com/boost-force)` decorator to enforce optimization ([eb7357c](https://github.com/kuatsu/react-native-boost/commit/eb7357c1fc296aa62658dcc010254c6f1b08e986))
+
 # [1.0.0](https://github.com/kuatsu/react-native-boost/compare/v0.6.2...v1.0.0) (2026-02-27)
 
 
