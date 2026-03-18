@@ -118,6 +118,7 @@
     },
     "npm": {
       "publish": true,
+      "skipChecks": true,
       "versionArgs": [
         "--workspaces-update=false"
       ]
