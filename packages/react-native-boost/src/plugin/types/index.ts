@@ -74,6 +74,7 @@ export interface WarningLogPayload {
 export interface PluginLogger {
   optimized: (payload: OptimizationLogPayload) => void;
   skipped: (payload: SkippedOptimizationLogPayload) => void;
+  forced: (payload: SkippedOptimizationLogPayload) => void;
   warning: (payload: WarningLogPayload) => void;
 }
 

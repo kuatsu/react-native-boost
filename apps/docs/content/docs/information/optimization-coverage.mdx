@@ -24,6 +24,10 @@ These skip optimization before component-specific checks:
   those files.
 </Callout>
 
+## Overriding Bailouts
+
+Use `@boost-force` to force optimization on a component that would otherwise be skipped. This bypasses all bailout checks except the `react-native` import check. See the [Decorators](/docs/configuration/boost-decorator#boost-force) page for details.
+
 ## Text Coverage
 
 `Text` is optimized when all checks pass.

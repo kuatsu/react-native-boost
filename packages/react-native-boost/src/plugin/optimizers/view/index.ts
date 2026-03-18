@@ -1,9 +1,10 @@
 import { types as t } from '@babel/core';
 import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { getFirstBailoutReason } from '../../utils/helpers';
+import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
   hasBlacklistedProperty,
+  isForcedLine,
   isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
@@ -30,6 +31,7 @@ export const viewBlacklistedProperties = new Set([
 
 export const viewOptimizer: Optimizer = (path, logger, options) => {
   if (!isValidJSXComponent(path, 'View')) return;
+  if (!isReactNativeImport(path, 'View')) return;
 
   let ancestorClassification: ViewAncestorClassification | undefined;
   const getAncestorClassification = () => {
@@ -40,15 +42,9 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
     return ancestorClassification;
   };
 
-  const skipReason = getFirstBailoutReason([
-    {
-      reason: 'line is marked with @boost-ignore',
-      shouldBail: () => isIgnoredLine(path),
-    },
-    {
-      reason: 'View is not imported from react-native',
-      shouldBail: () => !isReactNativeImport(path, 'View'),
-    },
+  const forced = isForcedLine(path);
+
+  const overridableChecks: BailoutCheck[] = [
     {
       reason: 'contains blacklisted props',
       shouldBail: () => hasBlacklistedProperty(path, viewBlacklistedProperties),
@@ -62,19 +58,29 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
       shouldBail: () =>
         getAncestorClassification() === 'unknown' && options?.dangerouslyOptimizeViewWithUnknownAncestors !== true,
     },
-  ]);
+  ];
 
-  if (skipReason) {
-    logger.skipped({
-      component: 'View',
-      path,
-      reason: skipReason,
-    });
+  if (forced) {
+    const overriddenReason = getFirstBailoutReason(overridableChecks);
 
-    return;
+    if (overriddenReason) {
+      logger.forced({ component: 'View', path, reason: overriddenReason });
+    }
+  } else {
+    const skipReason = getFirstBailoutReason([
+      {
+        reason: 'line is marked with @boost-ignore',
+        shouldBail: () => isIgnoredLine(path),
+      },
+      ...overridableChecks,
+    ]);
+
+    if (skipReason) {
+      logger.skipped({ component: 'View', path, reason: skipReason });
+      return;
+    }
   }
 
-  // Extract the file from the Babel hub
   const hub = path.hub as unknown;
   const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
 
@@ -89,6 +95,5 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
 
   const parent = path.parent as t.JSXElement;
 
-  // Replace the View component with NativeView
   replaceWithNativeComponent(path, parent, file, 'NativeView');
 };

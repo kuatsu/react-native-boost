@@ -1,16 +1,37 @@
 ---
-title: "@boost-ignore Decorator"
-description: Skip optimization for a specific JSX element.
+title: "Decorators"
+description: Control optimization on individual JSX elements with @boost-ignore and @boost-force.
 ---
+
+## @boost-ignore
 
 Use `@boost-ignore` to disable optimization on a specific element.
 
 If a line containing `@boost-ignore` appears immediately before a JSX opening tag, that component is skipped.
-
-## Example
 
 ```jsx
 <Text>This will be optimized.</Text>
 {/* @boost-ignore */}
 <Text>This will not be optimized.</Text>
 ```
+
+## @boost-force
+
+Use `@boost-force` to force optimization on a specific element, even if it would normally be skipped by a bailout rule (e.g. blacklisted props, unresolvable spreads, or ancestor checks).
+
+The only check that `@boost-force` does **not** override is the `react-native` import check — the component must still be imported from `react-native`.
+
+```jsx
+const Component = ({ props }) => {
+  return (
+    {/* @boost-force */}
+    <Text {...props}>This will be optimized despite having unresolvable spread props.</Text>
+  )
+}
+```
+
+<Callout type="warn" title="Use with caution">
+  `@boost-force` bypasses safety checks that exist to prevent behavioral changes.
+  Only use it when you are confident that the optimization is safe for your specific use case — for example,
+  when a wrapper component filters or handles props before passing them to the underlying native component.
+</Callout>

@@ -12,10 +12,12 @@ const ANSI_RESET = '\u001B[0m';
 const ANSI_GREEN = '\u001B[32m';
 const ANSI_YELLOW = '\u001B[33m';
 const ANSI_MAGENTA = '\u001B[35m';
+const ANSI_RED = '\u001B[31m';
 
 export const noopLogger: PluginLogger = {
   optimized() {},
   skipped() {},
+  forced() {},
   warning() {},
 };
 
@@ -29,6 +31,12 @@ export const createLogger = ({ verbose, silent }: { verbose: boolean; silent: bo
     skipped(payload) {
       if (!verbose) return;
       writeLog('skipped', `Skipped ${payload.component} in ${formatPathLocation(payload.path)} (${payload.reason})`);
+    },
+    forced(payload) {
+      writeLog(
+        'forced',
+        `Force-optimized ${payload.component} in ${formatPathLocation(payload.path)} (skipped bailout: ${payload.reason})`
+      );
     },
     warning(payload) {
       const context = formatWarningContext(payload);
@@ -52,18 +60,24 @@ function formatWarningContext(payload: WarningLogPayload): string {
   return location;
 }
 
-function writeLog(level: 'optimized' | 'skipped' | 'warning', message: string): void {
+type LogLevel = 'optimized' | 'skipped' | 'forced' | 'warning';
+
+function writeLog(level: LogLevel, message: string): void {
   const levelTag = formatLevel(level);
   console.log(`${LOG_PREFIX} ${levelTag} ${message}`);
 }
 
-function formatLevel(level: 'optimized' | 'skipped' | 'warning'): string {
+function formatLevel(level: LogLevel): string {
   if (level === 'optimized') {
     return colorize('[optimized]', ANSI_GREEN);
   }
 
   if (level === 'skipped') {
     return colorize('[skipped]', ANSI_YELLOW);
+  }
+
+  if (level === 'forced') {
+    return colorize('[forced]', ANSI_RED);
   }
 
   return colorize('[warning]', ANSI_MAGENTA);

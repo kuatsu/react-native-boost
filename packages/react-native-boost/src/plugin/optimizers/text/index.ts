@@ -1,13 +1,14 @@
 import { NodePath, types as t } from '@babel/core';
 import { HubFile, Optimizer, PluginLogger } from '../../types';
 import PluginError from '../../utils/plugin-error';
-import { getFirstBailoutReason } from '../../utils/helpers';
+import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
   addDefaultProperty,
   addFileImportHint,
   buildPropertiesFromAttributes,
   hasAccessibilityProperty,
   hasBlacklistedProperty,
+  isForcedLine,
   isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
@@ -39,19 +40,12 @@ export const textBlacklistedProperties = new Set([
 
 export const textOptimizer: Optimizer = (path, logger) => {
   if (!isValidJSXComponent(path, 'Text')) return;
+  if (!isReactNativeImport(path, 'Text')) return;
 
-  // Verify that the Text only has string children
   const parent = path.parent as t.JSXElement;
+  const forced = isForcedLine(path);
 
-  const skipReason = getFirstBailoutReason([
-    {
-      reason: 'line is marked with @boost-ignore',
-      shouldBail: () => isIgnoredLine(path),
-    },
-    {
-      reason: 'Text is not imported from react-native',
-      shouldBail: () => !isReactNativeImport(path, 'Text'),
-    },
+  const overridableChecks: BailoutCheck[] = [
     {
       reason: 'contains blacklisted props',
       shouldBail: () => hasBlacklistedProperty(path, textBlacklistedProperties),
@@ -64,15 +58,27 @@ export const textOptimizer: Optimizer = (path, logger) => {
       reason: 'contains non-string children',
       shouldBail: () => hasInvalidChildren(path, parent),
     },
-  ]);
+  ];
 
-  if (skipReason) {
-    logger.skipped({
-      component: 'Text',
-      path,
-      reason: skipReason,
-    });
-    return;
+  if (forced) {
+    const overriddenReason = getFirstBailoutReason(overridableChecks);
+
+    if (overriddenReason) {
+      logger.forced({ component: 'Text', path, reason: overriddenReason });
+    }
+  } else {
+    const skipReason = getFirstBailoutReason([
+      {
+        reason: 'line is marked with @boost-ignore',
+        shouldBail: () => isIgnoredLine(path),
+      },
+      ...overridableChecks,
+    ]);
+
+    if (skipReason) {
+      logger.skipped({ component: 'Text', path, reason: skipReason });
+      return;
+    }
   }
 
   const hub = path.hub as unknown;

@@ -39,54 +39,52 @@ export const isIgnoredFile = (path: NodePath<t.JSXOpeningElement>, ignores: stri
   return false;
 };
 
-/**
- * Checks if the JSX element should be ignored based on a preceding comment.
- *
- * The function looks up the JSXOpeningElement's own leading comments as well as
- * the parent element's comments before falling back to inspect siblings.
- *
- * @param path - The path to the JSXOpeningElement.
- * @returns true if the JSX element should be ignored.
- */
+export const isForcedLine = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  return hasDecoratorComment(path, '@boost-force');
+};
+
 export const isIgnoredLine = (path: NodePath<t.JSXOpeningElement>): boolean => {
-  // Check for @boost-ignore in the leading comments on the JSX opening element.
-  if (path.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))) {
+  return hasDecoratorComment(path, '@boost-ignore');
+};
+
+/**
+ * Checks if the JSX element has a preceding comment containing the given decorator string.
+ *
+ * Scans the JSXOpeningElement's own leading comments, the parent element's comments,
+ * ObjectProperty containers, and backward siblings.
+ */
+function hasDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: string): boolean {
+  if (path.node.leadingComments?.some((comment) => comment.value.includes(decorator))) {
     return true;
   }
 
-  // Check for @boost-ignore in the leading comments on the parent JSX element.
   const jsxElementPath = path.parentPath;
-  if (jsxElementPath.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))) {
+  if (jsxElementPath.node.leadingComments?.some((comment) => comment.value.includes(decorator))) {
     return true;
   }
 
-  // NEW: Check for @boost-ignore in the leading comments on the ObjectProperty (if it exists)
-  // This handles cases where the JSX element is used as a value inside an object literal.
+  // Check leading comments on the ObjectProperty (if the JSX element is a value inside an object literal).
   const propertyPath = jsxElementPath.parentPath;
   if (
     propertyPath &&
     propertyPath.isObjectProperty() &&
-    propertyPath.node.leadingComments?.some((comment) => comment.value.includes('@boost-ignore'))
+    propertyPath.node.leadingComments?.some((comment) => comment.value.includes(decorator))
   ) {
     return true;
   }
 
   if (!jsxElementPath.parentPath) return false;
 
-  // Get the container that holds this element (for example, a JSX fragment or JSX element)
   const containerPath = jsxElementPath.parentPath;
   const siblings = ensureArray(containerPath.get('children'));
   const index = siblings.findIndex((sibling) => sibling.node === jsxElementPath.node);
   if (index === -1) return false;
 
-  // Look backward from the current element for a non-empty node.
   for (let index_ = index - 1; index_ >= 0; index_--) {
     const sibling = siblings[index_];
-    // Skip over any whitespace (only in JSXText nodes)
     if (sibling.isJSXText() && sibling.node.value.trim() === '') {
       continue;
     }
-    // If the sibling is a JSX expression container, check its empty expression's comments.
     if (sibling.isJSXExpressionContainer()) {
       const expression = sibling.get('expression');
       if (expression && expression.node) {
@@ -95,22 +93,21 @@ export const isIgnoredLine = (path: NodePath<t.JSXOpeningElement>): boolean => {
           ...(expression.node.trailingComments || []),
           ...(expression.node.innerComments || []),
         ].map((comment) => comment.value.trim());
-        if (comments.some((comment) => comment.includes('@boost-ignore'))) {
+        if (comments.some((comment) => comment.includes(decorator))) {
           return true;
         }
       }
     }
-    // Also check if the node itself carries a leadingComments property.
     if (
       sibling.node.leadingComments &&
-      sibling.node.leadingComments.some((comment) => comment.value.includes('@boost-ignore'))
+      sibling.node.leadingComments.some((comment) => comment.value.includes(decorator))
     ) {
       return true;
     }
-    break; // if the immediate non-whitespace node is not our ignore marker, stop
+    break;
   }
   return false;
-};
+}
 
 /**
  * Checks if the path represents a valid JSX component with the specified name.
