@@ -15,7 +15,7 @@ internal class OnMarkerPaintedEvent(surfaceId: Int, viewId: Int, val paintTime: 
     override protected fun getEventData(): WritableMap {
         val eventData: WritableMap = Arguments.createMap()
         eventData.putDouble("paintTime", paintTime.toDouble())
-        eventData.putInt("target", getViewTag())
+        eventData.putInt("target", viewTag)
         return eventData
     }
 

@@ -4,6 +4,7 @@ import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
   hasBlacklistedProperty,
+  getUnistylesStyleStatus,
   isForcedLine,
   isIgnoredLine,
   isValidJSXComponent,
@@ -29,9 +30,20 @@ export const viewBlacklistedProperties = new Set([
   'style', // TODO: process style at runtime
 ]);
 
+const viewBlacklistedPropertiesWithoutStyle = new Set(
+  [...viewBlacklistedProperties].filter((property) => property !== 'style')
+);
+
 export const viewOptimizer: Optimizer = (path, logger, options) => {
   if (!isValidJSXComponent(path, 'View')) return;
   if (!isReactNativeImport(path, 'View')) return;
+  const unistylesStyleStatus = getUnistylesStyleStatus(path);
+  const usesUnistylesStyle = unistylesStyleStatus === 'static';
+
+  if (unistylesStyleStatus === 'dynamic') {
+    logger.skipped({ component: 'View', path, reason: 'contains dynamic Unistyles styles' });
+    return;
+  }
 
   let ancestorClassification: ViewAncestorClassification | undefined;
   const getAncestorClassification = () => {
@@ -47,7 +59,11 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
   const overridableChecks: BailoutCheck[] = [
     {
       reason: 'contains blacklisted props',
-      shouldBail: () => hasBlacklistedProperty(path, viewBlacklistedProperties),
+      shouldBail: () =>
+        hasBlacklistedProperty(
+          path,
+          usesUnistylesStyle ? viewBlacklistedPropertiesWithoutStyle : viewBlacklistedProperties
+        ),
     },
     {
       reason: 'has Text ancestor',
