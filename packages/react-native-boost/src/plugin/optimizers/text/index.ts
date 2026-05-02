@@ -8,6 +8,7 @@ import {
   buildPropertiesFromAttributes,
   hasAccessibilityProperty,
   hasBlacklistedProperty,
+  getUnistylesStyleStatus,
   isForcedLine,
   isIgnoredLine,
   isValidJSXComponent,
@@ -44,6 +45,12 @@ export const textOptimizer: Optimizer = (path, logger) => {
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
+  const unistylesStyleStatus = getUnistylesStyleStatus(path);
+
+  if (unistylesStyleStatus === 'dynamic') {
+    logger.skipped({ component: 'Text', path, reason: 'contains dynamic Unistyles styles' });
+    return;
+  }
 
   const overridableChecks: BailoutCheck[] = [
     {

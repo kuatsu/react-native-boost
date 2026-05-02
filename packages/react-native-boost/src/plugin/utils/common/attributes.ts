@@ -2,6 +2,8 @@ import { NodePath, types as t } from '@babel/core';
 import { ACCESSIBILITY_PROPERTIES } from '../constants';
 import { USER_SELECT_STYLE_TO_SELECTABLE_PROP } from '../constants';
 
+const UNISTYLES_MODULE_NAME = 'react-native-unistyles';
+
 /**
  * Checks if the JSX element has a blacklisted property.
  *
@@ -46,6 +48,340 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
     return false;
   });
 };
+
+export type UnistylesStyleStatus = 'none' | 'static' | 'dynamic';
+
+/**
+ * Checks whether the JSX element receives a style that comes from Unistyles'
+ * StyleSheet.create output.
+ */
+export const hasUnistylesStyleProperty = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  return getUnistylesStyleStatus(path) !== 'none';
+};
+
+/**
+ * Returns whether Unistyles styles used by this JSX element are provably static.
+ * Any runtime syntax in the StyleSheet.create call or style expression is treated
+ * as dynamic so the optimizer can leave the component unchanged.
+ */
+export const getUnistylesStyleStatus = (path: NodePath<t.JSXOpeningElement>): UnistylesStyleStatus => {
+  let status: UnistylesStyleStatus = 'none';
+
+  for (const attribute of path.node.attributes) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
+      const styleExpression = getJSXAttributeExpression(attribute);
+      status = mergeUnistylesStyleStatus(
+        status,
+        styleExpression ? getExpressionUnistylesStyleStatus(path, styleExpression) : 'none'
+      );
+    }
+
+    if (t.isJSXSpreadAttribute(attribute)) {
+      const objectExpression = resolveObjectExpression(path, attribute.argument);
+      if (!objectExpression) continue;
+
+      for (const property of objectExpression.properties) {
+        if (!t.isObjectProperty(property) || property.computed || !isStaticPropertyName(property.key, 'style')) {
+          continue;
+        }
+
+        status = mergeUnistylesStyleStatus(
+          status,
+          t.isExpression(property.value) ? getExpressionUnistylesStyleStatus(path, property.value) : 'none'
+        );
+      }
+    }
+
+    if (status === 'dynamic') return status;
+  }
+
+  return status;
+};
+
+function mergeUnistylesStyleStatus(current: UnistylesStyleStatus, next: UnistylesStyleStatus): UnistylesStyleStatus {
+  if (current === 'dynamic' || next === 'dynamic') return 'dynamic';
+  if (current === 'static' || next === 'static') return 'static';
+  return 'none';
+}
+
+function getJSXAttributeExpression(attribute: t.JSXAttribute): t.Expression | undefined {
+  if (!attribute.value || !t.isJSXExpressionContainer(attribute.value)) return undefined;
+  if (t.isJSXEmptyExpression(attribute.value.expression)) return undefined;
+
+  return attribute.value.expression;
+}
+
+function resolveObjectExpression(
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.Expression
+): t.ObjectExpression | undefined {
+  if (t.isObjectExpression(expression)) return expression;
+
+  if (t.isIdentifier(expression)) {
+    const binding = path.scope.getBinding(expression.name);
+    if (
+      binding?.path.node &&
+      t.isVariableDeclarator(binding.path.node) &&
+      t.isObjectExpression(binding.path.node.init)
+    ) {
+      return binding.path.node.init;
+    }
+  }
+
+  return undefined;
+}
+
+function getExpressionUnistylesStyleStatus(
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.Expression,
+  seen = new WeakSet<t.Node>()
+): UnistylesStyleStatus {
+  if (seen.has(expression)) return 'none';
+  seen.add(expression);
+
+  if (t.isIdentifier(expression)) {
+    if (isUnistylesStyleSheetBinding(path, expression.name)) return 'dynamic';
+
+    const binding = path.scope.getBinding(expression.name);
+    if (!binding?.path.node || !t.isVariableDeclarator(binding.path.node)) return 'none';
+    if (!binding.path.node.init || !t.isExpression(binding.path.node.init)) return 'none';
+
+    return getExpressionUnistylesStyleStatus(path, binding.path.node.init, seen);
+  }
+
+  if (t.isMemberExpression(expression)) {
+    const memberStatus = getUnistylesStyleMemberStatus(path, expression);
+    if (memberStatus !== 'none') return memberStatus;
+
+    let status: UnistylesStyleStatus = 'none';
+    if (t.isExpression(expression.object)) {
+      status = mergeUnistylesStyleStatus(status, getExpressionUnistylesStyleStatus(path, expression.object, seen));
+    }
+    if (expression.computed && t.isExpression(expression.property)) {
+      status = mergeUnistylesStyleStatus(status, getExpressionUnistylesStyleStatus(path, expression.property, seen));
+    }
+
+    return status;
+  }
+
+  if (t.isArrayExpression(expression)) {
+    let status: UnistylesStyleStatus = 'none';
+
+    for (const element of expression.elements) {
+      if (!element) continue;
+      if (t.isSpreadElement(element)) {
+        return getExpressionUnistylesStyleStatus(path, element.argument, seen) === 'none' ? status : 'dynamic';
+      }
+      if (t.isExpression(element)) {
+        status = mergeUnistylesStyleStatus(status, getExpressionUnistylesStyleStatus(path, element, seen));
+      }
+      if (status === 'dynamic') return status;
+    }
+
+    return status;
+  }
+
+  if (t.isConditionalExpression(expression)) {
+    return mergeUnistylesStyleStatus(
+      getExpressionUnistylesStyleStatus(path, expression.test, seen),
+      mergeUnistylesStyleStatus(
+        getExpressionUnistylesStyleStatus(path, expression.consequent, seen),
+        getExpressionUnistylesStyleStatus(path, expression.alternate, seen)
+      )
+    ) === 'none'
+      ? 'none'
+      : 'dynamic';
+  }
+
+  if (t.isLogicalExpression(expression) || t.isBinaryExpression(expression)) {
+    const status = mergeUnistylesStyleStatus(
+      t.isExpression(expression.left) ? getExpressionUnistylesStyleStatus(path, expression.left, seen) : 'none',
+      t.isExpression(expression.right) ? getExpressionUnistylesStyleStatus(path, expression.right, seen) : 'none'
+    );
+
+    return status === 'none' ? 'none' : 'dynamic';
+  }
+
+  if (t.isSequenceExpression(expression)) {
+    let status: UnistylesStyleStatus = 'none';
+
+    for (const item of expression.expressions) {
+      status = mergeUnistylesStyleStatus(status, getExpressionUnistylesStyleStatus(path, item, seen));
+      if (status === 'dynamic') return status;
+    }
+
+    return status;
+  }
+
+  if (t.isCallExpression(expression)) {
+    let status: UnistylesStyleStatus = t.isExpression(expression.callee)
+      ? getExpressionUnistylesStyleStatus(path, expression.callee, seen)
+      : 'none';
+
+    for (const argument of expression.arguments) {
+      if (!t.isExpression(argument)) continue;
+      status = mergeUnistylesStyleStatus(status, getExpressionUnistylesStyleStatus(path, argument, seen));
+      if (status !== 'none') return 'dynamic';
+    }
+
+    return status === 'none' ? 'none' : 'dynamic';
+  }
+
+  if (t.isUnaryExpression(expression)) {
+    return getExpressionUnistylesStyleStatus(path, expression.argument, seen);
+  }
+
+  if (t.isTSAsExpression(expression) || t.isTSSatisfiesExpression(expression) || t.isTSNonNullExpression(expression)) {
+    return getExpressionUnistylesStyleStatus(path, expression.expression, seen);
+  }
+
+  if (t.isTypeCastExpression(expression)) {
+    return getExpressionUnistylesStyleStatus(path, expression.expression, seen);
+  }
+
+  return 'none';
+}
+
+function getUnistylesStyleMemberStatus(
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.MemberExpression
+): UnistylesStyleStatus {
+  if (!t.isIdentifier(expression.object)) return 'none';
+
+  const styleSheetCreateCall = getUnistylesStyleSheetCreateCallForBinding(path, expression.object.name);
+  if (!styleSheetCreateCall) return 'none';
+
+  const styleName = getStaticMemberName(expression);
+  if (!styleName) return 'dynamic';
+
+  const createArgument = styleSheetCreateCall.arguments[0];
+  if (!t.isObjectExpression(createArgument)) return 'dynamic';
+
+  const styleProperty = findObjectProperty(createArgument, styleName);
+  if (!styleProperty || !t.isObjectProperty(styleProperty)) return 'dynamic';
+
+  return isStaticUnistylesStyleValue(styleProperty.value) ? 'static' : 'dynamic';
+}
+
+function getStaticMemberName(expression: t.MemberExpression): string | undefined {
+  if (!expression.computed && t.isIdentifier(expression.property)) return expression.property.name;
+  if (expression.computed && t.isStringLiteral(expression.property)) return expression.property.value;
+  return undefined;
+}
+
+function findObjectProperty(objectExpression: t.ObjectExpression, name: string): t.ObjectProperty | undefined {
+  return objectExpression.properties.find((property): property is t.ObjectProperty => {
+    return t.isObjectProperty(property) && !property.computed && isStaticPropertyName(property.key, name);
+  });
+}
+
+function isStaticUnistylesStyleValue(node: t.Node): boolean {
+  if (t.isStringLiteral(node) || t.isNumericLiteral(node) || t.isBooleanLiteral(node) || t.isNullLiteral(node)) {
+    return true;
+  }
+
+  if (t.isUnaryExpression(node)) {
+    return ['-', '+'].includes(node.operator) && t.isNumericLiteral(node.argument);
+  }
+
+  if (t.isArrayExpression(node)) {
+    return node.elements.every(
+      (element) => element != null && t.isExpression(element) && isStaticUnistylesStyleValue(element)
+    );
+  }
+
+  if (t.isObjectExpression(node)) {
+    return node.properties.every((property) => {
+      return (
+        t.isObjectProperty(property) &&
+        !property.computed &&
+        isStaticObjectKey(property.key) &&
+        isStaticUnistylesStyleValue(property.value)
+      );
+    });
+  }
+
+  if (t.isTSAsExpression(node) || t.isTSSatisfiesExpression(node) || t.isTSNonNullExpression(node)) {
+    return isStaticUnistylesStyleValue(node.expression);
+  }
+
+  if (t.isTypeCastExpression(node)) {
+    return isStaticUnistylesStyleValue(node.expression);
+  }
+
+  return false;
+}
+
+function isStaticObjectKey(key: t.ObjectProperty['key']): boolean {
+  return t.isIdentifier(key) || t.isStringLiteral(key) || t.isNumericLiteral(key);
+}
+
+function isUnistylesStyleSheetBinding(path: NodePath<t.JSXOpeningElement>, name: string): boolean {
+  return getUnistylesStyleSheetCreateCallForBinding(path, name) !== undefined;
+}
+
+function getUnistylesStyleSheetCreateCallForBinding(
+  path: NodePath<t.JSXOpeningElement>,
+  name: string
+): t.CallExpression | undefined {
+  const binding = path.scope.getBinding(name);
+  if (!binding?.path.node || !t.isVariableDeclarator(binding.path.node)) return undefined;
+
+  const initializer = binding.path.node.init;
+  if (!t.isCallExpression(initializer)) return undefined;
+  if (!isUnistylesStyleSheetCreateCall(path, initializer)) return undefined;
+
+  return initializer;
+}
+
+function isUnistylesStyleSheetCreateCall(path: NodePath<t.JSXOpeningElement>, expression: t.CallExpression): boolean {
+  const { callee } = expression;
+  if (!t.isMemberExpression(callee)) return false;
+  if (!t.isIdentifier(callee.property, { name: 'create' }) || callee.computed) return false;
+
+  if (t.isIdentifier(callee.object)) {
+    return isUnistylesStyleSheetImport(path, callee.object.name);
+  }
+
+  if (
+    t.isMemberExpression(callee.object) &&
+    t.isIdentifier(callee.object.object) &&
+    t.isIdentifier(callee.object.property, { name: 'StyleSheet' }) &&
+    !callee.object.computed
+  ) {
+    return isUnistylesNamespaceImport(path, callee.object.object.name);
+  }
+
+  return false;
+}
+function isUnistylesStyleSheetImport(path: NodePath<t.JSXOpeningElement>, name: string): boolean {
+  const binding = path.scope.getBinding(name);
+  if (!binding || binding.kind !== 'module') return false;
+  if (!t.isImportSpecifier(binding.path.node)) return false;
+
+  const importDeclaration = binding.path.parent;
+  if (!t.isImportDeclaration(importDeclaration) || importDeclaration.source.value !== UNISTYLES_MODULE_NAME) {
+    return false;
+  }
+
+  const imported = binding.path.node.imported;
+  return (
+    t.isIdentifier(imported, { name: 'StyleSheet' }) || (t.isStringLiteral(imported) && imported.value === 'StyleSheet')
+  );
+}
+
+function isUnistylesNamespaceImport(path: NodePath<t.JSXOpeningElement>, name: string): boolean {
+  const binding = path.scope.getBinding(name);
+  if (!binding || binding.kind !== 'module') return false;
+  if (!t.isImportNamespaceSpecifier(binding.path.node)) return false;
+
+  const importDeclaration = binding.path.parent;
+  return t.isImportDeclaration(importDeclaration) && importDeclaration.source.value === UNISTYLES_MODULE_NAME;
+}
+
+function isStaticPropertyName(key: t.ObjectProperty['key'], name: string): boolean {
+  return t.isIdentifier(key, { name }) || (t.isStringLiteral(key) && key.value === name);
+}
 
 /**
  * Adds a default property to a JSX element if it's not already defined. It avoids adding a default
