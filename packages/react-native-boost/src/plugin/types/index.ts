@@ -78,7 +78,13 @@ export interface PluginLogger {
   warning: (payload: WarningLogPayload) => void;
 }
 
-export type Optimizer = (path: NodePath<t.JSXOpeningElement>, logger: PluginLogger, options?: PluginOptions) => void;
+export type Optimizer = (
+  path: NodePath<t.JSXOpeningElement>,
+  logger: PluginLogger,
+  options?: PluginOptions,
+  /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
+  platform?: string
+) => void;
 
 export type HubFile = t.File & {
   opts: {

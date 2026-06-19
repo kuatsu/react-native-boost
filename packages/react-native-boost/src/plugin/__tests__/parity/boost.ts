@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { transformSync } from '@babel/core';
+import { transformSync, type TransformCaller } from '@babel/core';
 import * as React from 'react';
 import boostPlugin from '../../index'; // src/plugin/index.ts — the full Boost plugin
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
@@ -24,9 +24,9 @@ interface BoostOptimized {
  * `{ optimized: false }` when Boost bailed — it then defers to the wrapper, so the case is
  * equivalent by construction and the test skips it.
  *
- * Rendered under the given platform (like {@link captureWrapper}) because the runtime helpers read
- * `Platform.OS`/`Platform.select` at render time to resolve platform-specific defaults such as
- * `accessible`.
+ * Compiled and rendered under the given platform (like {@link captureWrapper}): the caller `platform`
+ * mirrors how Metro builds per platform, so the plugin inlines build-time defaults (e.g. `accessible`)
+ * exactly as it would in production, and the runtime helpers read the matching `Platform.OS` at render.
  */
 export async function captureBoost(os: 'ios' | 'android', jsxBody: string): Promise<BoostBailed | BoostOptimized> {
   setPlatformOS(os);
@@ -35,6 +35,7 @@ export async function captureBoost(os: 'ios' | 'android', jsxBody: string): Prom
     configFile: false,
     babelrc: false,
     filename: 'boost-case.jsx',
+    caller: { name: 'metro', platform: os } as TransformCaller,
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
     plugins: [[boostPlugin, { silent: true }]],
   });

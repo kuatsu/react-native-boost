@@ -55,7 +55,7 @@ const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled'])
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const textOptimizer: Optimizer = (path, logger) => {
+export const textOptimizer: Optimizer = (path, logger, _options, platform) => {
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
 
@@ -114,7 +114,7 @@ export const textOptimizer: Optimizer = (path, logger) => {
   fixNegativeNumberOfLines({ path, logger });
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
-  processProps(path, file);
+  processProps(path, file, platform);
 
   // Replace the Text component with NativeText
   replaceWithNativeComponent(path, parent, file, 'NativeText');
@@ -183,7 +183,7 @@ function fixNegativeNumberOfLines({ path, logger }: { path: NodePath<t.JSXOpenin
 /**
  * Processes style and accessibility attributes, replacing them with optimized versions.
  */
-function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
+function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platform?: string) {
   // Grab the up-to-date list of attributes
   const currentAttributes = [...path.node.attributes];
 
@@ -269,16 +269,22 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
   // 3. `accessible` default for the common path
   // ============================================
   // With no accessibility/`disabled` prop the helper is skipped, but `Text` still applies a
-  // platform-specific `accessible` default. Inject a call to the lightweight runtime resolver so it is
-  // not silently dropped, while keeping the common path off the full `processAccessibilityProps`.
+  // platform-specific `accessible` default (`true` on iOS, `false` on Android, omitted on web). Metro
+  // bundles per platform and reports the target on the Babel caller, so the value is known at build
+  // time and we inline the literal directly. Only when the platform is unknown (non-Metro bundlers,
+  // fixture tests) do we defer to the lightweight runtime resolver, so the default is never dropped.
   if (!shouldNormalize) {
-    const accessibleIdentifier = addFileImportHint({
-      file,
-      nameHint: 'getDefaultTextAccessible',
-      path,
-      importName: 'getDefaultTextAccessible',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
-    addDefaultProperty(path, 'accessible', t.callExpression(t.identifier(accessibleIdentifier.name), []));
+    if (platform === 'ios' || platform === 'android') {
+      addDefaultProperty(path, 'accessible', t.booleanLiteral(platform === 'ios'));
+    } else if (platform !== 'web') {
+      const accessibleIdentifier = addFileImportHint({
+        file,
+        nameHint: 'getDefaultTextAccessible',
+        path,
+        importName: 'getDefaultTextAccessible',
+        moduleName: RUNTIME_MODULE_NAME,
+      });
+      addDefaultProperty(path, 'accessible', t.callExpression(t.identifier(accessibleIdentifier.name), []));
+    }
   }
 }
