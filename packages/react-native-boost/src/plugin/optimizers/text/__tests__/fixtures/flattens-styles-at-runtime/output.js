@@ -10,6 +10,7 @@ import { Text } from 'react-native';
   })}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  accessible={_getDefaultTextAccessible()}
 />;
 <_NativeText
   {..._processTextStyle([
@@ -23,4 +24,5 @@ import { Text } from 'react-native';
   selectable={true}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  accessible={_getDefaultTextAccessible()}
 />;

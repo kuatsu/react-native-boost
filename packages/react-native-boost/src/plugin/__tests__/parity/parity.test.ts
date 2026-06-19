@@ -26,6 +26,8 @@ const TEXT_CASES = [
   '<Text accessibilityState={{ disabled: true }}>hello</Text>',
   '<Text numberOfLines={2}>hello</Text>',
   '<Text aria-busy={true}>hello</Text>',
+  '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the style spread
+  '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
 ];
 
 const VIEW_CASES = [
