@@ -23,7 +23,7 @@ const benchmarks = [
   },
 ] satisfies Benchmark[];
 
-export default function HomeScreen() {
+export default function BenchmarkScreen() {
   const insets = useSafeAreaInsets();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [runBenchmark, setRunBenchmark] = useState(false);
@@ -171,7 +171,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff8ef',
+    backgroundColor: '#0b0e11',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -181,10 +181,10 @@ const styles = StyleSheet.create({
     maxWidth: 640,
   },
   headerCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#141b22',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#f1d4a3',
+    borderColor: '#2a3139',
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
@@ -192,17 +192,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#5e3c0c',
+    color: '#eaecef',
   },
   subtitle: {
     marginTop: 4,
     fontSize: 13,
-    color: '#7a4b00',
+    color: '#9aa3ad',
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   runButton: {
-    backgroundColor: '#ff9800',
+    backgroundColor: '#f0b90b',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   runButtonText: {
-    color: '#2f1d00',
+    color: '#0b0e11',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -222,8 +222,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1d4a3',
-    backgroundColor: '#ffffff',
+    borderColor: '#2a3139',
+    backgroundColor: '#12161c',
   },
   footer: {
     position: 'absolute',
@@ -237,23 +237,23 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   tableHeader: {
-    backgroundColor: '#fff0d6',
+    backgroundColor: '#1b2330',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1d4a3',
+    borderBottomColor: '#2a3139',
   },
   tableHeaderText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#7a4b00',
+    color: '#6c7480',
   },
   tableStripeLight: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#12161c',
   },
   tableStripeDark: {
-    backgroundColor: '#fffaf2',
+    backgroundColor: '#161c24',
   },
   tableActiveRow: {
-    backgroundColor: '#ffe8c2',
+    backgroundColor: '#1f2a36',
   },
   tableCell: {
     paddingHorizontal: 10,
@@ -268,23 +268,23 @@ const styles = StyleSheet.create({
   },
   benchmarkText: {
     fontSize: 14,
-    color: '#4d3311',
+    color: '#eaecef',
     fontWeight: '600',
   },
   metricText: {
     fontSize: 13,
-    color: '#6e4c1d',
+    color: '#9aa3ad',
     textAlign: 'right',
   },
   gainPositive: {
-    color: '#0d7a3b',
+    color: '#0ecb81',
     fontWeight: '700',
   },
   gainNegative: {
-    color: '#b42318',
+    color: '#f6465d',
     fontWeight: '700',
   },
   gainNeutral: {
-    color: '#6e4c1d',
+    color: '#6c7480',
   },
 });
