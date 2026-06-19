@@ -21,6 +21,10 @@ import { ACCESSIBILITY_PROPERTIES } from '../../utils/constants';
 import { extractStyleAttribute, extractSelectableAndUpdateStyle } from '../../utils/common';
 
 export const textBlacklistedProperties = new Set([
+  // The `Text` wrapper translates `aria-hidden` into `accessibilityElementsHidden` /
+  // `importantForAccessibility`, which `processAccessibilityProps` does not yet handle. Passing it
+  // through would drop it, so bail. TODO: handle this in the runtime helper instead.
+  'aria-hidden',
   'id',
   'nativeID',
   'onLongPress',

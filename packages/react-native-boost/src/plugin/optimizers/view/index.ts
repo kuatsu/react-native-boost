@@ -14,7 +14,9 @@ import {
 } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
-  // TODO: process a11y props at runtime
+  // The `View` wrapper translates these into native props (e.g. `aria-*` → `accessibility*`,
+  // `tabIndex` → `focusable`). The native host does not understand them, so passing them through
+  // would silently drop them. TODO: process these at runtime instead of bailing.
   'accessible',
   'accessibilityLabel',
   'accessibilityState',
@@ -22,10 +24,18 @@ export const viewBlacklistedProperties = new Set([
   'aria-checked',
   'aria-disabled',
   'aria-expanded',
+  'aria-hidden',
   'aria-label',
+  'aria-labelledby',
+  'aria-live',
   'aria-selected',
+  'aria-valuemax',
+  'aria-valuemin',
+  'aria-valuenow',
+  'aria-valuetext',
   'id',
   'nativeID',
+  'tabIndex',
   'style', // TODO: process style at runtime
 ]);
 
