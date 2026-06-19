@@ -11,6 +11,7 @@
     "**/fixtures",
     "**/*.config.{js,mjs,cjs}",
     "**/scripts",
+    "**/plugins",
     "**/__tests__",
     "apps/docs/.docusaurus/**"
   ],
