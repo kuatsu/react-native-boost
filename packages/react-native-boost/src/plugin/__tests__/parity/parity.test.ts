@@ -35,10 +35,18 @@ const VIEW_CASES = [
   '<View accessibilityRole="button" />',
   '<View accessibilityValue={{ now: 5 }} />',
   '<View pointerEvents="none" />',
-  '<View aria-label="x" />', // blacklisted → Boost bails → skipped
-  '<View tabIndex={0} />', //   blacklisted → Boost bails → skipped
-  '<View style={{ width: 1 }} />', // blacklisted → Boost bails → skipped
+  '<View aria-label="x" />', // blacklisted → Boost bails → defers to wrapper
+  '<View tabIndex={0} />', //   blacklisted → Boost bails → defers to wrapper
+  '<View style={{ width: 1 }} />', // blacklisted → Boost bails → defers to wrapper
 ];
+
+// Cases Boost is expected to bail on (blacklisted props). Asserting the bail explicitly stops an
+// unexpected bailout — a silent loss of optimization — from masquerading as a passing parity test.
+const BAILED_VIEW_CASES = new Set([
+  '<View aria-label="x" />',
+  '<View tabIndex={0} />',
+  '<View style={{ width: 1 }} />',
+]);
 
 // Treat `undefined`-valued keys as absent and deep-clean nested objects (also drops function values
 // such as event handlers) so the comparison is a clean structural prop-bag equality.
@@ -48,15 +56,19 @@ describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
-      if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
+      expect(boost.optimized).toBe(true); // every Text case here is expected to optimize
+      if (!boost.optimized) return;
       const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
     it.each(VIEW_CASES)('View: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
+      expect(boost.optimized).toBe(!BAILED_VIEW_CASES.has(jsx));
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
   });
