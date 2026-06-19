@@ -5,6 +5,11 @@ import { GenericStyleProp } from './types';
 
 export const processTextStyle = (style: GenericStyleProp<TextStyle>) => ({ style }) as Partial<TextProps>;
 
+// On Web there is no platform-specific `accessible` default to apply; react-native-web's `Text`
+// derives accessibility from the rendered DOM. Returning `undefined` makes the injected
+// `accessible={getDefaultTextAccessible()}` a no-op.
+export const getDefaultTextAccessible = (): boolean | undefined => undefined;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
   return props;

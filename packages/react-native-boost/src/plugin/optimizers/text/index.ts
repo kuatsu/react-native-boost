@@ -42,6 +42,13 @@ export const textBlacklistedProperties = new Set([
   'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
+/**
+ * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`,
+ * which `Text` reconciles against `accessibilityState.disabled`. They are collected into a single
+ * helper call and stripped from the element so they are not also emitted verbatim.
+ */
+const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled']);
+
 export const textOptimizer: Optimizer = (path, logger) => {
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
@@ -175,20 +182,31 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
   const currentAttributes = [...path.node.attributes];
 
   const { styleExpr, styleAttribute } = extractStyleAttribute(currentAttributes);
-  const hasA11y = hasAccessibilityProperty(path, currentAttributes);
+
+  // `Text` always resolves a platform-specific `accessible` default and reconciles `disabled` with
+  // `accessibilityState.disabled`. When any accessibility prop or `disabled` is present we hand the
+  // element off to `processAccessibilityProps` (which also performs the aria/label merges); otherwise
+  // only the `accessible` default is needed, so we inject it directly to keep the common path cheap.
+  const shouldNormalize =
+    hasAccessibilityProperty(path, currentAttributes) ||
+    currentAttributes.some(
+      (attribute) => t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'disabled' })
+    );
 
   // ============================================
-  // 1. Prepare spread attributes (style / a11y)
+  // 1. Prepare spread attributes (a11y / style)
   // ============================================
 
   const spreadAttributes: t.JSXSpreadAttribute[] = [];
 
-  // --- Accessibility ---
-  if (hasA11y) {
-    const accessibilityAttributes = currentAttributes.filter((attribute) => {
-      if (!t.isJSXAttribute(attribute)) return false;
-      return t.isJSXIdentifier(attribute.name) && ACCESSIBILITY_PROPERTIES.has(attribute.name.name as string);
-    });
+  // --- Accessibility & `disabled` ---
+  if (shouldNormalize) {
+    const normalizedAttributes = currentAttributes.filter(
+      (attribute): attribute is t.JSXAttribute =>
+        t.isJSXAttribute(attribute) &&
+        t.isJSXIdentifier(attribute.name) &&
+        NORMALIZED_PROPERTIES.has(attribute.name.name)
+    );
 
     const normalizeIdentifier = addFileImportHint({
       file,
@@ -198,7 +216,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
       moduleName: RUNTIME_MODULE_NAME,
     });
 
-    const accessibilityObject = buildPropertiesFromAttributes(accessibilityAttributes);
+    const accessibilityObject = buildPropertiesFromAttributes(normalizedAttributes);
     const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
     spreadAttributes.push(t.jsxSpreadAttribute(accessibilityExpr));
   }
@@ -236,12 +254,12 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
     // Skip the style attribute (we have replaced it with a spread)
     if (styleAttribute && attribute === styleAttribute) continue;
 
-    // Skip accessibility attributes if we processed them
+    // Skip the props we routed through `processAccessibilityProps`
     if (
-      hasA11y &&
+      shouldNormalize &&
       t.isJSXAttribute(attribute) &&
       t.isJSXIdentifier(attribute.name) &&
-      ACCESSIBILITY_PROPERTIES.has(attribute.name.name as string)
+      NORMALIZED_PROPERTIES.has(attribute.name.name)
     ) {
       continue;
     }
@@ -252,4 +270,21 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
   path.node.attributes = [...spreadAttributes, selectableAttribute, ...remainingAttributes].filter(
     (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
   );
+
+  // ============================================
+  // 3. `accessible` default for the common path
+  // ============================================
+  // With no accessibility/`disabled` prop the helper is skipped, but `Text` still applies a
+  // platform-specific `accessible` default. Inject a call to the lightweight runtime resolver so it is
+  // not silently dropped, while keeping the common path off the full `processAccessibilityProps`.
+  if (!shouldNormalize) {
+    const accessibleIdentifier = addFileImportHint({
+      file,
+      nameHint: 'getDefaultTextAccessible',
+      path,
+      importName: 'getDefaultTextAccessible',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    addDefaultProperty(path, 'accessible', t.callExpression(t.identifier(accessibleIdentifier.name), []));
+  }
 }

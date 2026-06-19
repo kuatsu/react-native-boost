@@ -1,11 +1,12 @@
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import {
   processTextStyle,
   processAccessibilityProps,
+  getDefaultTextAccessible,
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
 } from '..';
-import { TextStyle } from 'react-native';
+import { Platform, TextStyle } from 'react-native';
 
 vi.mock('../components/native-text', () => ({
   NativeText: () => 'MockedNativeText',
@@ -15,16 +16,29 @@ vi.mock('../components/native-view', () => ({
   NativeView: () => 'MockedNativeView',
 }));
 
-vi.mock('react-native', () => ({
-  View: () => 'View',
-  Text: () => 'Text',
-  Platform: {
-    OS: 'ios',
-  },
-  StyleSheet: {
-    flatten: (style: any) => style,
-  },
-}));
+// Switchable Platform mock so platform-specific defaults can be asserted for both OSes. `select`
+// reads the live `OS`, mirroring react-native's own implementation; tests flip `Platform.OS` and the
+// shared `afterEach` resets it.
+vi.mock('react-native', () => {
+  const Platform = {
+    OS: 'ios' as 'ios' | 'android',
+    select<T>(spec: Record<string, T>): T | undefined {
+      return Platform.OS in spec ? spec[Platform.OS] : spec.default;
+    },
+  };
+  return {
+    View: () => 'View',
+    Text: () => 'Text',
+    Platform,
+    StyleSheet: {
+      flatten: (style: any) => style,
+    },
+  };
+});
+
+afterEach(() => {
+  Platform.OS = 'ios';
+});
 
 describe('processTextStyle', () => {
   it('returns empty object for falsy style', () => {
@@ -85,6 +99,18 @@ describe('processTextStyle', () => {
   });
 });
 
+describe('getDefaultTextAccessible', () => {
+  it('returns true on iOS', () => {
+    Platform.OS = 'ios';
+    expect(getDefaultTextAccessible()).toBe(true);
+  });
+
+  it('returns false on Android', () => {
+    Platform.OS = 'android';
+    expect(getDefaultTextAccessible()).toBe(false);
+  });
+});
+
 describe('processAccessibilityProps', () => {
   it('sets default accessible to true and has no accessibilityLabel if not provided', () => {
     const props = {};
@@ -92,6 +118,11 @@ describe('processAccessibilityProps', () => {
     expect(normalized.accessible).toBe(true);
     expect(normalized.accessibilityLabel).toBeUndefined();
     expect(normalized.accessibilityState).toBeUndefined();
+  });
+
+  it('defaults accessible to false on Android', () => {
+    Platform.OS = 'android';
+    expect(processAccessibilityProps({}).accessible).toBe(false);
   });
 
   it('merges accessibility labels using aria-label over accessibilityLabel', () => {
@@ -165,5 +196,29 @@ describe('processAccessibilityProps', () => {
     };
     const normalized = processAccessibilityProps(props);
     expect(normalized.accessible).toBe(false);
+  });
+
+  it('derives disabled from accessibilityState.disabled when the disabled prop is absent', () => {
+    const normalized = processAccessibilityProps({ accessibilityState: { disabled: true } });
+    expect(normalized.disabled).toBe(true);
+    expect(normalized.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('mirrors a standalone disabled prop into accessibilityState', () => {
+    const normalized = processAccessibilityProps({ disabled: true });
+    expect(normalized.disabled).toBe(true);
+    expect(normalized.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('lets an explicit disabled prop win over accessibilityState.disabled', () => {
+    const normalized = processAccessibilityProps({ disabled: true, accessibilityState: { disabled: false } });
+    expect(normalized.disabled).toBe(true);
+    expect(normalized.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('does not synthesize accessibilityState when disabled is false and state is absent', () => {
+    const normalized = processAccessibilityProps({ disabled: false });
+    expect(normalized.disabled).toBe(false);
+    expect(normalized.accessibilityState).toBeUndefined();
   });
 });

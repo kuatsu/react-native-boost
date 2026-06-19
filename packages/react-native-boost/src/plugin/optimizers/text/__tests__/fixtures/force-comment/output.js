@@ -1,4 +1,7 @@
-import { NativeText as _NativeText } from 'react-native-boost/runtime';
+import {
+  getDefaultTextAccessible as _getDefaultTextAccessible,
+  NativeText as _NativeText,
+} from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <>
   <Text
@@ -13,7 +16,8 @@ import { Text } from 'react-native';
       console.log('pressed');
     }}
     allowFontScaling={true}
-    ellipsizeMode={'tail'}>
+    ellipsizeMode={'tail'}
+    accessible={_getDefaultTextAccessible()}>
     Force optimized despite blacklisted prop
   </_NativeText>
 </>;

@@ -1,15 +1,18 @@
-import { NativeText as _NativeText } from 'react-native-boost/runtime';
+import {
+  getDefaultTextAccessible as _getDefaultTextAccessible,
+  NativeText as _NativeText,
+} from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 import { Link } from 'expo-router';
 <>
-  <_NativeText allowFontScaling={true} ellipsizeMode={'tail'}>
+  <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
     This should be optimized
   </_NativeText>
   <Link asChild>
     <Text>This should NOT be optimized due to Link asChild</Text>
   </Link>
   <Link>
-    <_NativeText allowFontScaling={true} ellipsizeMode={'tail'}>
+    <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
       This should be optimized (Link without asChild)
     </_NativeText>
   </Link>

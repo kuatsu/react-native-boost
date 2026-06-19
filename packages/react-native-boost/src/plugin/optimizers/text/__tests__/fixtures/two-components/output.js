@@ -1,4 +1,7 @@
-import { NativeText as _NativeText } from 'react-native-boost/runtime';
+import {
+  getDefaultTextAccessible as _getDefaultTextAccessible,
+  NativeText as _NativeText,
+} from 'react-native-boost/runtime';
 import { Text } from 'react-native';
-<_NativeText allowFontScaling={true} ellipsizeMode={'tail'} />;
-<_NativeText allowFontScaling={true} ellipsizeMode={'tail'}></_NativeText>;
+<_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()} />;
+<_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}></_NativeText>;
