@@ -15,10 +15,10 @@ import {
   replaceWithNativeComponent,
   isStringNode,
   hasExpoRouterLinkParentWithAsChild,
+  extractStyleAttribute,
+  extractSelectableAndUpdateStyle,
 } from '../../utils/common';
-import { RUNTIME_MODULE_NAME } from '../../utils/constants';
-import { ACCESSIBILITY_PROPERTIES } from '../../utils/constants';
-import { extractStyleAttribute, extractSelectableAndUpdateStyle } from '../../utils/common';
+import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
   // The `Text` wrapper translates `aria-hidden` into `accessibilityElementsHidden` /
@@ -48,6 +48,12 @@ export const textBlacklistedProperties = new Set([
  * helper call and stripped from the element so they are not also emitted verbatim.
  */
 const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled']);
+
+/**
+ * Type guard for a direct JSX attribute whose name is in {@link NORMALIZED_PROPERTIES}.
+ */
+const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
+  t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
 export const textOptimizer: Optimizer = (path, logger) => {
   if (!isValidJSXComponent(path, 'Text')) return;
@@ -201,12 +207,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
 
   // --- Accessibility & `disabled` ---
   if (shouldNormalize) {
-    const normalizedAttributes = currentAttributes.filter(
-      (attribute): attribute is t.JSXAttribute =>
-        t.isJSXAttribute(attribute) &&
-        t.isJSXIdentifier(attribute.name) &&
-        NORMALIZED_PROPERTIES.has(attribute.name.name)
-    );
+    const normalizedAttributes = currentAttributes.filter((attribute) => isNormalizedProperty(attribute));
 
     const normalizeIdentifier = addFileImportHint({
       file,
@@ -255,14 +256,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
     if (styleAttribute && attribute === styleAttribute) continue;
 
     // Skip the props we routed through `processAccessibilityProps`
-    if (
-      shouldNormalize &&
-      t.isJSXAttribute(attribute) &&
-      t.isJSXIdentifier(attribute.name) &&
-      NORMALIZED_PROPERTIES.has(attribute.name.name)
-    ) {
-      continue;
-    }
+    if (shouldNormalize && isNormalizedProperty(attribute)) continue;
 
     remainingAttributes.push(attribute);
   }
