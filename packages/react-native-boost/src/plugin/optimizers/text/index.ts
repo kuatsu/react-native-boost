@@ -261,30 +261,49 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
     remainingAttributes.push(attribute);
   }
 
-  path.node.attributes = [...spreadAttributes, selectableAttribute, ...remainingAttributes].filter(
-    (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
-  );
-
   // ============================================
   // 3. `accessible` default for the common path
   // ============================================
   // With no accessibility/`disabled` prop the helper is skipped, but `Text` still applies a
-  // platform-specific `accessible` default (`true` on iOS, `false` on Android, omitted on web). Metro
-  // bundles per platform and reports the target on the Babel caller, so the value is known at build
-  // time and we inline the literal directly. Only when the platform is unknown (non-Metro bundlers,
-  // fixture tests) do we defer to the lightweight runtime resolver, so the default is never dropped.
-  if (!shouldNormalize) {
-    if (platform === 'ios' || platform === 'android') {
-      addDefaultProperty(path, 'accessible', t.booleanLiteral(platform === 'ios'));
-    } else if (platform !== 'web') {
-      const accessibleIdentifier = addFileImportHint({
-        file,
-        nameHint: 'getDefaultTextAccessible',
-        path,
-        importName: 'getDefaultTextAccessible',
-        moduleName: RUNTIME_MODULE_NAME,
-      });
-      addDefaultProperty(path, 'accessible', t.callExpression(t.identifier(accessibleIdentifier.name), []));
-    }
+  // platform-specific `accessible` default. We build it explicitly (rather than via `addDefaultProperty`,
+  // which gives up when it hits the unresolvable `{...processTextStyle(...)}` spread and would silently
+  // drop the default on styled text). The cheap path guarantees no `accessible` is already set — any
+  // such prop would have set `shouldNormalize`, and unresolvable spreads bail before this point — so
+  // appending it unconditionally is safe.
+  const accessibleAttribute = shouldNormalize ? undefined : buildAccessibleDefault(path, file, platform);
+
+  path.node.attributes = [...spreadAttributes, selectableAttribute, ...remainingAttributes, accessibleAttribute].filter(
+    (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
+  );
+}
+
+/**
+ * Builds the `accessible` default attribute `Text` applies when the prop is omitted: `true` on iOS,
+ * `false` on Android, omitted on web. Metro bundles per platform and reports the target on the Babel
+ * caller, so a known platform is inlined as a literal; an unknown platform (non-Metro bundlers,
+ * fixture tests) defers to the lightweight runtime resolver. Returns `undefined` when nothing should
+ * be emitted.
+ */
+function buildAccessibleDefault(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  platform?: string
+): t.JSXAttribute | undefined {
+  if (platform === 'web') return undefined;
+
+  let value: t.Expression;
+  if (platform === 'ios' || platform === 'android') {
+    value = t.booleanLiteral(platform === 'ios');
+  } else {
+    const accessibleIdentifier = addFileImportHint({
+      file,
+      nameHint: 'getDefaultTextAccessible',
+      path,
+      importName: 'getDefaultTextAccessible',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    value = t.callExpression(t.identifier(accessibleIdentifier.name), []);
   }
+
+  return t.jsxAttribute(t.jsxIdentifier('accessible'), t.jsxExpressionContainer(value));
 }
