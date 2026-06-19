@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { transformSync, type TransformCaller } from '@babel/core';
 import * as React from 'react';
 import boostPlugin from '../../index'; // src/plugin/index.ts — the full Boost plugin
@@ -43,7 +44,7 @@ export async function captureBoost(os: 'ios' | 'android', jsxBody: string): Prom
   // Single-element snippet: the runtime import is injected iff that element was optimized.
   if (!code.includes(RUNTIME_MODULE_NAME)) return { optimized: false };
 
-  const file = new URL(`./__generated__/boost-${counter++}.js`, import.meta.url).pathname;
+  const file = fileURLToPath(new URL(`./__generated__/boost-${counter++}.js`, import.meta.url));
   writeFileSync(file, code);
   const mod = await import(/* @vite-ignore */ file);
   const { which, props } = renderAndCapture(React.createElement(mod.default));

@@ -1,10 +1,13 @@
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { transformSync } from '@babel/core';
 import { defineConfig } from 'vitest/config';
 
 const require = createRequire(import.meta.url);
-const u = (p: string) => new URL(p, import.meta.url).pathname;
+// `fileURLToPath` (not `URL.pathname`) so paths survive percent-encodable characters (e.g. a space
+// in a parent directory becomes `%20` in `.pathname`) and the Windows drive-letter prefix.
+const u = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 // React Native ships its own source as Flow `.js`. We only want to transform RN's own files.
 const RN_SRC = /\/node_modules\/react-native\/(Libraries|src)\/.*\.js$/;
