@@ -1,4 +1,4 @@
-import { TextProps, TextStyle, StyleSheet } from 'react-native';
+import { TextProps, TextStyle, StyleSheet, Platform } from 'react-native';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
@@ -49,14 +49,27 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
 }
 
 /**
- * Normalizes accessibility and ARIA props for runtime native components.
+ * The default value `Text` resolves for `accessible` when the prop is omitted: `true` on iOS (text is
+ * an accessibility element unless opted out), `false` on Android, and `undefined` elsewhere.
+ *
+ * @remarks
+ * Used on the common optimized `<Text>` path (no accessibility props), where it is the only
+ * normalization `Text` would otherwise apply. Evaluated per render — like `Text`'s own
+ * `Platform.select` — rather than hoisted to a constant, so it always reflects the current platform.
+ */
+export const getDefaultTextAccessible = (): boolean | undefined => Platform.select({ ios: true, android: false });
+
+/**
+ * Normalizes accessibility and ARIA props for runtime native components, mirroring the reconciliation
+ * `Text` performs before handing off to its native host.
  *
  * @param props - Accessibility and ARIA props.
  * @returns Props with normalized accessibility fields.
  * @remarks
  * - Merges `aria-label` with `accessibilityLabel`
  * - Merges ARIA state fields into `accessibilityState`
- * - Defaults `accessible` to `true` when omitted
+ * - Reconciles `disabled` with `accessibilityState.disabled` (the explicit `disabled` prop wins)
+ * - Resolves the platform-specific `accessible` default (see {@link getDefaultTextAccessible})
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
@@ -70,6 +83,7 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
     ['aria-expanded']: ariaExpanded,
     ['aria-selected']: ariaSelected,
     accessible,
+    disabled,
     ...restProperties
   } = props;
 
@@ -97,14 +111,33 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
           };
   }
 
-  // For the accessible prop, if not provided, default to `true`
-  const normalizedAccessible = accessible == null ? true : accessible;
+  // Reconcile `disabled` with `accessibilityState.disabled`. When the two are out of sync (and not
+  // both falsy) the explicit `disabled` prop wins and is mirrored back into the state object, so the
+  // native host receives a consistent value on both fields.
+  const stateDisabled = normalizedState?.disabled;
+  const normalizedDisabled = disabled ?? stateDisabled;
+  if (
+    normalizedDisabled !== stateDisabled &&
+    ((normalizedDisabled != null && normalizedDisabled !== false) || (stateDisabled != null && stateDisabled !== false))
+  ) {
+    normalizedState = { ...normalizedState, disabled: normalizedDisabled };
+  }
+
+  // Resolve `accessible` exactly as `Text` does: opt-out on iOS, off by default on Android. The
+  // Android pressable case (`onPress`/`onLongPress`) never applies — press handlers bail out of
+  // optimization — so an omitted prop falls back to the platform default.
+  const normalizedAccessible = Platform.select({
+    ios: accessible !== false,
+    android: accessible ?? false,
+    default: accessible,
+  });
 
   return {
     ...restProperties,
     accessibilityLabel: normalizedLabel,
     accessibilityState: normalizedState,
     accessible: normalizedAccessible,
+    disabled: normalizedDisabled,
   };
 }
 

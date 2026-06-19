@@ -1,4 +1,7 @@
-import { NativeText as _NativeText } from 'react-native-boost/runtime';
+import {
+  getDefaultTextAccessible as _getDefaultTextAccessible,
+  NativeText as _NativeText,
+} from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 export default function TextBenchmark(props) {
   const optimizedViews = Array.from(
@@ -6,7 +9,7 @@ export default function TextBenchmark(props) {
       length: props.count,
     },
     (_, index) => (
-      <_NativeText key={index} allowFontScaling={true} ellipsizeMode={'tail'}>
+      <_NativeText key={index} allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
         Nice text
       </_NativeText>
     )
@@ -22,7 +25,7 @@ export default function TextBenchmark(props) {
   );
   if (props.status === 'pending')
     return (
-      <_NativeText allowFontScaling={true} ellipsizeMode={'tail'}>
+      <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
         Pending...
       </_NativeText>
     );

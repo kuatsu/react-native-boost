@@ -4,6 +4,7 @@ import * as React from 'react';
 import boostPlugin from '../../index'; // src/plugin/index.ts — the full Boost plugin
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { renderAndCapture } from './capture';
+import { setPlatformOS } from './mocks/Platform';
 
 let counter = 0;
 
@@ -22,8 +23,13 @@ interface BoostOptimized {
  * helpers (the components are mocked to the shared capturers by the test). Returns
  * `{ optimized: false }` when Boost bailed — it then defers to the wrapper, so the case is
  * equivalent by construction and the test skips it.
+ *
+ * Rendered under the given platform (like {@link captureWrapper}) because the runtime helpers read
+ * `Platform.OS`/`Platform.select` at render time to resolve platform-specific defaults such as
+ * `accessible`.
  */
-export async function captureBoost(jsxBody: string): Promise<BoostBailed | BoostOptimized> {
+export async function captureBoost(os: 'ios' | 'android', jsxBody: string): Promise<BoostBailed | BoostOptimized> {
+  setPlatformOS(os);
   const source = `import { Text, View } from 'react-native';\nexport default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,

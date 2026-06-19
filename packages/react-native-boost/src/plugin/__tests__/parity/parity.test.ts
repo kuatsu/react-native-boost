@@ -45,14 +45,14 @@ const normalize = (props: Record<string, unknown>) => JSON.parse(JSON.stringify(
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
-      const boost = await captureBoost(jsx);
+      const boost = await captureBoost(os, jsx);
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
     it.each(VIEW_CASES)('View: %s', async (jsx) => {
-      const boost = await captureBoost(jsx);
+      const boost = await captureBoost(os, jsx);
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
