@@ -53,8 +53,9 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
  * an accessibility element unless opted out), `false` on Android, and `undefined` elsewhere.
  *
  * @remarks
- * Used on the common optimized `<Text>` path (no accessibility props), where it is the only
- * normalization `Text` would otherwise apply. Evaluated per render — like `Text`'s own
+ * Runtime fallback for the common optimized `<Text>` path (no accessibility props) when the target
+ * platform is unknown at build time. When it is known (Metro reports it on the Babel caller), the
+ * plugin inlines the literal instead and this is not emitted. Evaluated per render — like `Text`'s own
  * `Platform.select` — rather than hoisted to a constant, so it always reflects the current platform.
  */
 export const getDefaultTextAccessible = (): boolean | undefined => Platform.select({ ios: true, android: false });

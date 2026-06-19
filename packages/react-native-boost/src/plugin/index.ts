@@ -15,6 +15,10 @@ type PluginState = {
 export default declare((api) => {
   api.assertVersion(7);
 
+  // Target platform, resolved at build time. Metro sets this on the Babel caller per platform bundle,
+  // letting optimizers inline platform-specific defaults instead of deferring them to the runtime.
+  const platform = api.caller((caller) => (caller as { platform?: string } | undefined)?.platform);
+
   return {
     name: 'react-native-boost',
     visitor: {
@@ -24,7 +28,7 @@ export default declare((api) => {
         const logger = getOrCreateLogger(pluginState, options);
 
         if (isIgnoredFile(path, options.ignores ?? [])) return;
-        if (options.optimizations?.text !== false) textOptimizer(path, logger);
+        if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform);
         if (options.optimizations?.view !== false) viewOptimizer(path, logger, options);
       },
     },
