@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { transformSync } from '@babel/core';
 import * as React from 'react';
 import { renderAndCapture } from './capture';
@@ -26,7 +27,7 @@ export async function captureWrapper(os: 'ios' | 'android', jsxBody: string) {
     filename: 'wrapper-case.jsx',
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
   });
-  const file = new URL(`./__generated__/wrapper-${os}-${counter++}.js`, import.meta.url).pathname;
+  const file = fileURLToPath(new URL(`./__generated__/wrapper-${os}-${counter++}.js`, import.meta.url));
   writeFileSync(file, out!.code!);
   const mod = await import(/* @vite-ignore */ file);
   return renderAndCapture(React.createElement(mod.default));
