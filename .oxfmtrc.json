@@ -13,5 +13,11 @@
   "arrowParens": "always",
   "endOfLine": "lf",
   "sortPackageJson": false,
-  "ignorePatterns": ["CHANGELOG.md", "apps/docs/**/*.md", "apps/docs/**/*.mdx", "apps/docs/.docusaurus/**"]
+  "ignorePatterns": [
+    "CHANGELOG.md",
+    "apps/docs/**/*.md",
+    "apps/docs/**/*.mdx",
+    "apps/docs/.docusaurus/**",
+    "benchmarks/**"
+  ]
 }
