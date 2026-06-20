@@ -23,6 +23,17 @@ const exactRedirects: Record<string, string> = {
   'react-native-boost/runtime': u('../../../runtime/index.ts'),
 };
 
+// While the fibers collector runs (suite sets BENCH_FIBERS_OUT), swap the JSX runtimes for a counting
+// wrapper so every rendered node — including ones the real RN wrappers create — is tallied. No effect
+// on the normal parity test run.
+if (process.env.BENCH_FIBERS_OUT) {
+  const jsxCounter = u('./mocks/jsx-runtime-count.ts');
+  exactRedirects['react/jsx-runtime'] = jsxCounter;
+  exactRedirects['react/jsx-dev-runtime'] = jsxCounter;
+  // Render the Boost output through host capturers (countable, no untranspiled runtime sources).
+  exactRedirects['react-native-boost/runtime'] = u('./mocks/boost-runtime.ts');
+}
+
 // Leaf RN modules that touch native code or can't load under node. Matched by basename so both the
 // `react-native/Libraries/...` import and the relative `./Foo` / `../Foo` imports are redirected.
 const basenameRedirects: Array<[RegExp, string]> = [
@@ -71,7 +82,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: [u('./setup.ts')],
-    include: [u('./parity.test.ts')],
+    // fibers.collect.ts is a benchmark collector that no-ops unless BENCH_FIBERS_OUT is set.
+    include: [u('./parity.test.ts'), u('./fibers.collect.ts')],
     server: { deps: { inline: [/react-native/] } }, // force RN source through the transform pipeline
   },
 });

@@ -10,6 +10,7 @@
     "dev": "pnpm --parallel --stream --filter react-native-boost --filter react-native-boost-example run dev",
     "docs": "pnpm --filter react-native-boost-docs run",
     "package": "pnpm --filter react-native-boost run",
+    "benchmark": "pnpm --filter @react-native-boost/benchmark exec tsx src/cli.ts",
     "lint": "oxlint .",
     "format": "oxfmt .",
     "prepare": "husky"

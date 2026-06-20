@@ -1,0 +1,413 @@
+{
+  "platform": "android",
+  "buildMode": "release",
+  "device": {
+    "platform": "android",
+    "kind": "emulator",
+    "name": "sdk_gphone64_arm64",
+    "osVersion": "16",
+    "id": "emulator-5554"
+  },
+  "measurements": [
+    {
+      "load": 34,
+      "boost": "off",
+      "avgFps": 58.8,
+      "p50FrameMs": 16.8,
+      "p95FrameMs": 19.1,
+      "droppedPct": 0.3,
+      "frames": 295,
+      "durationMs": 5013
+    },
+    {
+      "load": 48,
+      "boost": "off",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 19,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5013
+    },
+    {
+      "load": 62,
+      "boost": "off",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 20.5,
+      "droppedPct": 0,
+      "frames": 302,
+      "durationMs": 5033
+    },
+    {
+      "load": 76,
+      "boost": "off",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 19.4,
+      "droppedPct": 0,
+      "frames": 302,
+      "durationMs": 5031
+    },
+    {
+      "load": 90,
+      "boost": "off",
+      "avgFps": 60,
+      "p50FrameMs": 16.7,
+      "p95FrameMs": 18.6,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5014
+    },
+    {
+      "load": 104,
+      "boost": "off",
+      "avgFps": 59.8,
+      "p50FrameMs": 16.8,
+      "p95FrameMs": 19.7,
+      "droppedPct": 0.3,
+      "frames": 300,
+      "durationMs": 5018
+    },
+    {
+      "load": 118,
+      "boost": "off",
+      "avgFps": 59.8,
+      "p50FrameMs": 16.7,
+      "p95FrameMs": 20.5,
+      "droppedPct": 0,
+      "frames": 300,
+      "durationMs": 5014
+    },
+    {
+      "load": 132,
+      "boost": "off",
+      "avgFps": 59.4,
+      "p50FrameMs": 17.1,
+      "p95FrameMs": 21.1,
+      "droppedPct": 0,
+      "frames": 298,
+      "durationMs": 5018
+    },
+    {
+      "load": 146,
+      "boost": "off",
+      "avgFps": 57.5,
+      "p50FrameMs": 18.7,
+      "p95FrameMs": 23.7,
+      "droppedPct": 1,
+      "frames": 290,
+      "durationMs": 5041
+    },
+    {
+      "load": 160,
+      "boost": "off",
+      "avgFps": 51.1,
+      "p50FrameMs": 21.2,
+      "p95FrameMs": 28,
+      "droppedPct": 2.3,
+      "frames": 256,
+      "durationMs": 5010
+    },
+    {
+      "load": 174,
+      "boost": "off",
+      "avgFps": 41.1,
+      "p50FrameMs": 24.5,
+      "p95FrameMs": 30,
+      "droppedPct": 4.4,
+      "frames": 206,
+      "durationMs": 5015
+    },
+    {
+      "load": 188,
+      "boost": "off",
+      "avgFps": 39.4,
+      "p50FrameMs": 25.9,
+      "p95FrameMs": 31.3,
+      "droppedPct": 7.6,
+      "frames": 198,
+      "durationMs": 5023
+    },
+    {
+      "load": 202,
+      "boost": "off",
+      "avgFps": 35.4,
+      "p50FrameMs": 28.7,
+      "p95FrameMs": 34.3,
+      "droppedPct": 30.7,
+      "frames": 179,
+      "durationMs": 5050
+    },
+    {
+      "load": 216,
+      "boost": "off",
+      "avgFps": 32.2,
+      "p50FrameMs": 31.3,
+      "p95FrameMs": 35.7,
+      "droppedPct": 58,
+      "frames": 162,
+      "durationMs": 5036
+    },
+    {
+      "load": 230,
+      "boost": "off",
+      "avgFps": 29.7,
+      "p50FrameMs": 33.9,
+      "p95FrameMs": 37.8,
+      "droppedPct": 89.9,
+      "frames": 149,
+      "durationMs": 5023
+    },
+    {
+      "load": 244,
+      "boost": "off",
+      "avgFps": 27.3,
+      "p50FrameMs": 36.9,
+      "p95FrameMs": 41.8,
+      "droppedPct": 100,
+      "frames": 137,
+      "durationMs": 5020
+    },
+    {
+      "load": 258,
+      "boost": "off",
+      "avgFps": 26.3,
+      "p50FrameMs": 38.2,
+      "p95FrameMs": 41.6,
+      "droppedPct": 100,
+      "frames": 133,
+      "durationMs": 5049
+    },
+    {
+      "load": 272,
+      "boost": "off",
+      "avgFps": 23.8,
+      "p50FrameMs": 41.3,
+      "p95FrameMs": 53.5,
+      "droppedPct": 100,
+      "frames": 120,
+      "durationMs": 5033
+    },
+    {
+      "load": 286,
+      "boost": "off",
+      "avgFps": 23.2,
+      "p50FrameMs": 43.4,
+      "p95FrameMs": 47.9,
+      "droppedPct": 100,
+      "frames": 116,
+      "durationMs": 5006
+    },
+    {
+      "load": 300,
+      "boost": "off",
+      "avgFps": 22.2,
+      "p50FrameMs": 45.2,
+      "p95FrameMs": 49.6,
+      "droppedPct": 100,
+      "frames": 111,
+      "durationMs": 5009
+    },
+    {
+      "load": 34,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.7,
+      "p95FrameMs": 19,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5015
+    },
+    {
+      "load": 48,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.8,
+      "p95FrameMs": 19,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5014
+    },
+    {
+      "load": 62,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 19.6,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5016
+    },
+    {
+      "load": 76,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 20,
+      "droppedPct": 0,
+      "frames": 302,
+      "durationMs": 5030
+    },
+    {
+      "load": 90,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 17,
+      "p95FrameMs": 19,
+      "droppedPct": 0,
+      "frames": 300,
+      "durationMs": 5001
+    },
+    {
+      "load": 104,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 20.1,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5014
+    },
+    {
+      "load": 118,
+      "boost": "on",
+      "avgFps": 60.1,
+      "p50FrameMs": 17,
+      "p95FrameMs": 19.2,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5012
+    },
+    {
+      "load": 132,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.8,
+      "p95FrameMs": 19.5,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5017
+    },
+    {
+      "load": 146,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.8,
+      "p95FrameMs": 20.1,
+      "droppedPct": 0,
+      "frames": 302,
+      "durationMs": 5031
+    },
+    {
+      "load": 160,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 17,
+      "p95FrameMs": 21.1,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5016
+    },
+    {
+      "load": 174,
+      "boost": "on",
+      "avgFps": 59.8,
+      "p50FrameMs": 17,
+      "p95FrameMs": 21.1,
+      "droppedPct": 0,
+      "frames": 301,
+      "durationMs": 5032
+    },
+    {
+      "load": 188,
+      "boost": "on",
+      "avgFps": 59.6,
+      "p50FrameMs": 16.2,
+      "p95FrameMs": 21.5,
+      "droppedPct": 0.3,
+      "frames": 300,
+      "durationMs": 5030
+    },
+    {
+      "load": 202,
+      "boost": "on",
+      "avgFps": 60,
+      "p50FrameMs": 16.9,
+      "p95FrameMs": 22.4,
+      "droppedPct": 0,
+      "frames": 302,
+      "durationMs": 5031
+    },
+    {
+      "load": 216,
+      "boost": "on",
+      "avgFps": 57.7,
+      "p50FrameMs": 18.1,
+      "p95FrameMs": 23.8,
+      "droppedPct": 0,
+      "frames": 291,
+      "durationMs": 5042
+    },
+    {
+      "load": 230,
+      "boost": "on",
+      "avgFps": 54.9,
+      "p50FrameMs": 19.1,
+      "p95FrameMs": 25.6,
+      "droppedPct": 1.1,
+      "frames": 276,
+      "durationMs": 5024
+    },
+    {
+      "load": 244,
+      "boost": "on",
+      "avgFps": 50.9,
+      "p50FrameMs": 20.9,
+      "p95FrameMs": 26.5,
+      "droppedPct": 0,
+      "frames": 257,
+      "durationMs": 5046
+    },
+    {
+      "load": 258,
+      "boost": "on",
+      "avgFps": 44.4,
+      "p50FrameMs": 22.9,
+      "p95FrameMs": 29.1,
+      "droppedPct": 2.7,
+      "frames": 224,
+      "durationMs": 5048
+    },
+    {
+      "load": 272,
+      "boost": "on",
+      "avgFps": 39.5,
+      "p50FrameMs": 24.7,
+      "p95FrameMs": 30.9,
+      "droppedPct": 6.6,
+      "frames": 198,
+      "durationMs": 5018
+    },
+    {
+      "load": 286,
+      "boost": "on",
+      "avgFps": 37.5,
+      "p50FrameMs": 26.5,
+      "p95FrameMs": 33.5,
+      "droppedPct": 23.4,
+      "frames": 188,
+      "durationMs": 5014
+    },
+    {
+      "load": 300,
+      "boost": "on",
+      "avgFps": 35.5,
+      "p50FrameMs": 27.4,
+      "p95FrameMs": 34.6,
+      "droppedPct": 30.3,
+      "frames": 178,
+      "durationMs": 5020
+    }
+  ]
+}

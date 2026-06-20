@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+<rect x="0" y="0" width="760" height="440" fill="#ffffff"/>
+<text x="70" y="30" fill="#1b1f24" font-size="18" font-weight="700" font-family="system-ui,sans-serif">FPS @ load • iOS • iPhone 17 Pro • Release</text>
+<line x1="70" y1="376" x2="736" y2="376" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="380" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">0</text>
+<line x1="70" y1="311.2" x2="736" y2="311.2" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="315.2" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">13</text>
+<line x1="70" y1="246.4" x2="736" y2="246.4" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="250.4" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">26</text>
+<line x1="70" y1="181.6" x2="736" y2="181.6" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="185.6" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">39</text>
+<line x1="70" y1="116.80000000000001" x2="736" y2="116.80000000000001" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="120.80000000000001" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">52</text>
+<line x1="70" y1="52" x2="736" y2="52" stroke="#e3e6ea" stroke-width="1"/>
+<text x="60" y="56" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">65</text>
+<text x="70" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">68</text>
+<text x="105.05263157894737" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">96</text>
+<text x="140.10526315789474" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">124</text>
+<text x="175.15789473684208" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">152</text>
+<text x="210.21052631578948" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">180</text>
+<text x="245.26315789473682" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">208</text>
+<text x="280.31578947368416" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">236</text>
+<text x="315.36842105263156" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">264</text>
+<text x="350.42105263157896" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">292</text>
+<text x="385.4736842105263" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">320</text>
+<text x="420.52631578947364" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">348</text>
+<text x="455.57894736842104" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">376</text>
+<text x="490.6315789473684" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">404</text>
+<text x="525.6842105263158" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">432</text>
+<text x="560.7368421052631" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">460</text>
+<text x="595.7894736842105" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">488</text>
+<text x="630.8421052631579" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">516</text>
+<text x="665.8947368421053" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">544</text>
+<text x="700.9473684210526" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">572</text>
+<text x="736" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">600</text>
+<text x="403" y="424" fill="#5c6470" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif">Text rows rendered</text>
+<text x="18" y="214" fill="#5c6470" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif" transform="rotate(-90 18 214)">avg FPS</text>
+<polyline points="70.0,76.9 105.1,76.9 140.1,76.9 175.2,76.9 210.2,76.9 245.3,76.9 280.3,76.9 315.4,85.9 350.4,114.8 385.5,145.2 420.5,167.6 455.6,184.6 490.6,196.1 525.7,206.0 560.7,216.0 595.8,226.5 630.8,234.9 665.9,242.4 700.9,248.9 736.0,255.4" fill="none" stroke="#f6465d" stroke-width="2.5"/><circle cx="70.0" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="105.1" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="140.1" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="175.2" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="210.2" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="245.3" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="280.3" cy="76.9" r="3.5" fill="#f6465d"/><circle cx="315.4" cy="85.9" r="3.5" fill="#f6465d"/><circle cx="350.4" cy="114.8" r="3.5" fill="#f6465d"/><circle cx="385.5" cy="145.2" r="3.5" fill="#f6465d"/><circle cx="420.5" cy="167.6" r="3.5" fill="#f6465d"/><circle cx="455.6" cy="184.6" r="3.5" fill="#f6465d"/><circle cx="490.6" cy="196.1" r="3.5" fill="#f6465d"/><circle cx="525.7" cy="206.0" r="3.5" fill="#f6465d"/><circle cx="560.7" cy="216.0" r="3.5" fill="#f6465d"/><circle cx="595.8" cy="226.5" r="3.5" fill="#f6465d"/><circle cx="630.8" cy="234.9" r="3.5" fill="#f6465d"/><circle cx="665.9" cy="242.4" r="3.5" fill="#f6465d"/><circle cx="700.9" cy="248.9" r="3.5" fill="#f6465d"/><circle cx="736.0" cy="255.4" r="3.5" fill="#f6465d"/>
+<polyline points="70.0,76.9 105.1,76.9 140.1,76.9 175.2,76.9 210.2,76.9 245.3,76.9 280.3,76.9 315.4,76.9 350.4,76.9 385.5,76.9 420.5,76.9 455.6,76.9 490.6,76.9 525.7,76.9 560.7,98.4 595.8,116.3 630.8,136.2 665.9,146.7 700.9,161.2 736.0,176.1" fill="none" stroke="#0ecb81" stroke-width="2.5"/><circle cx="70.0" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="105.1" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="140.1" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="175.2" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="210.2" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="245.3" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="280.3" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="315.4" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="350.4" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="385.5" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="420.5" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="455.6" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="490.6" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="525.7" cy="76.9" r="3.5" fill="#0ecb81"/><circle cx="560.7" cy="98.4" r="3.5" fill="#0ecb81"/><circle cx="595.8" cy="116.3" r="3.5" fill="#0ecb81"/><circle cx="630.8" cy="136.2" r="3.5" fill="#0ecb81"/><circle cx="665.9" cy="146.7" r="3.5" fill="#0ecb81"/><circle cx="700.9" cy="161.2" r="3.5" fill="#0ecb81"/><circle cx="736.0" cy="176.1" r="3.5" fill="#0ecb81"/>
+<rect x="586" y="51" width="12" height="12" rx="2" fill="#f6465d"/><text x="604" y="61" fill="#1b1f24" font-size="12" font-family="system-ui,sans-serif">Baseline</text>
+<rect x="586" y="71" width="12" height="12" rx="2" fill="#0ecb81"/><text x="604" y="81" fill="#1b1f24" font-size="12" font-family="system-ui,sans-serif">Boost</text>
+</svg>

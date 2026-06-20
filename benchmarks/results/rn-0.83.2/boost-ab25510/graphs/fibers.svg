@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+<rect x="0" y="0" width="760" height="440" fill="#0b0e11"/>
+<text x="70" y="30" fill="#eaecef" font-size="18" font-weight="700" font-family="system-ui,sans-serif">React tree nodes @ load</text>
+<line x1="70" y1="376" x2="736" y2="376" stroke="#222831" stroke-width="1"/>
+<text x="60" y="380" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">0</text>
+<line x1="70" y1="311.2" x2="736" y2="311.2" stroke="#222831" stroke-width="1"/>
+<text x="60" y="315.2" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">1056</text>
+<line x1="70" y1="246.4" x2="736" y2="246.4" stroke="#222831" stroke-width="1"/>
+<text x="60" y="250.4" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">2112</text>
+<line x1="70" y1="181.6" x2="736" y2="181.6" stroke="#222831" stroke-width="1"/>
+<text x="60" y="185.6" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">3168</text>
+<line x1="70" y1="116.80000000000001" x2="736" y2="116.80000000000001" stroke="#222831" stroke-width="1"/>
+<text x="60" y="120.80000000000001" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">4224</text>
+<line x1="70" y1="52" x2="736" y2="52" stroke="#222831" stroke-width="1"/>
+<text x="60" y="56" fill="#6c7480" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">5280</text>
+<text x="70" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">68</text>
+<text x="105.05263157894737" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">96</text>
+<text x="140.10526315789474" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">124</text>
+<text x="175.15789473684208" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">152</text>
+<text x="210.21052631578948" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">180</text>
+<text x="245.26315789473682" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">208</text>
+<text x="280.31578947368416" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">236</text>
+<text x="315.36842105263156" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">264</text>
+<text x="350.42105263157896" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">292</text>
+<text x="385.4736842105263" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">320</text>
+<text x="420.52631578947364" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">348</text>
+<text x="455.57894736842104" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">376</text>
+<text x="490.6315789473684" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">404</text>
+<text x="525.6842105263158" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">432</text>
+<text x="560.7368421052631" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">460</text>
+<text x="595.7894736842105" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">488</text>
+<text x="630.8421052631579" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">516</text>
+<text x="665.8947368421053" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">544</text>
+<text x="700.9473684210526" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">572</text>
+<text x="736" y="398" fill="#6c7480" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">600</text>
+<text x="403" y="424" fill="#9aa3ad" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif">Text rows rendered</text>
+<text x="18" y="214" fill="#9aa3ad" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif" transform="rotate(-90 18 214)">tree nodes (≈ fibers)</text>
+<rect x="75.0" y="342.6" width="10.5" height="33.4" fill="#f6465d" rx="2"/>
+<rect x="86.7" y="355.1" width="10.5" height="20.9" fill="#0ecb81" rx="2"/>
+<rect x="108.3" y="328.9" width="10.5" height="47.1" fill="#f6465d" rx="2"/>
+<rect x="119.9" y="346.5" width="10.5" height="29.5" fill="#0ecb81" rx="2"/>
+<rect x="141.6" y="315.1" width="10.5" height="60.9" fill="#f6465d" rx="2"/>
+<rect x="153.3" y="338.0" width="10.5" height="38.0" fill="#0ecb81" rx="2"/>
+<rect x="174.9" y="301.4" width="10.5" height="74.6" fill="#f6465d" rx="2"/>
+<rect x="186.5" y="329.4" width="10.5" height="46.6" fill="#0ecb81" rx="2"/>
+<rect x="208.2" y="287.6" width="10.5" height="88.4" fill="#f6465d" rx="2"/>
+<rect x="219.8" y="320.8" width="10.5" height="55.2" fill="#0ecb81" rx="2"/>
+<rect x="241.5" y="273.9" width="10.5" height="102.1" fill="#f6465d" rx="2"/>
+<rect x="253.1" y="312.2" width="10.5" height="63.8" fill="#0ecb81" rx="2"/>
+<rect x="274.8" y="260.1" width="10.5" height="115.9" fill="#f6465d" rx="2"/>
+<rect x="286.4" y="303.6" width="10.5" height="72.4" fill="#0ecb81" rx="2"/>
+<rect x="308.1" y="246.4" width="10.5" height="129.6" fill="#f6465d" rx="2"/>
+<rect x="319.8" y="295.0" width="10.5" height="81.0" fill="#0ecb81" rx="2"/>
+<rect x="341.4" y="232.7" width="10.5" height="143.3" fill="#f6465d" rx="2"/>
+<rect x="353.0" y="286.4" width="10.5" height="89.6" fill="#0ecb81" rx="2"/>
+<rect x="374.7" y="218.9" width="10.5" height="157.1" fill="#f6465d" rx="2"/>
+<rect x="386.3" y="277.8" width="10.5" height="98.2" fill="#0ecb81" rx="2"/>
+<rect x="408.0" y="205.2" width="10.5" height="170.8" fill="#f6465d" rx="2"/>
+<rect x="419.6" y="269.2" width="10.5" height="106.8" fill="#0ecb81" rx="2"/>
+<rect x="441.3" y="191.4" width="10.5" height="184.6" fill="#f6465d" rx="2"/>
+<rect x="452.9" y="260.6" width="10.5" height="115.4" fill="#0ecb81" rx="2"/>
+<rect x="474.6" y="177.7" width="10.5" height="198.3" fill="#f6465d" rx="2"/>
+<rect x="486.2" y="252.0" width="10.5" height="124.0" fill="#0ecb81" rx="2"/>
+<rect x="507.9" y="163.9" width="10.5" height="212.1" fill="#f6465d" rx="2"/>
+<rect x="519.5" y="243.5" width="10.5" height="132.5" fill="#0ecb81" rx="2"/>
+<rect x="541.2" y="150.2" width="10.5" height="225.8" fill="#f6465d" rx="2"/>
+<rect x="552.8" y="234.9" width="10.5" height="141.1" fill="#0ecb81" rx="2"/>
+<rect x="574.5" y="136.4" width="10.5" height="239.6" fill="#f6465d" rx="2"/>
+<rect x="586.1" y="226.3" width="10.5" height="149.7" fill="#0ecb81" rx="2"/>
+<rect x="607.8" y="122.7" width="10.5" height="253.3" fill="#f6465d" rx="2"/>
+<rect x="619.4" y="217.7" width="10.5" height="158.3" fill="#0ecb81" rx="2"/>
+<rect x="641.1" y="108.9" width="10.5" height="267.1" fill="#f6465d" rx="2"/>
+<rect x="652.8" y="209.1" width="10.5" height="166.9" fill="#0ecb81" rx="2"/>
+<rect x="674.4" y="95.2" width="10.5" height="280.8" fill="#f6465d" rx="2"/>
+<rect x="686.0" y="200.5" width="10.5" height="175.5" fill="#0ecb81" rx="2"/>
+<rect x="707.7" y="81.5" width="10.5" height="294.5" fill="#f6465d" rx="2"/>
+<rect x="719.3" y="191.9" width="10.5" height="184.1" fill="#0ecb81" rx="2"/>
+<rect x="586" y="51" width="12" height="12" rx="2" fill="#f6465d"/><text x="604" y="61" fill="#eaecef" font-size="12" font-family="system-ui,sans-serif">Baseline</text>
+<rect x="586" y="71" width="12" height="12" rx="2" fill="#0ecb81"/><text x="604" y="81" fill="#eaecef" font-size="12" font-family="system-ui,sans-serif">Boost</text>
+</svg>
