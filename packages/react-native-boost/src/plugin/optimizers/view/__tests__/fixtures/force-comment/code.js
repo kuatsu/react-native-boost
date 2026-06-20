@@ -1,10 +1,10 @@
 import { View } from 'react-native';
 <>
-  <View style={{ flex: 1 }}>
+  <View aria-label="x">
     <NotOptimized />
   </View>
   {/* @boost-force */}
-  <View style={{ flex: 1 }}>
+  <View aria-label="x">
     <ForceOptimized />
   </View>
 </>;

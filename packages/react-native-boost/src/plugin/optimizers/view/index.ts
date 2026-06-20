@@ -17,6 +17,10 @@ export const viewBlacklistedProperties = new Set([
   // The `View` wrapper translates these into native props (e.g. `aria-*` → `accessibility*`,
   // `tabIndex` → `focusable`). The native host does not understand them, so passing them through
   // would silently drop them. TODO: process these at runtime instead of bailing.
+  //
+  // `style` is deliberately NOT blacklisted: the `View` wrapper passes it straight to the native
+  // host untouched (unlike `Text`, it does no flatten/userSelect/verticalAlign work), so the swap is
+  // an identity pass-through. See the `style`/`style-array` fixtures and the differential parity test.
   'accessible',
   'accessibilityLabel',
   'accessibilityState',
@@ -36,7 +40,6 @@ export const viewBlacklistedProperties = new Set([
   'id',
   'nativeID',
   'tabIndex',
-  'style', // TODO: process style at runtime
 ]);
 
 export const viewOptimizer: Optimizer = (path, logger, options) => {
