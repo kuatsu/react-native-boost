@@ -20,10 +20,13 @@ The documentation is available at [react-native-boost.oss.kuatsu.de](https://rea
 The app in the `apps/example` directory serves as a benchmark for the performance of the plugin.
 
 <div align="center">
-  <img src="./apps/docs/content/docs/information/img/benchmark-ios.png" width="500" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./apps/docs/content/docs/information/img/fps-ios.svg" />
+    <img alt="React Native Boost — iOS frame rate vs render load" src="./apps/docs/content/docs/information/img/fps-ios-light.svg" width="640" />
+  </picture>
 </div>
 
-More benchmarks are available in the [docs](https://react-native-boost.oss.kuatsu.de/docs/information/benchmarks).
+See the [benchmarks page](https://react-native-boost.oss.kuatsu.de/docs/information/benchmarks) for Android results and the full methodology.
 
 ## Compatibility
 

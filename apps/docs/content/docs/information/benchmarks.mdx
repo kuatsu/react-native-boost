@@ -1,15 +1,47 @@
 ---
 title: Benchmarks
-description: Benchmark results from the repository example app.
+description: Benchmark results from the example app, and methodology
 ---
 
-We run benchmarks with the example app available in the repository to measure render-time improvements.
+To show what that React Native Boost buys you,
+the example app in the repository server a benchmark by rendering a heavy, constantly-updating screen and
+measuring the **frame rate**, once with Boost **off** and once with Boost **on**, on the exact same code and
+device.
 
-In recent runs, React Native Boost improved rendering performance on both iOS and Android, with gains up to ~50%
-depending on component mix and screen structure.
+Higher frames per second (FPS) means a smoother UI. The dotted ceiling is 60 FPS (one new frame every ~16 ms);
+once the app can't keep up, FPS drops and the interface starts to stutter.
 
-![React Native Boost iOS benchmarks](./img/benchmark-ios.png)
-![React Native Boost Android benchmarks](./img/benchmark-android.png)
+## Results
 
-The more `Text` and `View` components your UI renders (especially in lists), the more measurable the gains are likely
-to be.
+**iOS** — the baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while Boost
+holds a solid 60 FPS far longer and stays roughly **66% faster** at the top end.
+
+![React Native Boost — iOS frame rate vs render load](./img/fps-ios-light.svg)
+
+**Android** — same shape, with Boost about **60% faster** at the heaviest load.
+
+![React Native Boost — Android frame rate vs render load](./img/fps-android-light.svg)
+
+## How the benchmark works
+
+The test screen is a live crypto-style order book: two stacked columns of rows, each
+row a few pieces of `Text`, all updating many times per second from a simulated price feed.
+
+Each run is a clean A/B on identical inputs:
+
+1. **Run the app twice**, once with React Native Boost disabled (the *baseline*), once with it enabled. Nothing else changes.
+2. **Sweep the load.** For each version, the app steps through a range of row counts, from light to heavy.
+3. **Measure FPS at each step.** The app runs a continuous animation loop and records how long every frame
+   takes over a fixed window, then reports the average FPS (plus 95th-percentile frame time and the share of
+   dropped frames).
+
+Everything runs as a **release/production build on the New Architecture**.
+
+### The structural saving
+
+There's also a second, device-independent measurement. For a single row, we count the **React tree nodes**
+(fibers). One of the ways React Native Boost impacts an app's performance is by deleting a layer of these fibers per element it optimizes.
+
+![React Native Boost — React tree nodes with and without Boost](./img/fibers-light.svg)
+
+Fewer nodes means less for React to build and re-check on every frame.
