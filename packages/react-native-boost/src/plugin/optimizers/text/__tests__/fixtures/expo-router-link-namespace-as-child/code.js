@@ -6,6 +6,6 @@ import * as ExpoRouter from 'expo-router';
     <Text>This should NOT be optimized for namespace Link asChild</Text>
   </ExpoRouter.Link>
   <ExpoRouter.Link href="/home">
-    <Text>This should be optimized without asChild</Text>
+    <Text>Direct child of namespace Link without asChild</Text>
   </ExpoRouter.Link>
 </>;

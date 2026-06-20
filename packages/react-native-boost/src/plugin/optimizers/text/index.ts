@@ -17,6 +17,7 @@ import {
   hasExpoRouterLinkParentWithAsChild,
   extractStyleAttribute,
   extractSelectableAndUpdateStyle,
+  ancestorBailoutChecks,
 } from '../../utils/common';
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
 
@@ -55,7 +56,7 @@ const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled'])
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const textOptimizer: Optimizer = (path, logger, _options, platform) => {
+export const textOptimizer: Optimizer = (path, logger, options, platform) => {
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
 
@@ -71,10 +72,13 @@ export const textOptimizer: Optimizer = (path, logger, _options, platform) => {
       reason: 'is a direct child of expo-router Link with asChild',
       shouldBail: () => hasExpoRouterLinkParentWithAsChild(path),
     },
+    // The local children check runs before the ancestor checks because it is cheap and prunes the
+    // common nested-element `Text` before the unbounded ancestor walk those checks trigger.
     {
       reason: 'contains non-primitive children',
       shouldBail: () => hasInvalidChildren(path, parent),
     },
+    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeTextWithUnknownAncestors === true),
   ];
 
   if (forced) {

@@ -11,8 +11,8 @@ vi.mock('../../../runtime/components/native-view', async () => ({
   NativeView: (await import('./capture')).NativeViewCapturer,
 }));
 
-import { captureWrapper } from './wrapper';
-import { captureBoost } from './boost';
+import { captureWrapper, captureWrapperHosts } from './wrapper';
+import { captureBoost, boostOptimizes } from './boost';
 
 const PLATFORMS = ['ios', 'android'] as const;
 
@@ -73,6 +73,18 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    // A string-only `<Text>` nested under another `<Text>` is rendered by the wrapper as the inline
+    // host `NativeVirtualText` (the outer provides `TextAncestorContext`), NOT `NativeText`. Optimizing
+    // it (pre-fix) emits `NativeText` — a host-kind divergence. Boost must instead defer the whole
+    // snippet to the wrapper. The wrapper-side render is the oracle proving the inner host kind; the
+    // Boost-side compile check proves Boost no longer optimizes the nested inner.
+    it('nested Text defers to the wrapper (inner host is NativeVirtualText)', async () => {
+      const jsx = '<Text>Hello <Text>World</Text></Text>';
+      const hosts = await captureWrapperHosts(os, jsx);
+      expect(hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
+      expect(boostOptimizes(os, jsx)).toBe(false);
     });
   });
 });

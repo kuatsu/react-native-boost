@@ -9,8 +9,7 @@ import {
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
-  getViewAncestorClassification,
-  ViewAncestorClassification,
+  ancestorBailoutChecks,
 } from '../../utils/common';
 
 export const viewBlacklistedProperties = new Set([
@@ -42,15 +41,6 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
   if (!isValidJSXComponent(path, 'View')) return;
   if (!isReactNativeImport(path, 'View')) return;
 
-  let ancestorClassification: ViewAncestorClassification | undefined;
-  const getAncestorClassification = () => {
-    if (!ancestorClassification) {
-      ancestorClassification = getViewAncestorClassification(path);
-    }
-
-    return ancestorClassification;
-  };
-
   const forced = isForcedLine(path);
 
   const overridableChecks: BailoutCheck[] = [
@@ -58,15 +48,7 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
       reason: 'contains blacklisted props',
       shouldBail: () => hasBlacklistedProperty(path, viewBlacklistedProperties),
     },
-    {
-      reason: 'has Text ancestor',
-      shouldBail: () => getAncestorClassification() === 'text',
-    },
-    {
-      reason: 'has unresolved ancestor and dangerous optimization is disabled',
-      shouldBail: () =>
-        getAncestorClassification() === 'unknown' && options?.dangerouslyOptimizeViewWithUnknownAncestors !== true,
-    },
+    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeViewWithUnknownAncestors === true),
   ];
 
   if (forced) {

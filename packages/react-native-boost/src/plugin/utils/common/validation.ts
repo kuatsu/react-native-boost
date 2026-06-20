@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { ensureArray } from '../helpers';
+import { ensureArray, BailoutCheck } from '../helpers';
 import { HubFile } from '../../types';
 import { minimatch } from 'minimatch';
 import nodePath from 'node:path';
@@ -177,8 +177,7 @@ export const isReactNativeImport = (path: NodePath<t.JSXOpeningElement>, expecte
   return false;
 };
 
-type AncestorClassification = 'safe' | 'text' | 'unknown';
-export type ViewAncestorClassification = AncestorClassification;
+export type AncestorClassification = 'safe' | 'text' | 'unknown';
 type ScopeBinding = NonNullable<ReturnType<NodePath<t.Node>['scope']['getBinding']>>;
 
 type AncestorAnalysisContext = {
@@ -187,11 +186,7 @@ type AncestorAnalysisContext = {
   renderExpressionInProgress: WeakSet<t.Node>;
 };
 
-export const getViewAncestorClassification = (path: NodePath<t.JSXOpeningElement>): ViewAncestorClassification => {
-  return classifyViewAncestors(path);
-};
-
-function classifyViewAncestors(path: NodePath<t.JSXOpeningElement>): AncestorClassification {
+export const getAncestorClassification = (path: NodePath<t.JSXOpeningElement>): AncestorClassification => {
   const context: AncestorAnalysisContext = {
     componentCache: new WeakMap<t.Node, AncestorClassification>(),
     componentInProgress: new WeakSet<t.Node>(),
@@ -213,7 +208,35 @@ function classifyViewAncestors(path: NodePath<t.JSXOpeningElement>): AncestorCla
   }
 
   return classification;
-}
+};
+
+/**
+ * The ancestor-safety bailout checks shared by the Text and View optimizers. An element nested under a
+ * `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`) instead of the block
+ * `NativeText`/`NativeView` host, so optimizing it would emit the wrong host; an `'unknown'` ancestor
+ * chain cannot be proven free of such a `Text`, so it bails too unless the caller opts into the risk.
+ *
+ * The ancestor walk is lazy (it runs only if these checks are reached) and memoized across the two
+ * checks. Each optimizer passes its own resolved `dangerouslyOptimize*WithUnknownAncestors` flag.
+ */
+export const ancestorBailoutChecks = (
+  path: NodePath<t.JSXOpeningElement>,
+  dangerousOptimizationEnabled: boolean
+): BailoutCheck[] => {
+  let classification: AncestorClassification | undefined;
+  const classify = () => (classification ??= getAncestorClassification(path));
+
+  return [
+    {
+      reason: 'has Text ancestor',
+      shouldBail: () => classify() === 'text',
+    },
+    {
+      reason: 'has unresolved ancestor and dangerous optimization is disabled',
+      shouldBail: () => classify() === 'unknown' && !dangerousOptimizationEnabled,
+    },
+  ];
+};
 
 function classifyJSXElementAsAncestor(
   path: NodePath<t.JSXElement>,

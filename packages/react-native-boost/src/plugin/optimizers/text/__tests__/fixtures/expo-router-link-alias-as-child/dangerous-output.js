@@ -12,6 +12,8 @@ import { Link as RouterLink } from 'expo-router';
     <Text>This should NOT be optimized due to aliased Link asChild</Text>
   </RouterLink>
   <RouterLink>
-    <Text>Direct child of aliased Link without asChild</Text>
+    <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
+      Direct child of aliased Link without asChild
+    </_NativeText>
   </RouterLink>
 </>;

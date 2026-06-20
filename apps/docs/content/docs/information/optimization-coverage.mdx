@@ -9,7 +9,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
-| `Text` | Imported from `react-native`, no blacklisted props, string-safe children | `contains blacklisted props`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
+| `Text` | Imported from `react-native`, no blacklisted props, string-safe children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, no blacklisted props, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
@@ -43,7 +43,26 @@ If any of these are present, the `Text` node is skipped:
 ### Text structure checks
 
 - Children must be string-safe.
-- `Text` is skipped when used as a direct child of `expo-router` `Link` with `asChild`.
+
+### Text ancestor safety checks
+
+Like `View`, `Text` optimization depends on ancestor classification:
+
+- `safe`: optimize
+- `text`: skip (`has Text ancestor`) — a `Text` nested in another `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`), not `NativeText` (`RCTText`), so optimizing it would emit the wrong host.
+- `unknown`: skip by default
+
+Set `dangerouslyOptimizeTextWithUnknownAncestors: true` to optimize `unknown` ancestors too.
+
+<Callout type="warn" title="Dangerous Mode">
+  Enabling dangerous mode can introduce regressions if an unresolved ancestor renders a `Text` wrapper. A concrete
+  example is `expo-router`'s `Link`, which wraps its children in a `<Text>` by default — so a `Text` under a `Link`
+  must render as `NativeVirtualText`, and optimizing it would be wrong.
+</Callout>
+
+A `Text` used as a direct child of `expo-router` `Link` with `asChild` is **always** skipped
+(`is a direct child of expo-router Link with asChild`), even under the dangerous flag, because `Link` makes that child
+pressable.
 
 ```tsx
 import { Link } from 'expo-router';
@@ -56,7 +75,8 @@ import { Text } from 'react-native';
 
 ## View Coverage
 
-`View` has stricter safety checks because `View` inside text-like ancestors can break layout/semantics.
+`View` and `Text` share the same ancestor safety checks; `View` additionally blacklists more props (a `View` inside a
+text-like ancestor can break layout/semantics).
 
 ### View blacklisted props
 

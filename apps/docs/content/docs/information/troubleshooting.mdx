@@ -57,13 +57,16 @@ Fix options:
 
 ### Skip reason: `has unresolved ancestor and dangerous optimization is disabled`
 
-`View` is inside an ancestor React Native Boost cannot statically classify.
+A `View` or `Text` is inside an ancestor React Native Boost cannot statically classify, so it cannot prove the
+ancestor is not a `Text` (which would change the correct native host). A common case is a `Text` inside a
+third-party wrapper such as `expo-router`'s `Link` (which itself wraps its children in a `<Text>`).
 
 Options:
 
 - Keep default behavior (safest)
+- Use `@boost-force` on a specific line you have verified is safe
 - Refactor ancestor/component structure to be statically obvious
-- Enable `dangerouslyOptimizeViewWithUnknownAncestors` only if you can validate behavior carefully
+- Enable `dangerouslyOptimizeViewWithUnknownAncestors` / `dangerouslyOptimizeTextWithUnknownAncestors` to override this behavior
 
 ### Ignores do not work as expected in monorepos
 

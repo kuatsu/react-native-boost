@@ -14,7 +14,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kuatsu-mkrause.react-native-boost-example"
+      "bundleIdentifier": "com.kuatsu-mkrause.react-native-boost-example",
+      "appleTeamId": "HJ544P3S3Z"
     },
     "android": {
       "adaptiveIcon": {

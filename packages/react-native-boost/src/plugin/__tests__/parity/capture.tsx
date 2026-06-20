@@ -1,22 +1,22 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-/**
- * The single shared sink both the wrapper and Boost sides funnel their native props into. Whichever
- * native host capturer renders last writes here, so {@link renderAndCapture} resets it before every
- * render and reads it immediately after.
- */
-interface Sink {
-  props?: Record<string, unknown>;
-  which?: string;
+/** One native host render: which host kind, and the exact prop bag it received (children stripped). */
+export interface Capture {
+  which: string;
+  props: Record<string, unknown>;
 }
 
-export const sink: Sink = {};
+/**
+ * Every native host capturer appends here, in render order (an outer host before its children), so a
+ * nested render — e.g. a `NativeVirtualText` inside a `NativeText` — records each host distinctly
+ * instead of overwriting a single slot. {@link renderAndCaptureAll} resets it before every render.
+ */
+export const captures: Capture[] = [];
 
 /**
- * Builds a prop-recording function component standing in for a native host. It records the exact
- * prop bag it receives into the shared {@link sink} and renders its children so nested hosts (e.g.
- * a `NativeVirtualText` inside a `NativeText`) are captured too.
+ * Builds a prop-recording function component standing in for a native host. It appends the exact prop
+ * bag it receives to {@link captures} and renders its children so nested hosts are captured too.
  *
  * It must be a function component, not a host string token (e.g. `'RCTText'`): the DOM serializer
  * would lowercase attribute names and stringify values, destroying the fidelity we compare on.
@@ -24,8 +24,7 @@ export const sink: Sink = {};
 const makeCapturer =
   (which: string): React.FC<Record<string, unknown>> =>
   (props) => {
-    sink.props = props;
-    sink.which = which;
+    captures.push({ which, props });
     return (props.children as React.ReactNode) ?? null;
   };
 
@@ -33,12 +32,26 @@ export const NativeTextCapturer = makeCapturer('NativeText');
 export const NativeVirtualTextCapturer = makeCapturer('NativeVirtualText');
 export const NativeViewCapturer = makeCapturer('NativeView');
 
-/** Render an element and return the props its single native host received (children stripped). */
-export function renderAndCapture(element: React.ReactElement): { which?: string; props: Record<string, unknown> } {
-  sink.props = undefined;
-  sink.which = undefined;
+/** Render an element and return every native host it produced, in render order. */
+export function renderAndCaptureAll(element: React.ReactElement): Capture[] {
+  captures.length = 0;
   renderToStaticMarkup(element);
-  const captured: Record<string, unknown> = sink.props ?? {};
-  const { children: _children, ...rest } = captured;
-  return { which: sink.which, props: rest };
+  return captures.map(({ which, props }) => {
+    const { children: _children, ...rest } = props;
+    return { which, props: rest };
+  });
+}
+
+/**
+ * Render an element expected to produce exactly one native host and return it. Throws on any other
+ * count so an unexpected extra/missing host surfaces loudly instead of silently comparing the wrong bag.
+ */
+export function renderAndCaptureSingle(element: React.ReactElement): Capture {
+  const all = renderAndCaptureAll(element);
+  if (all.length !== 1) {
+    throw new Error(
+      `Expected exactly one native host, captured ${all.length}: [${all.map((c) => c.which).join(', ')}]`
+    );
+  }
+  return all[0];
 }

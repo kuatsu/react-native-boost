@@ -12,7 +12,9 @@ import { Link } from 'expo-router';
     <Text>This should NOT be optimized due to Link asChild</Text>
   </Link>
   <Link>
-    <Text>Direct child of Link without asChild</Text>
+    <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
+      Direct child of Link without asChild
+    </_NativeText>
   </Link>
   <Link href="/home" asChild>
     <Text>This should NOT be optimized (Link with href and asChild)</Text>

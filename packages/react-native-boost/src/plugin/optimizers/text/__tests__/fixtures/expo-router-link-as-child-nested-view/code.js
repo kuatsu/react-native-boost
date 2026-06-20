@@ -3,6 +3,6 @@ import { Link } from 'expo-router';
 
 <Link asChild href="/home">
   <View>
-    <Text>This should be optimized because View is the direct child</Text>
+    <Text>Inside a View under an asChild Link</Text>
   </View>
 </Link>;
