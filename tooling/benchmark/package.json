@@ -1,0 +1,19 @@
+{
+  "name": "@react-native-boost/benchmark",
+  "version": "0.0.0",
+  "description": "Cross-platform render-performance benchmark suite for React Native Boost (FPS + fiber counts, archived per RN×Boost version).",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "rnboost-benchmark": "src/cli.ts"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3"
+  }
+}

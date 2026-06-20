@@ -27,6 +27,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["./plugins/with-swiftuicore-debug-link-fix"]
+    "plugins": ["./plugins/with-swiftuicore-debug-link-fix", "./plugins/with-cleartext-traffic"]
   }
 }

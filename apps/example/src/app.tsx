@@ -7,10 +7,21 @@ import { coinsById } from './screens/trading-demo/model/coins';
 import TradingDemoScreen from './screens/trading-demo';
 import LauncherScreen from './screens/launcher';
 import BenchmarkScreen from './screens/benchmark';
+import BenchmarkRunner from './screens/benchmark-runner';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  // The benchmark suite launches the app with this flag to run the headless, self-driving FPS sweep.
+  if (process.env.EXPO_PUBLIC_BENCHMARK === '1') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <BenchmarkRunner />
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
