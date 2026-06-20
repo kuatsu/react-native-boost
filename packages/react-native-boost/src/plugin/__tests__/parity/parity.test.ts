@@ -16,9 +16,12 @@ import { captureBoost } from './boost';
 
 const PLATFORMS = ['ios', 'android'] as const;
 
-// `<Text>` cases use a string child so they render to NativeText (not NativeVirtualText).
+// `<Text>` cases use a primitive child (string, number, or template literal) so they render to
+// NativeText (not NativeVirtualText).
 const TEXT_CASES = [
   '<Text>hello</Text>',
+  '<Text>{42}</Text>',
+  '<Text>{`a${1}`}</Text>',
   '<Text aria-label="x">hello</Text>',
   '<Text accessibilityLabel="x">hello</Text>',
   '<Text accessible={false}>hello</Text>',

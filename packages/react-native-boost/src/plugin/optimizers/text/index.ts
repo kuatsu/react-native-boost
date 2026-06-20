@@ -13,7 +13,7 @@ import {
   isValidJSXComponent,
   isReactNativeImport,
   replaceWithNativeComponent,
-  isStringNode,
+  isPrimitiveChild,
   hasExpoRouterLinkParentWithAsChild,
   extractStyleAttribute,
   extractSelectableAndUpdateStyle,
@@ -72,7 +72,7 @@ export const textOptimizer: Optimizer = (path, logger, _options, platform) => {
       shouldBail: () => hasExpoRouterLinkParentWithAsChild(path),
     },
     {
-      reason: 'contains non-string children',
+      reason: 'contains non-primitive children',
       shouldBail: () => hasInvalidChildren(path, parent),
     },
   ];
@@ -135,16 +135,16 @@ function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>, parent: t.JSXEl
     if (
       t.isJSXIdentifier(attribute.name) &&
       attribute.value &&
-      // For a "children" attribute, optimization is allowed only if it is a string
+      // For a "children" attribute, optimization is allowed only if it is a provable primitive
       attribute.name.name === 'children' &&
-      !isStringNode(path, attribute.value)
+      !isPrimitiveChild(path, attribute.value)
     ) {
       return true;
     }
   }
 
-  // Return true if any child is not a string node
-  return !parent.children.every((child) => isStringNode(path, child));
+  // Return true if any child is not a provably-primitive node
+  return !parent.children.every((child) => isPrimitiveChild(path, child));
 }
 
 /**

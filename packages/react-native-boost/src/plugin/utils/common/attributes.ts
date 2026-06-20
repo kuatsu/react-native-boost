@@ -289,21 +289,80 @@ export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): boolea
 }
 
 /**
- * Checks if a node represents a string value.
+ * Determines whether an expression is statically provable to evaluate to a `string` or `number`
+ * primitive — and therefore can never be a React element.
  */
-export const isStringNode = (path: NodePath<t.JSXOpeningElement>, child: t.Node): boolean => {
-  if (t.isJSXText(child) || t.isStringLiteral(child)) return true;
+const isPrimitiveExpression = (
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.Expression,
+  // Identifier names already resolved along this chain, to break circular `const` references
+  // (`const a = b; const b = a;`) that would otherwise recurse forever.
+  resolved: Set<string> = new Set()
+): boolean => {
+  // Unambiguous primitives — these can never be a React element.
+  if (t.isStringLiteral(expression) || t.isNumericLiteral(expression)) return true;
+
+  // A template literal ALWAYS coerces its interpolations to string, regardless of their types.
+  if (t.isTemplateLiteral(expression)) return true;
+
+  // `a + b` (and numeric `-`, `*`, ...) is primitive only when BOTH operands are themselves
+  // provably primitive. `in`/`instanceof` have a non-Expression `left` (a `PrivateName`), so the
+  // `isExpression` guard rejects them.
+  if (t.isBinaryExpression(expression)) {
+    const { left, right } = expression;
+    return (
+      t.isExpression(left) &&
+      isPrimitiveExpression(path, left, resolved) &&
+      isPrimitiveExpression(path, right, resolved)
+    );
+  }
+
+  // `c ? a : b` — only the reachable results (`a`, `b`) are rendered; the test is irrelevant.
+  if (t.isConditionalExpression(expression)) {
+    return (
+      isPrimitiveExpression(path, expression.consequent, resolved) &&
+      isPrimitiveExpression(path, expression.alternate, resolved)
+    );
+  }
+
+  // `a && b` / `a || b` / `a ?? b` — short-circuiting makes the result one of the operands, so both
+  // must be primitive (unlike the conditional, the left operand is itself a reachable result).
+  if (t.isLogicalExpression(expression)) {
+    return (
+      isPrimitiveExpression(path, expression.left, resolved) && isPrimitiveExpression(path, expression.right, resolved)
+    );
+  }
+
+  // Identifier resolving to a non-reassigned `const` whose initializer is itself provably primitive.
+  // `binding.constant` excludes reassigned bindings (`let x = 'a'; x = <Foo/>`).
+  if (t.isIdentifier(expression)) {
+    if (resolved.has(expression.name)) return false; // circular reference — give up
+    const binding = path.scope.getBinding(expression.name);
+    if (binding && binding.constant && binding.path.node && t.isVariableDeclarator(binding.path.node)) {
+      const init = binding.path.node.init;
+      return (
+        !!init && t.isExpression(init) && isPrimitiveExpression(path, init, new Set(resolved).add(expression.name))
+      );
+    }
+    return false;
+  }
+
+  return false;
+};
+
+/**
+ * Checks whether a Text child node is statically provable to render as a string/number primitive.
+ * Used to gate the Text optimizer: only such children are safe to keep when rewriting `<Text>` to
+ * its native host. See {@link isPrimitiveExpression} for the underlying expression rules.
+ */
+export const isPrimitiveChild = (path: NodePath<t.JSXOpeningElement>, child: t.Node): boolean => {
+  if (t.isJSXText(child)) return true; // raw text between tags
+  if (t.isStringLiteral(child)) return true; // explicit `children="..."` attribute value
 
   if (t.isJSXExpressionContainer(child)) {
-    const expression = child.expression;
-    if (t.isIdentifier(expression)) {
-      const binding = path.scope.getBinding(expression.name);
-      if (binding && binding.path.node && t.isVariableDeclarator(binding.path.node)) {
-        return !!binding.path.node.init && t.isStringLiteral(binding.path.node.init);
-      }
-      return false;
-    }
-    if (t.isStringLiteral(expression)) return true;
+    const { expression } = child;
+    if (t.isJSXEmptyExpression(expression)) return false; // `{/* comment */}` is not a primitive
+    return isPrimitiveExpression(path, expression);
   }
   return false;
 };

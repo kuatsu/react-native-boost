@@ -9,7 +9,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
-| `Text` | Imported from `react-native`, no blacklisted props, string-safe children | `contains blacklisted props`, `contains non-string children`, `is a direct child of expo-router Link with asChild` |
+| `Text` | Imported from `react-native`, no blacklisted props, string-safe children | `contains blacklisted props`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, no blacklisted props, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts

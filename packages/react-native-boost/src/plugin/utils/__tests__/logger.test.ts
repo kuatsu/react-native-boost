@@ -39,7 +39,7 @@ describe('logger', () => {
     logger.skipped({
       component: 'Text',
       path,
-      reason: 'contains non-string children',
+      reason: 'contains non-primitive children',
     });
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
