@@ -43,9 +43,11 @@ Each run is a clean A/B on identical inputs:
 
 Everything runs as a **release/production build on the New Architecture**.
 
-### Secondary benchmark
+## Secondary benchmarks
 
-There's also a second, device-independent measurement. For a single row, we count the **React tree nodes**
+### Number of React tree nodes
+
+We're also making a second, device-independent measurement. For a single row, we count the **React tree nodes**
 (fibers). One of the ways React Native Boost impacts an app's performance is by deleting a layer of these fibers per element it optimizes.
 
 <ThemedImage light={fibersLight} dark={fibersDark} alt="React Native Boost — React tree nodes with and without Boost" />
@@ -58,7 +60,7 @@ For previous versions of React Native, we also published benchmarks showing heav
 
 Thanks to various improvements to the reconciler and other internals in React Native 0.78, this advantage has shrunken to only around ~4-6% in recent benchmarks. React Native Boost remains advantageous for frequently-updated screens, less so for screens with only a lot of static components.
 
-### `reduceDefaultPropsInText` feature flag in React Native
+## `reduceDefaultPropsInText` feature flag in React Native
 
 In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced for the native `Text` component. React Native's long-term goal is to reduce the overhead of the `Text` and `View` components directly in React Native core, eliminating the need to use the native underlying components, an effort that has been started with this feature flag.
 
