@@ -3,13 +3,13 @@ title: Optimization Coverage
 description: What React Native Boost can optimize today, what it skips, and why.
 ---
 
-React Native Boost is conservative by design. If it cannot prove an optimization is safe within the possibilities of a Babel plugin, it skips it. While this means it'll often skip optimizations that would be safe in practice, it also means that you can trust that optimizations that do happen are safe and won't cause behavioral changes or other regressions.
+React Native Boost is conservative by design. If it cannot prove an optimization is safe, it skips it. While this means it'll often skip optimizations that would be safe in practice, it also means that you can trust that optimizations that do happen are safe and won't cause behavioral changes or other bugs.
 
 ## At a Glance
 
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
-| `Text` | Imported from `react-native`, no blacklisted props, string-safe children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
+| `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, no blacklisted props, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
@@ -36,13 +36,14 @@ Use `@boost-force` to force optimization on a component that would otherwise be 
 
 If any of these are present, the `Text` node is skipped:
 
-- Interaction/responder props (`onPress`, `onLongPress`, `onResponder*`, `pressRetentionOffset`, etc.)
+- Interaction/responder props (`onPress`, `onLongPress`, `onResponder*`, `pressRetentionOffset`, `suppressHighlighting`, etc.)
 - `selectionColor`
+- `aria-hidden`
 - `id`, `nativeID`
 
 ### Text structure checks
 
-- Children must be string-safe.
+- Children must be provably primitive (resolve to a `string` or `number`). Anything that could be a React element (nested elements, function calls, unresolved identifiers) bails as `contains non-primitive children`.
 
 ### Text ancestor safety checks
 
@@ -75,15 +76,16 @@ import { Text } from 'react-native';
 
 ## View Coverage
 
-`View` and `Text` share the same ancestor safety checks; `View` additionally blacklists more props (a `View` inside a
-text-like ancestor can break layout/semantics).
+`View` and `Text` share the same ancestor safety checks. `View` blacklists the props the
+`View` wrapper translates into native equivalents (e.g. `aria-*` → `accessibility*`, `tabIndex` → `focusable`), since
+passing those through unchanged would silently drop them.
 
 ### View blacklisted props
 
 If any of these are present, the `View` node is skipped:
 
-- `style`
 - Accessibility props (`accessible`, `accessibilityLabel`, `accessibilityState`, `aria-*`)
+- `tabIndex`
 - `id`, `nativeID`
 
 ### Ancestor safety checks

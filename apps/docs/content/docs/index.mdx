@@ -10,9 +10,9 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 React Native Boost consists of two pieces:
 
 - A Babel plugin that statically analyzes your source code and replaces safe `Text` and `View` components with their direct native counterparts, leading to significant performance improvements compared to the JS-based wrapper components.
-- A runtime package used by the plugin for cross-platform-safe imports and helper utilities.
+- A runtime package used internally by the plugin for cross-platform-safe imports and helper utilities.
 
-The analyzer is intentionally strict and skips any optimizations that could lead to behavioral changes or other bugs.
+The analyzer is intentionally strict and skips any optimizations that may lead to user-facing bugs and behavioral changes.
 
 ## Compatibility
 
@@ -21,7 +21,7 @@ The analyzer is intentionally strict and skips any optimizations that could lead
 | `0.x` | All versions[^1] |
 | `1.x` | `>=0.83` |
 
-[^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings. [See here.](https://github.com/react-native-community/discussions-and-proposals/discussions/893)
+[^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings. [See react-native-community/discussions-and-proposals #893.](https://github.com/react-native-community/discussions-and-proposals/discussions/893)
 
 ## Getting Started
 
@@ -108,12 +108,12 @@ module.exports = {
 
 <Callout title="Runtime Dependency">
   The Babel plugin imports optimized components via `react-native-boost/runtime`, so `react-native-boost` must be
-  available at runtime and can therefore **not** be installed as a dev dependency.
+  available at runtime and must therefore **not** be installed as a dev dependency.
 </Callout>
 
 ## Platform Support
 
-React Native Boost supports iOS and Android projects. On Web, React Native Boost safely falls back to the default components, providing full cross-platform support.
+React Native Boost supports all platforms. Optimizations are performed on iOS and Android, while falling back to the default components on all other platforms.
 
 <Cards>
   <Card title="How It Works" href="/docs/information/how-it-works" />
