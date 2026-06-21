@@ -79,6 +79,8 @@ function fpsChart(result: FpsResult, theme: Theme): string {
     yLabel: 'avg FPS',
     xTicks: loads.map((l) => ({ value: renderedRows(l), label: String(renderedRows(l)) })),
     yMax: FPS_Y_MAX,
+    // The FPS curves sit high-left and descend right, leaving the bottom-left corner empty.
+    legendPosition: 'bottom-left' as const,
   };
 
   const points = isThermalRun(result) ? convergencePoints(result) : undefined;

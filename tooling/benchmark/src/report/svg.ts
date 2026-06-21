@@ -45,6 +45,8 @@ export interface Series {
   errors?: Array<{ x: number; lo: number; hi: number }>;
 }
 
+type LegendPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+
 interface ChartOptions {
   title: string;
   xLabel: string;
@@ -54,6 +56,8 @@ interface ChartOptions {
   yMax?: number;
   width?: number;
   height?: number;
+  /** Where to anchor the legend (default 'top-right'). Place it in whichever corner the data leaves empty. */
+  legendPosition?: LegendPosition;
 }
 
 const PAD = { left: 70, right: 24, top: 52, bottom: 64 };
@@ -129,11 +133,14 @@ function chrome(options: ChartOptions, f: Frame, c: ThemeColors): string {
   return parts.join('\n');
 }
 
-function legend(series: Series[], f: Frame, c: ThemeColors): string {
+function legend(series: Series[], f: Frame, c: ThemeColors, position: LegendPosition): string {
+  const onLeft = position === 'top-left' || position === 'bottom-left';
+  const onBottom = position === 'bottom-left' || position === 'bottom-right';
+  const x = onLeft ? f.plotLeft + 12 : f.plotRight - 150;
+  const top = onBottom ? f.plotBottom - series.length * 20 - 2 : f.plotTop + 8;
   return series
     .map((s, i) => {
-      const x = f.plotRight - 150;
-      const y = f.plotTop + 8 + i * 20;
+      const y = top + i * 20;
       const swatch = s.dash
         ? `<line x1="${x}" y1="${y - 3}" x2="${x + 12}" y2="${y - 3}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="4 3"/>`
         : `<rect x="${x}" y="${y - 9}" width="12" height="12" rx="2" fill="${s.color}"/>`;
@@ -174,7 +181,11 @@ export function lineChart(options: ChartOptions, series: Series[], theme: Theme)
       return `${whiskers}<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2.5"${dash}/>${dots}`;
     })
     .join('\n');
-  return wrap(f.width, f.height, [chrome(options, f, c), lines, legend(series, f, c)].join('\n'));
+  return wrap(
+    f.width,
+    f.height,
+    [chrome(options, f, c), lines, legend(series, f, c, options.legendPosition ?? 'top-right')].join('\n')
+  );
 }
 
 export function barChart(options: ChartOptions, series: Series[], theme: Theme): string {
@@ -197,5 +208,9 @@ export function barChart(options: ChartOptions, series: Series[], theme: Theme):
       );
     }
   }
-  return wrap(f.width, f.height, [chrome(options, f, c), bars.join('\n'), legend(series, f, c)].join('\n'));
+  return wrap(
+    f.width,
+    f.height,
+    [chrome(options, f, c), bars.join('\n'), legend(series, f, c, options.legendPosition ?? 'top-right')].join('\n')
+  );
 }
