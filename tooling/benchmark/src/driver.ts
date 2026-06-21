@@ -90,9 +90,9 @@ export function relaunchWithProfile(device: DeviceInfo, profile: ProfileSpec): v
   }
   // force-stop ends the singleTask process so a fresh JS init reads the new intent extra.
   tryExecFile('adb', ['-s', device.id, 'shell', 'am', 'force-stop', ANDROID_PACKAGE]);
-  execFileSync(
-    'adb',
-    ['-s', device.id, 'shell', 'am', 'start', '-n', `${ANDROID_PACKAGE}/${ANDROID_ACTIVITY}`, '--es', 'rnFlags', flags],
-    { stdio: 'ignore' }
-  );
+  // `am start --es rnFlags ''` is malformed (empty extra value) — omit the extra for the flag-less default
+  // profile; with no extra, getForcedFlags() returns '' → default, exactly as intended.
+  const startArgs = ['-s', device.id, 'shell', 'am', 'start', '-n', `${ANDROID_PACKAGE}/${ANDROID_ACTIVITY}`];
+  if (flags.length > 0) startArgs.push('--es', 'rnFlags', flags);
+  execFileSync('adb', startArgs, { stdio: 'ignore' });
 }

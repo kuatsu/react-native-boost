@@ -4,23 +4,24 @@
 <line x1="70" y1="376" x2="736" y2="376" stroke="#e3e6ea" stroke-width="1"/>
 <text x="60" y="380" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">0</text>
 <line x1="70" y1="311.2" x2="736" y2="311.2" stroke="#e3e6ea" stroke-width="1"/>
-<text x="60" y="315.2" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">15</text>
+<text x="60" y="315.2" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">16</text>
 <line x1="70" y1="246.4" x2="736" y2="246.4" stroke="#e3e6ea" stroke-width="1"/>
-<text x="60" y="250.4" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">30</text>
+<text x="60" y="250.4" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">32</text>
 <line x1="70" y1="181.59999999999997" x2="736" y2="181.59999999999997" stroke="#e3e6ea" stroke-width="1"/>
-<text x="60" y="185.59999999999997" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">45</text>
+<text x="60" y="185.59999999999997" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">48</text>
 <line x1="70" y1="116.80000000000001" x2="736" y2="116.80000000000001" stroke="#e3e6ea" stroke-width="1"/>
-<text x="60" y="120.80000000000001" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">60</text>
+<text x="60" y="120.80000000000001" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">64</text>
 <line x1="70" y1="52" x2="736" y2="52" stroke="#e3e6ea" stroke-width="1"/>
-<text x="60" y="56" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">76</text>
+<text x="60" y="56" fill="#7a828c" font-size="12" text-anchor="end" font-family="system-ui,sans-serif">79</text>
 <text x="70" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">0.83.2</text>
+<text x="403" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">0.83.2</text>
 <text x="736" y="398" fill="#7a828c" font-size="12" text-anchor="middle" font-family="system-ui,sans-serif">0.83.2</text>
 <text x="403" y="424" fill="#5c6470" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif">React Native version</text>
 <text x="18" y="214" fill="#5c6470" font-size="13" text-anchor="middle" font-family="system-ui,sans-serif" transform="rotate(-90 18 214)">FPS gain %</text>
-<polyline points="70.0,94.3 736.0,255.1" fill="none" stroke="#0ecb81" stroke-width="2.5"/><circle cx="70.0" cy="94.3" r="3.5" fill="#0ecb81"/><circle cx="736.0" cy="255.1" r="3.5" fill="#0ecb81"/>
-<polyline points="736.0,424.1" fill="none" stroke="#0ecb81" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="736.0" cy="424.1" r="3.5" fill="#0ecb81"/>
-<polyline points="70.0,119.1 736.0,111.0" fill="none" stroke="#f0b90b" stroke-width="2.5"/><circle cx="70.0" cy="119.1" r="3.5" fill="#f0b90b"/><circle cx="736.0" cy="111.0" r="3.5" fill="#f0b90b"/>
-<polyline points="736.0,317.6" fill="none" stroke="#f0b90b" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="736.0" cy="317.6" r="3.5" fill="#f0b90b"/>
+<polyline points="70.0,108.0 403.0,94.3 736.0,260.9" fill="none" stroke="#0ecb81" stroke-width="2.5"/><circle cx="70.0" cy="108.0" r="3.5" fill="#0ecb81"/><circle cx="403.0" cy="94.3" r="3.5" fill="#0ecb81"/><circle cx="736.0" cy="260.9" r="3.5" fill="#0ecb81"/>
+<polyline points="403.0,328.8 736.0,421.7" fill="none" stroke="#0ecb81" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="403.0" cy="328.8" r="3.5" fill="#0ecb81"/><circle cx="736.0" cy="421.7" r="3.5" fill="#0ecb81"/>
+<polyline points="70.0,131.6 403.0,150.3 736.0,123.9" fill="none" stroke="#f0b90b" stroke-width="2.5"/><circle cx="70.0" cy="131.6" r="3.5" fill="#f0b90b"/><circle cx="403.0" cy="150.3" r="3.5" fill="#f0b90b"/><circle cx="736.0" cy="123.9" r="3.5" fill="#f0b90b"/>
+<polyline points="403.0,378.9 736.0,320.5" fill="none" stroke="#f0b90b" stroke-width="2.5" stroke-dasharray="6 4"/><circle cx="403.0" cy="378.9" r="3.5" fill="#f0b90b"/><circle cx="736.0" cy="320.5" r="3.5" fill="#f0b90b"/>
 <rect x="586" y="51" width="12" height="12" rx="2" fill="#0ecb81"/><text x="604" y="61" fill="#1b1f24" font-size="12" font-family="system-ui,sans-serif">iOS · boost</text>
 <line x1="586" y1="77" x2="598" y2="77" stroke="#0ecb81" stroke-width="2.5" stroke-dasharray="4 3"/><text x="604" y="81" fill="#1b1f24" font-size="12" font-family="system-ui,sans-serif">iOS · core</text>
 <rect x="586" y="91" width="12" height="12" rx="2" fill="#f0b90b"/><text x="604" y="101" fill="#1b1f24" font-size="12" font-family="system-ui,sans-serif">Android · boost</text>
