@@ -3,6 +3,13 @@ title: Benchmarks
 description: Benchmark results from the example app, and methodology
 ---
 
+import fpsIosLight from './img/fps-ios-light.svg';
+import fpsIosDark from './img/fps-ios.svg';
+import fpsAndroidLight from './img/fps-android-light.svg';
+import fpsAndroidDark from './img/fps-android.svg';
+import fibersLight from './img/fibers-light.svg';
+import fibersDark from './img/fibers.svg';
+
 To show what that React Native Boost buys you,
 the example app in the repository serves as a benchmark by rendering a heavy, constantly-updating screen and
 measuring the **frame rate**, once with Boost **off** and once with Boost **on**, on the exact same code and
@@ -13,14 +20,14 @@ once the app can't keep up, FPS drops and the interface starts to stutter.
 
 ## Results
 
-**iOS**: The baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while Boost
+**iOS**: The baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while React Native Boost
 holds a solid 60 FPS far longer and stays roughly **66% faster** at the top end.
 
-![React Native Boost — iOS frame rate vs render load](./img/fps-ios-light.svg)
+<ThemedImage light={fpsIosLight} dark={fpsIosDark} alt="React Native Boost — iOS frame rate vs render load" />
 
 **Android**: Same shape, with Boost about **60% faster** at the heaviest load.
 
-![React Native Boost — Android frame rate vs render load](./img/fps-android-light.svg)
+<ThemedImage light={fpsAndroidLight} dark={fpsAndroidDark} alt="React Native Boost — Android frame rate vs render load" />
 
 ## Methodology
 
@@ -42,6 +49,6 @@ Everything runs as a **release/production build on the New Architecture**.
 There's also a second, device-independent measurement. For a single row, we count the **React tree nodes**
 (fibers). One of the ways React Native Boost impacts an app's performance is by deleting a layer of these fibers per element it optimizes.
 
-![React Native Boost — React tree nodes with and without Boost](./img/fibers-light.svg)
+<ThemedImage light={fibersLight} dark={fibersDark} alt="React Native Boost — React tree nodes with and without Boost" />
 
 Fewer nodes means less for React to build and re-check on every frame.
