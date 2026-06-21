@@ -21,6 +21,9 @@ export function collectFibers(sweep: SweepConfig): FiberResult {
         cwd: repoRoot(),
         env: { ...process.env, BENCH_FIBERS_OUT: out, BENCH_FIBERS_LOADS: JSON.stringify(sweep.loads) },
         stdio: 'pipe',
+        // The test runs in seconds; cap it so a wedged pnpm/vitest fails the stage instead of hanging the pipeline.
+        timeout: 120_000,
+        killSignal: 'SIGKILL',
       }
     );
     return JSON.parse(readFileSync(out, 'utf8')) as FiberResult;

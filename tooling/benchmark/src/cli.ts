@@ -36,6 +36,12 @@ function oneOf<T extends string>(value: string | true | undefined, allowed: read
   return value as T;
 }
 
+/** Read a flag that needs a value; throws if it was passed bare (`--flag` with nothing after it). */
+function valueOf(value: string | true | undefined, flag: string): string | undefined {
+  if (value === true) throw new Error(`--${flag} requires a value`);
+  return value;
+}
+
 const log = (message: string): void => {
   console.log(message);
 };
@@ -43,17 +49,23 @@ const log = (message: string): void => {
 async function main(): Promise<void> {
   const flags = parseArgs(process.argv.slice(2));
 
-  const loads = typeof flags.loads === 'string' ? flags.loads.split(',').map(Number) : undefined;
+  const loadsArg = valueOf(flags.loads, 'loads');
+  const loads = loadsArg ? loadsArg.split(',').map(Number) : undefined;
   if (loads && (loads.length === 0 || loads.some((n) => !Number.isFinite(n) || n <= 0))) {
     throw new Error('--loads must be comma-separated positive numbers (rows rendered per side)');
   }
   const sweep: SweepConfig = { ...DEFAULT_SWEEP, ...(loads ? { loads } : {}) };
   const buildMode: BuildMode = oneOf(flags.mode, ['release', 'debug'] as const, 'mode') ?? 'release';
-  const port = typeof flags.port === 'string' ? Number(flags.port) : DEFAULT_SERVER_PORT;
+  const portArg = valueOf(flags.port, 'port');
+  const port = portArg ? Number(portArg) : DEFAULT_SERVER_PORT;
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new Error('--port must be an integer between 1 and 65535');
+  }
   const only = oneOf(flags.only, ['fibers', 'fps'] as const, 'only');
-  const explicitPlatform = typeof flags.platform === 'string';
+  const platformArg = valueOf(flags.platform, 'platform');
+  const explicitPlatform = platformArg !== undefined;
   const platforms: Platform[] = explicitPlatform
-    ? (flags.platform as string).split(',').map((p) => oneOf(p.trim(), ['ios', 'android'] as const, 'platform')!)
+    ? platformArg.split(',').map((p) => oneOf(p.trim(), ['ios', 'android'] as const, 'platform')!)
     : ['ios', 'android'];
 
   const context = resolveContext(sweep, new Date().toISOString());
