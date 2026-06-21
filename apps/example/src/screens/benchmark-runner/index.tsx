@@ -149,6 +149,15 @@ export default function BenchmarkRunner() {
     const cooldown = (): Promise<ThermalLevel> =>
       new Promise((resolve) => {
         const floorRank = levelRank(plan.thermalFloor);
+        // Already at the floor? Skip the idle screen entirely. Collapsing the render right before a capture
+        // lets the (Android) governor downclock and migrate the JS/render thread off the big cores; the
+        // warmup then re-ramps unpredictably, producing bimodal FPS at threshold loads. Keeping the render
+        // continuous holds the DVFS/scheduler state steady. The gate still idles when cooling IS needed.
+        const initial = getThermalState();
+        if (levelRank(initial) <= floorRank) {
+          resolve(initial);
+          return;
+        }
         setStep(null);
         const start = Date.now();
         const poll = (): void => {
