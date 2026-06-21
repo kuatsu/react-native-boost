@@ -8,7 +8,7 @@
 
 ## FPS
 
-#### iOS — iPhone 17 Pro (simulator, iOS 26.4), Release
+### iOS — iPhone 17 Pro (simulator, iOS 26.4), Release
 
 | Text rows | Baseline FPS | Boost FPS | Gain | Baseline p95 ms | Boost p95 ms | Dropped |
 | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
@@ -38,7 +38,7 @@
   <img alt="FPS @ load" src="./graphs/fps-ios-light.svg">
 </picture>
 
-#### Android — sdk_gphone64_arm64 (emulator, Android 16), Release
+### Android — sdk_gphone64_arm64 (emulator, Android 16), Release
 
 | Text rows | Baseline FPS | Boost FPS | Gain | Baseline p95 ms | Boost p95 ms | Dropped |
 | ---: | ---: | ---: | ---: | ---: | ---: | :--- |

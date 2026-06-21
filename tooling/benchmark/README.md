@@ -1,7 +1,7 @@
 # @react-native-boost/benchmark
 
-A one-command, cross-platform render-performance benchmark for React Native Boost. It captures **p50/p95
-FPS across a load sweep** on iOS and Android, a deterministic **fiber-count saving**, draws **graphs**, and
+A one-command, cross-platform render-performance benchmark for React Native Boost. It captures **avg FPS plus
+p50/p95 frame times across a load sweep** on iOS and Android, a deterministic **fiber-count saving**, draws **graphs**, and
 **archives every run** keyed by `(React Native version × Boost commit SHA)` so the effect can be tracked as
 RN evolves.
 
@@ -35,7 +35,7 @@ running emulator. The platform is skipped (with a note) if nothing is available,
 
 A four-stage pipeline joined by one typed JSON contract (`src/schema.ts`):
 
-```
+```text
 context ─▶ collectors ─▶ store ─▶ report
           ├─ fibers (headless vitest render, src/collectors/fibers.ts)
           └─ fps    (server + device driver, src/collectors/fps.ts)
@@ -58,7 +58,7 @@ Everything is committed to the repo so results are reviewable in PRs:
 Each chart is emitted as a dark and a light SVG (`*-light.svg`); the Markdown embeds them in a `<picture>`
 so GitHub shows whichever matches the reader's color scheme.
 
-```
+```text
 benchmarks/
   README.md                              # auto-generated archive index + cross-version trend
   graphs/trend.svg  trend-light.svg      # Boost FPS gain across RN versions

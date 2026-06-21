@@ -146,7 +146,7 @@ function fpsTable(result: FpsResult): string {
     return `| ${renderedRows(load)} | ${off?.avgFps ?? '—'} | ${on?.avgFps ?? '—'} | ${gain} | ${off?.p95FrameMs ?? '—'} | ${on?.p95FrameMs ?? '—'} | ${off?.droppedPct ?? '—'}% → ${on?.droppedPct ?? '—'}% |`;
   });
   return [
-    `#### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
+    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
     '',
     '| Text rows | Baseline FPS | Boost FPS | Gain | Baseline p95 ms | Boost p95 ms | Dropped |',
     '| ---: | ---: | ---: | ---: | ---: | ---: | :--- |',
