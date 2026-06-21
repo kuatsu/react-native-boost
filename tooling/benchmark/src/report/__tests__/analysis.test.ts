@@ -5,6 +5,7 @@ import {
   anchoredCore,
   anchorWarnings,
   convergencePoints,
+  coreValidAt,
   fpsAt,
   hasProfile,
   isThermalRun,
@@ -140,24 +141,26 @@ describe('peak gains', () => {
 });
 
 describe('regime: thermal (direct) vs legacy (anchor)', () => {
-  // default_on 60 ≠ core_on 50 → a thermal run reads core directly (42→+40%); a legacy run anchors it
-  // (×60/50=1.2 → core_off 42 lifts to 50.4 → +68%).
-  const cells = (thermal: ThermalLevel): FpsResult =>
-    result([
-      m(300, 'default', 'off', 30, 0, thermal),
-      m(300, 'default', 'on', 60, 0, thermal),
-      m(300, 'core', 'off', 42, 0, thermal),
-      m(300, 'core', 'on', 50, 0, thermal),
+  it('thermal run → direct core gain at the heaviest validated load (agreeing Boost curves)', () => {
+    const r = result([
+      m(300, 'default', 'off', 30, 0, 'nominal'),
+      m(300, 'default', 'on', 60, 0, 'nominal'),
+      m(300, 'core', 'off', 42, 0, 'nominal'),
+      m(300, 'core', 'on', 60, 0, 'nominal'), // agrees with default_on → load 300 is validated
     ]);
-
-  it('thermal run → direct core gain, no anchor', () => {
-    expect(isThermalRun(cells('nominal'))).toBe(true);
-    expect(peakCoreGain(cells('nominal'))).toBeCloseTo(40);
+    expect(isThermalRun(r)).toBe(true);
+    expect(peakCoreGain(r)).toBeCloseTo(40); // (42-30)/30 direct, no anchor
   });
 
   it('legacy run (all-unknown thermal) → anchored core gain', () => {
-    expect(isThermalRun(cells('unknown'))).toBe(false);
-    expect(peakCoreGain(cells('unknown'))).toBeCloseTo(68);
+    const r = result([
+      m(300, 'default', 'off', 30, 0, 'unknown'),
+      m(300, 'default', 'on', 60, 0, 'unknown'),
+      m(300, 'core', 'off', 42, 0, 'unknown'),
+      m(300, 'core', 'on', 50, 0, 'unknown'), // anchor ×60/50=1.2 → 42 lifts to 50.4 → +68%
+    ]);
+    expect(isThermalRun(r)).toBe(false);
+    expect(peakCoreGain(r)).toBeCloseTo(68);
   });
 });
 
@@ -181,53 +184,75 @@ describe('convergencePoints', () => {
   });
 });
 
-describe('validate', () => {
-  const valid = (): FpsResult =>
-    result([
-      m(100, 'default', 'off', 40),
-      m(100, 'default', 'on', 60),
-      m(100, 'core', 'off', 44),
-      m(100, 'core', 'on', 60),
-    ]);
-
-  it('passes when at floor, boost curves agree, and replicates are tight', () => {
-    expect(validate(valid()).valid).toBe(true);
+describe('validate (per-load)', () => {
+  it('passes every load when at floor, Boost curves agree, and replicates are tight', () => {
+    const report = validate(
+      result([
+        m(100, 'default', 'off', 40),
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        m(100, 'core', 'on', 60),
+      ])
+    );
+    expect(report.allValid).toBe(true);
+    expect(report.invalidLoads.size).toBe(0);
   });
 
-  it('fails on a sample captured above the floor', () => {
-    const r = result([
-      m(100, 'default', 'off', 40),
-      m(100, 'default', 'on', 60),
-      m(100, 'core', 'off', 44),
-      m(100, 'core', 'on', 60, 0, 'serious'),
-    ]);
-    const report = validate(r);
-    expect(report.valid).toBe(false);
-    expect(report.thermalBreaches.length).toBeGreaterThan(0);
+  it('drops a load with a capture above the floor', () => {
+    const report = validate(
+      result([
+        m(100, 'default', 'off', 40),
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        m(100, 'core', 'on', 60, 0, 'serious'),
+      ])
+    );
+    expect(report.allValid).toBe(false);
+    expect(coreValidAt(report, 100)).toBe(false);
   });
 
-  it('fails when the flag-invariant Boost curves diverge', () => {
-    const r = result([
-      m(100, 'default', 'off', 40),
-      m(100, 'default', 'on', 60),
-      m(100, 'core', 'off', 44),
-      m(100, 'core', 'on', 50), // 60 vs 50 → 20% > 8% tolerance
-    ]);
-    const report = validate(r);
-    expect(report.valid).toBe(false);
-    expect(report.boostDivergences.length).toBeGreaterThan(0);
+  it('drops a load where the flag-invariant Boost curves diverge', () => {
+    const report = validate(
+      result([
+        m(100, 'default', 'off', 40),
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        m(100, 'core', 'on', 50), // 60 vs 50 → 20% > 8% tolerance
+      ])
+    );
+    expect(coreValidAt(report, 100)).toBe(false);
   });
 
-  it('fails when a cell’s replicate spread is too wide', () => {
-    const r = result([
-      m(100, 'default', 'off', 35, 0),
-      m(100, 'default', 'off', 65, 1), // median 50, IQR 15 → 30% of median > 20%
-      m(100, 'default', 'on', 60),
-      m(100, 'core', 'off', 44),
-      m(100, 'core', 'on', 60),
-    ]);
-    const report = validate(r);
-    expect(report.valid).toBe(false);
-    expect(report.dispersions.length).toBeGreaterThan(0);
+  it('drops a load with wide replicate spread', () => {
+    const report = validate(
+      result([
+        m(100, 'default', 'off', 35, 0),
+        m(100, 'default', 'off', 65, 1), // median 50, IQR 15 → 30% of median > 20%
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        m(100, 'core', 'on', 60),
+      ])
+    );
+    expect(coreValidAt(report, 100)).toBe(false);
+  });
+
+  it('validates loads independently — one bad load does not taint the rest', () => {
+    const report = validate(
+      result([
+        // load 100 — clean
+        m(100, 'default', 'off', 40),
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        m(100, 'core', 'on', 60),
+        // load 200 — Boost curves diverge (60 vs 45 → 33%)
+        m(200, 'default', 'off', 30),
+        m(200, 'default', 'on', 60),
+        m(200, 'core', 'off', 33),
+        m(200, 'core', 'on', 45),
+      ])
+    );
+    expect(report.allValid).toBe(false);
+    expect(coreValidAt(report, 100)).toBe(true);
+    expect(coreValidAt(report, 200)).toBe(false);
   });
 });

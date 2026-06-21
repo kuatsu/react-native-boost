@@ -7,6 +7,7 @@ import {
   anchoredCore,
   anchorWarnings,
   convergencePoints,
+  coreValidAt,
   fpsAt,
   gainPct,
   isThermalRun,
@@ -82,6 +83,7 @@ function fpsChart(result: FpsResult, theme: Theme): string {
 
   const points = isThermalRun(result) ? convergencePoints(result) : undefined;
   if (points) {
+    const report = validate(result);
     const whisker = (load: number, value: number, iqr: number): { x: number; lo: number; hi: number } => ({
       x: renderedRows(load),
       lo: Math.max(0, value - iqr / 2),
@@ -95,12 +97,14 @@ function fpsChart(result: FpsResult, theme: Theme): string {
         errors: points.map((p) => whisker(p.load, p.baseline, p.baselineIqr)),
       },
     ];
-    if (validate(result).valid) {
+    // Core-optimized only at loads whose comparison passed validation (line connects across dropped loads).
+    const coreValidPoints = points.filter((p) => coreValidAt(report, p.load));
+    if (coreValidPoints.length > 0) {
       series.push({
         name: 'Core-optimized',
         color: SERIES.coreOptimized,
-        points: points.map((p) => ({ x: renderedRows(p.load), y: p.baselineOptimized })),
-        errors: points.map((p) => whisker(p.load, p.baselineOptimized, p.baselineOptimizedIqr)),
+        points: coreValidPoints.map((p) => ({ x: renderedRows(p.load), y: p.baselineOptimized })),
+        errors: coreValidPoints.map((p) => whisker(p.load, p.baselineOptimized, p.baselineOptimizedIqr)),
       });
     }
     series.push({
@@ -251,64 +255,50 @@ function fpsTableWithCore(result: FpsResult): string {
   ].join('\n');
 }
 
-/** The validation verdict as a report block: a ✓ note when valid, else an INVALID banner listing the
- *  failures (the core series is suppressed elsewhere when invalid). */
+/** The per-load validation verdict as a report block: a ✓ note when every load passed, else a note that
+ *  core is shown only where trustworthy, listing the dropped loads and why. */
 function validationBlock(result: FpsResult): string[] {
   const report = validate(result);
-  if (report.valid) {
+  if (report.allValid) {
     return [
-      '> **✓ Validated** — every capture taken at the thermal floor, the flag-invariant Boost curves agree, ' +
-        'and replicate spread is tight. Core-optimized FPS is the **direct** median (no anchor); chart whiskers ' +
-        'show the replicate IQR.',
+      '> **✓ Validated** — every load passed: captures at the thermal floor, the flag-invariant Boost curves ' +
+        'agree, and replicate spread is tight. Core-optimized FPS is the **direct** median (no anchor); chart ' +
+        'whiskers show the replicate IQR.',
       '',
     ];
   }
-  const issues = [...report.thermalBreaches, ...report.boostDivergences, ...report.dispersions];
+  const total = (convergencePoints(result) ?? []).length;
+  const dropped = [...report.invalidLoads.entries()].sort((a, b) => a[0] - b[0]);
   return [
-    '> **⚠ INVALID** — this run failed validation, so the **core-optimized series is suppressed** ' +
-      '(Boost-vs-baseline is still shown). Failed checks:',
+    `> **⚠ Core-optimized validated at ${total - dropped.length} of ${total} loads.** The core series is shown ` +
+      `only where the comparison is trustworthy and dropped (\`—\`) where it isn’t; Boost-vs-baseline is valid ` +
+      `throughout. Dropped:`,
     '',
-    ...issues.map((issue) => `> - ${issue}`),
+    ...dropped.map(([load, reasons]) => `> - ${renderedRows(load)} rows: ${reasons.join('; ')}`),
     '',
   ];
 }
 
-/** Three-series table for a thermal run, with direct gains at a common floor. When validation fails, the
- *  core column is dropped and only Boost-vs-baseline is shown under an INVALID banner. */
+/** Three-series table for a thermal run with direct gains at a common floor. The core column is shown
+ *  per-load — dropped to `—` at loads whose comparison failed validation; Boost-vs-baseline shows always. */
 function fpsTableValidated(result: FpsResult): string {
+  const report = validate(result);
   const points = convergencePoints(result) ?? [];
-  const heading = `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`;
-  if (validate(result).valid) {
-    const rows = points.map((p) => {
-      const coreGain = p.baseline === 0 ? '—' : fmtPct(gainPct(p.baseline, p.baselineOptimized));
-      const boostGain = p.baseline === 0 ? '—' : fmtPct(gainPct(p.baseline, p.boost));
-      const boostOverCore = p.baselineOptimized === 0 ? '—' : fmtPct(gainPct(p.baselineOptimized, p.boost));
-      return `| ${renderedRows(p.load)} | ${round1(p.baseline)} | ${round1(p.baselineOptimized)} | ${round1(p.boost)} | ${coreGain} | ${boostGain} | ${boostOverCore} |`;
-    });
-    return [
-      heading,
-      '',
-      ...thermalNote(result),
-      ...validationBlock(result),
-      '| Text rows | Baseline FPS | Core-opt FPS | Boost FPS | Core gain | Boost gain | Boost margin over core |',
-      '| ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
-      ...rows,
-      '',
-      chartPicture(`./graphs/fps-${result.platform}`, 'FPS @ load'),
-      '',
-    ].join('\n');
-  }
   const rows = points.map((p) => {
+    const valid = coreValidAt(report, p.load);
+    const coreFps = valid ? round1(p.baselineOptimized) : '—';
+    const coreGain = valid && p.baseline !== 0 ? fmtPct(gainPct(p.baseline, p.baselineOptimized)) : '—';
     const boostGain = p.baseline === 0 ? '—' : fmtPct(gainPct(p.baseline, p.boost));
-    return `| ${renderedRows(p.load)} | ${round1(p.baseline)} | ${round1(p.boost)} | ${boostGain} |`;
+    const boostOverCore = valid && p.baselineOptimized !== 0 ? fmtPct(gainPct(p.baselineOptimized, p.boost)) : '—';
+    return `| ${renderedRows(p.load)} | ${round1(p.baseline)} | ${coreFps} | ${round1(p.boost)} | ${coreGain} | ${boostGain} | ${boostOverCore} |`;
   });
   return [
-    heading,
+    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
     '',
     ...thermalNote(result),
     ...validationBlock(result),
-    '| Text rows | Baseline FPS | Boost FPS | Boost gain |',
-    '| ---: | ---: | ---: | ---: |',
+    '| Text rows | Baseline FPS | Core-opt FPS | Boost FPS | Core gain | Boost gain | Boost margin over core |',
+    '| ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...rows,
     '',
     chartPicture(`./graphs/fps-${result.platform}`, 'FPS @ load'),
@@ -396,10 +386,9 @@ function archiveIndexMarkdown(runs: RunResult[], hasTrend: boolean): string {
   const cell = (result: FpsResult | undefined): string => {
     if (!result) return '—';
     const boost = fmtGain(peakBoostGain(result));
-    if (!anyCore) return boost;
-    // Suppress the core gain for a thermal run that failed validation (the core series isn't trustworthy).
-    const core = isThermalRun(result) && !validate(result).valid ? undefined : peakCoreGain(result);
-    return `${boost} / ${fmtGain(core)}`;
+    // peakCoreGain returns the gain at the heaviest validated load (thermal) or anchored (legacy), or
+    // undefined when no load is trustworthy → renders as `—`.
+    return anyCore ? `${boost} / ${fmtGain(peakCoreGain(result))}` : boost;
   };
   const rows = runs.map((run) => {
     const dir = `results/rn-${run.context.rnVersion}/boost-${run.context.gitSha}`;

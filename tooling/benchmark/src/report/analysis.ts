@@ -212,19 +212,26 @@ function isFloorValid(level: ThermalLevel): boolean {
   return level !== 'unknown' && THERMAL_RANK[level] <= THERMAL_RANK[VALIDATION_FLOOR];
 }
 
-/** The pass/fail verdict that replaces the old anchor correction for thermal runs: the run is valid iff
- *  every capture was at the floor, the flag-invariant Boost curves agree, and replicates are tight. */
+/** Per-load verdict that replaces the old anchor correction for thermal runs. The core-optimized comparison
+ *  at a load is trustworthy only if every capture there was at the floor, the flag-invariant Boost curves
+ *  agree, and replicate spread is tight; loads that fail are dropped from the core series (Boost-vs-baseline
+ *  is robust and always shown). A noisy device taints individual transition loads, not the whole run. */
 export interface ValidationReport {
-  valid: boolean;
-  /** Loads with a capture above the floor, each with the worst level observed there. */
-  thermalBreaches: string[];
-  /** Informative loads where the two flag-invariant Boost curves disagree beyond tolerance. */
-  boostDivergences: string[];
-  /** Cells whose replicate IQR exceeded MAX_RELATIVE_IQR of the median. */
-  dispersions: string[];
+  /** Loads whose core comparison isn't trustworthy → core dropped there, each with its reason(s). */
+  invalidLoads: Map<number, string[]>;
+  /** True when every load's core comparison passed. */
+  allValid: boolean;
 }
 
 export function validate(result: FpsResult): ValidationReport {
+  const invalidLoads = new Map<number, string[]>();
+  const reject = (load: number, reason: string): void => {
+    const reasons = invalidLoads.get(load);
+    if (reasons) reasons.push(reason);
+    else invalidLoads.set(load, [reason]);
+  };
+
+  // (a) thermal — a load whose hottest end-of-capture level breached the floor.
   const worstBreach = new Map<number, ThermalLevel>();
   for (const m of result.measurements) {
     if (
@@ -234,11 +241,11 @@ export function validate(result: FpsResult): ValidationReport {
       worstBreach.set(m.load, m.thermalEnd);
     }
   }
-  const thermalBreaches = [...worstBreach.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([load, level]) => `load ${load}: captured at ${level} (> floor ${VALIDATION_FLOOR})`);
+  for (const [load, level] of [...worstBreach.entries()].sort((a, b) => a[0] - b[0])) {
+    reject(load, `captured at ${level} (> floor ${VALIDATION_FLOOR})`);
+  }
 
-  const boostDivergences: string[] = [];
+  // (b) the flag-invariant Boost curves disagree at an informative load.
   const points = convergencePoints(result);
   if (points) {
     for (const p of points) {
@@ -247,30 +254,30 @@ export function validate(result: FpsResult): ValidationReport {
       if (coreBoost === 0 || p.boost === 0) continue;
       const divergence = Math.abs(p.boost / coreBoost - 1);
       if (divergence > ANCHOR_DIVERGENCE_TOLERANCE) {
-        boostDivergences.push(
-          `load ${p.load}: flag-invariant Boost curves diverge ${(divergence * 100).toFixed(1)}% ` +
-            `(> ${(ANCHOR_DIVERGENCE_TOLERANCE * 100).toFixed(0)}% tolerance)`
+        reject(
+          p.load,
+          `Boost curves diverge ${(divergence * 100).toFixed(1)}% (> ${(ANCHOR_DIVERGENCE_TOLERANCE * 100).toFixed(0)}%)`
         );
       }
     }
   }
 
-  const dispersions: string[] = [];
+  // (c) a cell feeding the load's comparison has wide replicate spread.
   for (const cell of aggregate(result)) {
     if (cell.samples > 1 && cell.fps > 0 && cell.iqr / cell.fps > MAX_RELATIVE_IQR) {
-      dispersions.push(
-        `load ${cell.load} (${cell.profile}/${cell.boost}): replicate IQR ${cell.iqr.toFixed(1)}fps ` +
-          `(${((cell.iqr / cell.fps) * 100).toFixed(0)}% of median)`
+      reject(
+        cell.load,
+        `${cell.profile}/${cell.boost} replicate IQR ${((cell.iqr / cell.fps) * 100).toFixed(0)}% of median`
       );
     }
   }
 
-  return {
-    valid: thermalBreaches.length === 0 && boostDivergences.length === 0 && dispersions.length === 0,
-    thermalBreaches,
-    boostDivergences,
-    dispersions,
-  };
+  return { invalidLoads, allValid: invalidLoads.size === 0 };
+}
+
+/** Whether the core-optimized comparison at `load` is trustworthy (per-load validity). */
+export function coreValidAt(report: ValidationReport, load: number): boolean {
+  return !report.invalidLoads.has(load);
 }
 
 // ── Headline gains (regime-aware) ───────────────────────────────────────────────────────────────────────
@@ -284,17 +291,20 @@ export function peakBoostGain(result: FpsResult): number | undefined {
 }
 
 /** Core-vs-baseline FPS gain (%) at the heaviest load; `undefined` if the run isn't a two-profile run.
- *  Thermal runs use the direct ratio of medians (single build, common floor); legacy runs anchor across
- *  the two builds — so old archives keep their existing trend value. */
+ *  Thermal runs use the direct ratio of medians at the heaviest **validated** load (single build, common
+ *  floor); legacy runs anchor across the two builds — so old archives keep their existing trend value. */
 export function peakCoreGain(result: FpsResult): number | undefined {
   if (!hasProfile(result, 'core') || !hasProfile(result, 'default')) return undefined;
   const loads = loadsOf(result);
   if (loads.length === 0) return undefined;
-  const load = Math.max(...loads);
   if (isThermalRun(result)) {
-    const baseline = fpsAt(result, load, 'default', 'off');
-    return baseline === 0 ? undefined : gainPct(baseline, fpsAt(result, load, 'core', 'off'));
+    const report = validate(result);
+    const validLoads = loads.filter((l) => coreValidAt(report, l) && fpsAt(result, l, 'default', 'off') > 0);
+    if (validLoads.length === 0) return undefined;
+    const load = Math.max(...validLoads);
+    return gainPct(fpsAt(result, load, 'default', 'off'), fpsAt(result, load, 'core', 'off'));
   }
+  const load = Math.max(...loads);
   const points = anchoredCore(result);
   if (!points || points.length === 0) return undefined;
   const point = points.find((p) => p.load === load);

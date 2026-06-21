@@ -12,7 +12,7 @@
 
 > Hottest device thermal level during capture: **nominal**.
 
-> **✓ Validated** — every capture taken at the thermal floor, the flag-invariant Boost curves agree, and replicate spread is tight. Core-optimized FPS is the **direct** median (no anchor); chart whiskers show the replicate IQR.
+> **✓ Validated** — every load passed: captures at the thermal floor, the flag-invariant Boost curves agree, and replicate spread is tight. Core-optimized FPS is the **direct** median (no anchor); chart whiskers show the replicate IQR.
 
 | Text rows | Baseline FPS | Core-opt FPS | Boost FPS | Core gain | Boost gain | Boost margin over core |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -46,36 +46,36 @@
 
 > Hottest device thermal level during capture: **nominal**.
 
-> **⚠ INVALID** — this run failed validation, so the **core-optimized series is suppressed** (Boost-vs-baseline is still shown). Failed checks:
+> **⚠ Core-optimized validated at 15 of 20 loads.** The core series is shown only where the comparison is trustworthy and dropped (`—`) where it isn’t; Boost-vs-baseline is valid throughout. Dropped:
 
-> - load 174: flag-invariant Boost curves diverge 11.7% (> 8% tolerance)
-> - load 202: flag-invariant Boost curves diverge 8.7% (> 8% tolerance)
-> - load 230: flag-invariant Boost curves diverge 16.9% (> 8% tolerance)
-> - load 244: flag-invariant Boost curves diverge 8.7% (> 8% tolerance)
-> - load 118 (default/off): replicate IQR 9.0fps (30% of median)
+> - 236 rows: default/off replicate IQR 30% of median
+> - 348 rows: Boost curves diverge 11.7% (> 8%)
+> - 404 rows: Boost curves diverge 8.7% (> 8%)
+> - 460 rows: Boost curves diverge 16.9% (> 8%)
+> - 488 rows: Boost curves diverge 8.7% (> 8%)
 
-| Text rows | Baseline FPS | Boost FPS | Boost gain |
-| ---: | ---: | ---: | ---: |
-| 68 | 59.5 | 59.5 | +0.0% |
-| 96 | 59.5 | 59.5 | +0.0% |
-| 124 | 59.5 | 59.1 | -0.7% |
-| 152 | 59.5 | 58.9 | -1.0% |
-| 180 | 59.4 | 59.3 | -0.2% |
-| 208 | 56.5 | 59.3 | +5.0% |
-| 236 | 30.5 | 58.9 | +93.1% |
-| 264 | 35.6 | 56.7 | +59.3% |
-| 292 | 32.5 | 58.5 | +80.0% |
-| 320 | 28.3 | 54.3 | +91.9% |
-| 348 | 28.6 | 42.8 | +49.7% |
-| 376 | 25 | 35.6 | +42.4% |
-| 404 | 22.9 | 32.4 | +41.5% |
-| 432 | 20.8 | 31.5 | +51.4% |
-| 460 | 19.7 | 26.6 | +35.0% |
-| 488 | 19.7 | 30 | +52.3% |
-| 516 | 17.7 | 25 | +41.2% |
-| 544 | 16.1 | 25.2 | +56.5% |
-| 572 | 14.5 | 23.9 | +64.8% |
-| 600 | 14.1 | 21.9 | +55.3% |
+| Text rows | Baseline FPS | Core-opt FPS | Boost FPS | Core gain | Boost gain | Boost margin over core |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 68 | 59.5 | 59.5 | 59.5 | +0.0% | +0.0% | +0.0% |
+| 96 | 59.5 | 59.5 | 59.5 | +0.0% | +0.0% | +0.0% |
+| 124 | 59.5 | 59.5 | 59.1 | +0.0% | -0.7% | -0.7% |
+| 152 | 59.5 | 59.5 | 58.9 | +0.0% | -1.0% | -1.0% |
+| 180 | 59.4 | 59.6 | 59.3 | +0.3% | -0.2% | -0.5% |
+| 208 | 56.5 | 58.9 | 59.3 | +4.2% | +5.0% | +0.7% |
+| 236 | 30.5 | — | 58.9 | — | +93.1% | — |
+| 264 | 35.6 | 42.3 | 56.7 | +18.8% | +59.3% | +34.0% |
+| 292 | 32.5 | 39.8 | 58.5 | +22.5% | +80.0% | +47.0% |
+| 320 | 28.3 | 33.9 | 54.3 | +19.8% | +91.9% | +60.2% |
+| 348 | 28.6 | — | 42.8 | — | +49.7% | — |
+| 376 | 25 | 26.5 | 35.6 | +6.0% | +42.4% | +34.3% |
+| 404 | 22.9 | — | 32.4 | — | +41.5% | — |
+| 432 | 20.8 | 21.8 | 31.5 | +4.8% | +51.4% | +44.5% |
+| 460 | 19.7 | — | 26.6 | — | +35.0% | — |
+| 488 | 19.7 | — | 30 | — | +52.3% | — |
+| 516 | 17.7 | 20 | 25 | +13.0% | +41.2% | +25.0% |
+| 544 | 16.1 | 17.8 | 25.2 | +10.6% | +56.5% | +41.6% |
+| 572 | 14.5 | 16.8 | 23.9 | +15.9% | +64.8% | +42.3% |
+| 600 | 14.1 | 14 | 21.9 | -0.7% | +55.3% | +56.4% |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./graphs/fps-android.svg">
