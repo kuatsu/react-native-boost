@@ -42,10 +42,12 @@ if (baked.length > 0) {
   let featureFlags: FeatureFlags | undefined;
   try {
     featureFlags = require('react-native/src/private/featureflags/ReactNativeFeatureFlags') as FeatureFlags;
-  } catch {
+  } catch (error) {
     // Only a *missing module* is benign: older RN without the JS feature-flags module can't have these
-    // flags, so `core` correctly equals `baseline` for that version. Errors from `override` itself (e.g. it
-    // rejects because a flag was already read, violating the first-import ordering) must surface.
+    // flags, so `core` correctly equals `baseline` for that version. Any other failure (e.g. the module
+    // throws while evaluating) must surface — silently skipping the override would run the wrong profile.
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/cannot find module|unable to resolve module/i.test(message)) throw error;
     featureFlags = undefined;
   }
   if (featureFlags) {

@@ -110,7 +110,9 @@ async function sweepProfile(args: SweepArgs): Promise<FpsMeasurement[]> {
         `thermal ${sample.thermalStart}→${sample.thermalEnd})`
     )
   );
-  server.done.catch(() => {}); // may reject via close() after the race already settled — keep it handled
+  // Both may reject via close() after the await already settled (or before it's reached) — keep them handled.
+  server.done.catch(() => {});
+  server.firstContact.catch(() => {});
 
   try {
     relaunchWithProfile(device, profile);

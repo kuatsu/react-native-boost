@@ -236,6 +236,18 @@ describe('validate (per-load)', () => {
     expect(coreValidAt(report, 100)).toBe(false);
   });
 
+  it('drops a load missing one of the four required cells (partial run)', () => {
+    const report = validate(
+      result([
+        m(100, 'default', 'off', 40),
+        m(100, 'default', 'on', 60),
+        m(100, 'core', 'off', 44),
+        // core/on missing → incomplete, would otherwise read as 0 fps and distort the gain
+      ])
+    );
+    expect(coreValidAt(report, 100)).toBe(false);
+  });
+
   it('validates loads independently — one bad load does not taint the rest', () => {
     const report = validate(
       result([

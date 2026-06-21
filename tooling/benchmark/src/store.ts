@@ -15,10 +15,11 @@ import type {
 
 /** A measurement as it sits on disk: legacy archives predate the `profile` axis (and the thermal fields),
  *  so those are optional here; `loadRun` is the single boundary that migrates it onto `FpsMeasurement`. */
-type ArchivedMeasurement = Omit<FpsSample, 'thermalStart' | 'thermalEnd'> & {
+type ArchivedMeasurement = Omit<FpsSample, 'thermalStart' | 'thermalEnd' | 'replicate'> & {
   profile?: ProfileId;
   thermalStart?: ThermalLevel;
   thermalEnd?: ThermalLevel;
+  replicate?: number;
 };
 type ArchivedFpsResult = Omit<FpsResult, 'measurements'> & { measurements: ArchivedMeasurement[] };
 
@@ -63,6 +64,7 @@ export function loadRun(key: RunKey): RunResult | undefined {
           profile: m.profile ?? 'default',
           thermalStart: m.thermalStart ?? 'unknown',
           thermalEnd: m.thermalEnd ?? 'unknown',
+          replicate: m.replicate ?? 0,
         })),
       };
   }

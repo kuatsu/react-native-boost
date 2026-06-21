@@ -106,6 +106,14 @@ export function hasProfile(result: FpsResult, profile: ProfileId): boolean {
   return result.measurements.some((m) => m.profile === profile);
 }
 
+/** Whether all four cells the core comparison needs exist at this load. A partial/interrupted run can miss
+ *  some; without this guard a missing cell reads as 0 fps and distorts the gain (e.g. a false −100%). */
+function hasCoreComparisonCells(result: FpsResult, load: number): boolean {
+  const has = (profile: ProfileId, boost: BoostMode): boolean =>
+    result.measurements.some((m) => m.load === load && m.profile === profile && m.boost === boost);
+  return has('default', 'off') && has('default', 'on') && has('core', 'off') && has('core', 'on');
+}
+
 /** Median avgFps for a (profile, boost, load) cell over its replicates (a single-replicate cell = that
  *  value, so legacy runs are unchanged); 0 if the cell wasn't measured. */
 export function fpsAt(result: FpsResult, load: number, profile: ProfileId, boost: BoostMode): number {
@@ -132,21 +140,23 @@ export interface AnchoredPoint {
  *  profiles (a single-profile run can't be anchored — it renders as a classic two-series chart instead). */
 export function anchoredCore(result: FpsResult): AnchoredPoint[] | undefined {
   if (!hasProfile(result, 'core') || !hasProfile(result, 'default')) return undefined;
-  return loadsOf(result).map((load) => {
-    const baseline = fpsAt(result, load, 'default', 'off');
-    const boost = fpsAt(result, load, 'default', 'on');
-    const boostCore = fpsAt(result, load, 'core', 'on');
-    const coreOff = fpsAt(result, load, 'core', 'off');
-    const anchor = boostCore === 0 ? 1 : boost / boostCore;
-    return {
-      load,
-      baseline,
-      boost,
-      baselineOptimized: coreOff * anchor,
-      anchor,
-      anchorDivergence: Math.abs(anchor - 1),
-    };
-  });
+  return loadsOf(result)
+    .filter((load) => hasCoreComparisonCells(result, load))
+    .map((load) => {
+      const baseline = fpsAt(result, load, 'default', 'off');
+      const boost = fpsAt(result, load, 'default', 'on');
+      const boostCore = fpsAt(result, load, 'core', 'on');
+      const coreOff = fpsAt(result, load, 'core', 'off');
+      const anchor = boostCore === 0 ? 1 : boost / boostCore;
+      return {
+        load,
+        baseline,
+        boost,
+        baselineOptimized: coreOff * anchor,
+        anchor,
+        anchorDivergence: Math.abs(anchor - 1),
+      };
+    });
 }
 
 // ── Thermal-run regime: direct gains at a common floor + a pass/fail validator ──────────────────────────
@@ -231,7 +241,12 @@ export function validate(result: FpsResult): ValidationReport {
     else invalidLoads.set(load, [reason]);
   };
 
-  // (a) thermal — a load whose hottest end-of-capture level breached the floor.
+  // (a) completeness — a load missing any of the four cells the comparison needs (partial/interrupted run).
+  for (const load of loadsOf(result)) {
+    if (!hasCoreComparisonCells(result, load)) reject(load, 'missing one or more required profile/boost cells');
+  }
+
+  // (b) thermal — a load whose hottest end-of-capture level breached the floor.
   const worstBreach = new Map<number, ThermalLevel>();
   for (const m of result.measurements) {
     if (
@@ -245,7 +260,7 @@ export function validate(result: FpsResult): ValidationReport {
     reject(load, `captured at ${level} (> floor ${VALIDATION_FLOOR})`);
   }
 
-  // (b) the flag-invariant Boost curves disagree at an informative load.
+  // (c) the flag-invariant Boost curves disagree at an informative load.
   const points = convergencePoints(result);
   if (points) {
     for (const p of points) {
@@ -262,7 +277,7 @@ export function validate(result: FpsResult): ValidationReport {
     }
   }
 
-  // (c) a cell feeding the load's comparison has wide replicate spread.
+  // (d) a cell feeding the load's comparison has wide replicate spread.
   for (const cell of aggregate(result)) {
     if (cell.samples > 1 && cell.fps > 0 && cell.iqr / cell.fps > MAX_RELATIVE_IQR) {
       reject(

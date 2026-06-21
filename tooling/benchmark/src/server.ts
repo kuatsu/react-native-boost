@@ -103,7 +103,11 @@ export function startServer(
     // Awaitable so a sequential run can't re-bind the port before this socket is fully released.
     close: () =>
       new Promise<void>((resolve) => {
-        rejectDone(new Error('benchmark server closed before the app finished'));
+        // Reject both pending promises so a caller awaiting either (e.g. firstContact before any GET /plan)
+        // can't hang past close; a settled promise ignores the extra reject.
+        const error = new Error('benchmark server closed before the app finished');
+        rejectFirstContact(error);
+        rejectDone(error);
         server.close(() => resolve());
       }),
   };
