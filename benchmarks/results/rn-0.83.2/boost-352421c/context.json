@@ -1,0 +1,37 @@
+{
+  "boostVersion": "1.1.0",
+  "rnVersion": "0.83.2",
+  "reactVersion": "19.2.0",
+  "gitSha": "352421c",
+  "timestamp": "2026-06-21T18:53:17.993Z",
+  "sweep": {
+    "loads": [
+      34,
+      48,
+      62,
+      76,
+      90,
+      104,
+      118,
+      132,
+      146,
+      160,
+      174,
+      188,
+      202,
+      216,
+      230,
+      244,
+      258,
+      272,
+      286,
+      300
+    ],
+    "warmupMs": 2000,
+    "captureMs": 5000,
+    "tickMs": 16
+  },
+  "coreFlags": [
+    "reduceDefaultPropsInText"
+  ]
+}

@@ -24,23 +24,31 @@ function detectIosSimulator(): DeviceInfo | null {
   return null;
 }
 
-/** First connected physical iOS device (Xcode 15+ `devicectl`). */
+/** First connected physical iPhone/iPad (Xcode 15+ `devicectl`). `--json-output -` streams the device list
+ *  as JSON on stdout; we skip watches/TVs and paired-but-unreachable devices. */
 function detectIosDevice(): DeviceInfo | null {
-  const raw = tryExec('xcrun', ['devicectl', 'list', 'devices', '-j', '-q']);
+  const raw = tryExec('xcrun', ['devicectl', 'list', 'devices', '--json-output', '-']);
   if (!raw) return null;
   type Entry = {
-    hardwareProperties?: { udid?: string; marketingName?: string; osVersionNumber?: string };
+    hardwareProperties?: { udid?: string; marketingName?: string; deviceType?: string };
+    deviceProperties?: { osVersionNumber?: string };
     connectionProperties?: { tunnelState?: string };
   };
-  const devices = (JSON.parse(raw)?.result?.devices ?? []) as Entry[];
+  let devices: Entry[];
+  try {
+    devices = (JSON.parse(raw)?.result?.devices ?? []) as Entry[];
+  } catch {
+    return null;
+  }
   for (const device of devices) {
-    const udid = device.hardwareProperties?.udid;
-    if (!udid || device.connectionProperties?.tunnelState === 'unavailable') continue;
+    const { udid, deviceType, marketingName } = device.hardwareProperties ?? {};
+    if (!udid || (deviceType !== 'iPhone' && deviceType !== 'iPad')) continue;
+    if (device.connectionProperties?.tunnelState === 'unavailable') continue;
     return {
       platform: 'ios',
       kind: 'device',
-      name: device.hardwareProperties?.marketingName ?? 'iOS device',
-      osVersion: device.hardwareProperties?.osVersionNumber ?? 'unknown',
+      name: marketingName ?? 'iOS device',
+      osVersion: device.deviceProperties?.osVersionNumber ?? 'unknown',
       id: udid,
     };
   }

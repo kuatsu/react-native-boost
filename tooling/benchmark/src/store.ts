@@ -1,7 +1,27 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { archiveRoot, runDir } from './paths.ts';
-import type { BenchContext, FiberResult, FpsResult, Platform, RunKey, RunResult } from './schema.ts';
+import type {
+  BenchContext,
+  FiberResult,
+  FpsResult,
+  FpsSample,
+  Platform,
+  ProfileId,
+  RunKey,
+  RunResult,
+  ThermalLevel,
+} from './schema.ts';
+
+/** A measurement as it sits on disk: legacy archives predate the `profile` axis (and the thermal fields),
+ *  so those are optional here; `loadRun` is the single boundary that migrates it onto `FpsMeasurement`. */
+type ArchivedMeasurement = Omit<FpsSample, 'thermalStart' | 'thermalEnd' | 'replicate'> & {
+  profile?: ProfileId;
+  thermalStart?: ThermalLevel;
+  thermalEnd?: ThermalLevel;
+  replicate?: number;
+};
+type ArchivedFpsResult = Omit<FpsResult, 'measurements'> & { measurements: ArchivedMeasurement[] };
 
 /** The Boost commit SHA is the repo commit — Boost lives in this repo. */
 export const keyOf = (ctx: BenchContext): RunKey => ({ rnVersion: ctx.rnVersion, boostSha: ctx.gitSha });
@@ -35,8 +55,18 @@ export function loadRun(key: RunKey): RunResult | undefined {
   if (!context) return undefined;
   const fps: RunResult['fps'] = {};
   for (const platform of ['ios', 'android'] as Platform[]) {
-    const r = readJson<FpsResult>(join(dir, `${platform}.json`));
-    if (r) fps[platform] = r;
+    const r = readJson<ArchivedFpsResult>(join(dir, `${platform}.json`));
+    if (r)
+      fps[platform] = {
+        ...r,
+        measurements: r.measurements.map((m) => ({
+          ...m,
+          profile: m.profile ?? 'default',
+          thermalStart: m.thermalStart ?? 'unknown',
+          thermalEnd: m.thermalEnd ?? 'unknown',
+          replicate: m.replicate ?? 0,
+        })),
+      };
   }
   return { context, fibers: readJson<FiberResult>(join(dir, 'fibers.json')), fps };
 }

@@ -19,7 +19,10 @@ const round1 = (value: number): number => Math.round(value * 10) / 10;
  * Reduce a window of per-frame deltas (ms) into the FPS metrics the suite archives. A frame counts as
  * dropped when it overruns ~1.9× the target budget — the same threshold the on-screen FPS overlay uses.
  */
-export function summarize(deltas: number[], tickMs: number): Omit<FpsMeasurement, 'load' | 'boost'> {
+export function summarize(
+  deltas: number[],
+  tickMs: number
+): Omit<FpsMeasurement, 'load' | 'boost' | 'thermalStart' | 'thermalEnd' | 'replicate'> {
   // A capture with no frames means the app stalled completely — report 0 fps, not 1000.
   if (deltas.length === 0) {
     return { avgFps: 0, p50FrameMs: 0, p95FrameMs: 0, droppedPct: 0, frames: 0, durationMs: 0 };

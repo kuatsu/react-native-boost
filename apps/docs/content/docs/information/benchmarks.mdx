@@ -12,19 +12,25 @@ import fibersDark from './img/fibers.svg';
 
 To show what that React Native Boost buys you,
 the example app in the repository serves as a benchmark by rendering a heavy, constantly-updating screen and
-measuring the **frame rate**, once with Boost **off** and once with Boost **on**, on the exact same code and
-device.
+measuring the **frame rate**. We compare three configurations on the exact same device: the
+**baseline** (stock React Native), a [**core-optimized** configuration](#reducedefaultpropsintext-feature-flag-in-react-native) that turns on React Native's own
+overhead-reduction feature flag (detailed below), and **React Native Boost**.
 
 Higher frames per second (FPS) means a smoother UI. The ideal target is 60 FPS, which means you need to commit one new frame every ~16 ms. Once the app can't keep up, FPS drops and the interface starts to stutter.
 
 ## Results
 
-**iOS**: The baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while React Native Boost
-holds a solid 60 FPS far longer and stays roughly **66% faster** at the top end.
+**iOS**: The baseline starts dropping frames early and falls to ~32 FPS under the heaviest load, while React Native Boost
+holds a solid 60 FPS far longer and stays roughly **69% faster** at the top end. The core-optimized build (the middle
+line) recovers part of the gap — around **8–15%** under heavy load — but Boost stays roughly **50% ahead of even
+that**.
 
 <ThemedImage light={fpsIosLight} dark={fpsIosDark} alt="React Native Boost — iOS frame rate vs render load" />
 
-**Android**: Same shape, with Boost about **60% faster** at the heaviest load.
+**Android**: Same shape, with Boost about **55% faster** at the heaviest load (and higher at intermediate heavy loads).
+The core-optimized build helps here too — roughly **10–22%** at heavy loads. This device is noisy enough that a handful
+of loads couldn't be measured reliably for the core comparison and are left out of that middle line (you'll see small
+gaps), but Boost's lead is unambiguous throughout.
 
 <ThemedImage light={fpsAndroidLight} dark={fpsAndroidDark} alt="React Native Boost — Android frame rate vs render load" />
 
@@ -33,13 +39,13 @@ holds a solid 60 FPS far longer and stays roughly **66% faster** at the top end.
 The test screen is a live crypto-style order book: two stacked columns of rows, each
 row a few pieces of `Text`, all updating many times per second from a simulated price feed.
 
-Each run is a clean A/B on identical inputs:
+Each run is a clean comparison on identical inputs:
 
-1. **Run the app twice**, once with React Native Boost disabled (the *baseline*), once with it enabled. Nothing else changes.
-2. **Sweep the load.** For each version, the app steps through a range of row counts, from light to heavy.
-3. **Measure FPS at each step.** The app runs a continuous animation loop and records how long every frame
-   takes over a fixed window, then reports the average FPS (plus 95th-percentile frame time and the share of
-   dropped frames).
+1. **One build, three configurations.** From a single release build we run the *baseline* (stock React Native), a *core-optimized* configuration with React Native's `reduceDefaultPropsInText` flag enabled, and *React Native Boost*. Nothing else changes.
+2. **Sweep the load.** Each configuration steps through a range of row counts, from light to heavy.
+3. **Hold the temperature constant.** Phones throttle as they heat up, which would corrupt the comparison. So before every capture the app idles until the device cools back to a fixed thermal floor, and every sample records the device's thermal state. All three series are measured at the same temperature.
+4. **Measure FPS, repeatedly.** The app runs a continuous animation loop and records how long every frame takes over a fixed window, reporting the average FPS (plus 95th-percentile frame time and the share of dropped frames). Each point is captured several times and reported as the **median**, with the replicate spread drawn as error bars on the graphs.
+5. **Validate the core comparison.** Boost's frame rate doesn't depend on the `reduceDefaultPropsInText` flag, so the Boost curve should land identically in the baseline and core-optimized runs. This is used as a built-in sanity check / validator. At any load where the two disagree (or the device is simply too noisy to trust), the point is dropped as unreliable.
 
 Everything runs as a **release/production build on the New Architecture**.
 
@@ -70,4 +76,4 @@ In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced f
 // and <View> wrappers so that we no longer have any reason to export these APIs.`}
 />
 
-In our benchmarks, we couldn't find a measurable difference between enabling or disabling this feature flag in `Text` components, with `NativeText`, the component React Native Boost uses under the hood, remaining the most performant option.
+In our benchmark, the **core-optimized** series in the graphs enables `reduceDefaultPropsInText`. Under heavy render load it recovers roughly **8–15%** of the baseline's lost frame rate on iOS (a bit more on Android), but closes only part of the gap. `NativeText`, the component React Native Boost uses under the hood, stays well ahead — around a **50%** margin over the core-optimized build at the heaviest loads on iOS. As React Native lands more of these optimizations, we expect the core-optimized line to keep rising toward React Native Boost.

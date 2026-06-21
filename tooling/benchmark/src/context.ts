@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { BUILD_PROFILES } from './config.ts';
 import { repoRoot, exampleDir } from './paths.ts';
 import type { BenchContext, SweepConfig } from './schema.ts';
 
@@ -28,5 +29,6 @@ export function resolveContext(sweep: SweepConfig, timestamp: string): BenchCont
     gitSha,
     timestamp,
     sweep,
+    coreFlags: BUILD_PROFILES.find((p) => p.id === 'core')?.rnFlags ?? [],
   };
 }

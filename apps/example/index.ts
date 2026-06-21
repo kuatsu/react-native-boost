@@ -1,3 +1,7 @@
+// Must be the first import: bakes the benchmark `core` profile's RN feature-flag overrides in before
+// react-native's Text module evaluates (no-op outside the benchmark). See the module's @remarks.
+import './src/benchmark/feature-flags';
+
 import { registerRootComponent } from 'expo';
 
 import App from './src/app';

@@ -1,12 +1,20 @@
 import process from 'node:process';
 import { collectFibers } from './collectors/fibers.ts';
 import { collectFps } from './collectors/fps.ts';
-import { DEFAULT_SERVER_PORT, DEFAULT_SWEEP } from './config.ts';
+import {
+  BUILD_PROFILES,
+  DEFAULT_ORDER,
+  DEFAULT_REPLICATES,
+  DEFAULT_SEED,
+  DEFAULT_SERVER_PORT,
+  DEFAULT_SWEEP,
+  DEFAULT_THERMAL,
+} from './config.ts';
 import { resolveContext } from './context.ts';
 import { detectDevice } from './device.ts';
 import { writeArchiveIndex, writeReport, writeRunReport } from './report/index.ts';
 import { keyOf, listRuns, loadRun, saveContext, saveFibers, saveFps } from './store.ts';
-import type { BuildMode, Platform, SweepConfig } from './schema.ts';
+import type { BuildMode, Platform, SweepConfig, ThermalPolicy } from './schema.ts';
 
 type Flags = Record<string, string | true>;
 
@@ -28,6 +36,8 @@ function parseArgs(argv: string[]): Flags {
 }
 
 /** Validate a flag's value against an allowed set, failing loudly instead of casting a typo through. */
+function oneOf<T extends string>(value: string, allowed: readonly T[], flag: string): T;
+function oneOf<T extends string>(value: string | true | undefined, allowed: readonly T[], flag: string): T | undefined;
 function oneOf<T extends string>(value: string | true | undefined, allowed: readonly T[], flag: string): T | undefined {
   if (value === undefined) return undefined;
   if (value === true || !allowed.includes(value as T)) {
@@ -40,6 +50,16 @@ function oneOf<T extends string>(value: string | true | undefined, allowed: read
 function valueOf(value: string | true | undefined, flag: string): string | undefined {
   if (value === true) throw new Error(`--${flag} requires a value`);
   return value;
+}
+
+/** Parse a comma-separated flag into a list, validating every item against `allowed`; `undefined` if unset. */
+function listOf<T extends string>(
+  value: string | true | undefined,
+  allowed: readonly T[],
+  flag: string
+): T[] | undefined {
+  const raw = valueOf(value, flag);
+  return raw === undefined ? undefined : raw.split(',').map((item) => oneOf(item.trim(), allowed, flag));
 }
 
 const log = (message: string): void => {
@@ -62,11 +82,37 @@ async function main(): Promise<void> {
     throw new Error('--port must be an integer between 1 and 65535');
   }
   const only = oneOf(flags.only, ['fibers', 'fps'] as const, 'only');
-  const platformArg = valueOf(flags.platform, 'platform');
-  const explicitPlatform = platformArg !== undefined;
-  const platforms: Platform[] = explicitPlatform
-    ? platformArg.split(',').map((p) => oneOf(p.trim(), ['ios', 'android'] as const, 'platform')!)
-    : ['ios', 'android'];
+  const thermalFloor = oneOf(
+    flags['thermal-floor'],
+    ['nominal', 'fair', 'serious', 'critical'] as const,
+    'thermal-floor'
+  );
+  const maxWaitArg = valueOf(flags['thermal-max-wait'], 'thermal-max-wait');
+  const thermal: ThermalPolicy = {
+    ...DEFAULT_THERMAL,
+    ...(thermalFloor ? { floor: thermalFloor } : {}),
+    ...(maxWaitArg ? { maxWaitMs: Number(maxWaitArg) } : {}),
+  };
+  if (!Number.isFinite(thermal.maxWaitMs) || thermal.maxWaitMs < 0) {
+    throw new Error('--thermal-max-wait must be a non-negative number of milliseconds');
+  }
+  const replicatesArg = valueOf(flags.replicates, 'replicates');
+  const replicates = replicatesArg ? Number(replicatesArg) : DEFAULT_REPLICATES;
+  if (!Number.isInteger(replicates) || replicates < 1) {
+    throw new Error('--replicates must be a positive integer');
+  }
+  const order = oneOf(flags.order, ['ascending', 'palindrome', 'shuffle'] as const, 'order') ?? DEFAULT_ORDER;
+  const seedArg = valueOf(flags.seed, 'seed');
+  const seed = seedArg ? Number(seedArg) : DEFAULT_SEED;
+  if (!Number.isFinite(seed)) {
+    throw new TypeError('--seed must be a number');
+  }
+  const profileIds = BUILD_PROFILES.map((p) => p.id);
+  const selectedProfiles = listOf(flags.profiles, profileIds, 'profiles') ?? profileIds;
+  const profiles = BUILD_PROFILES.filter((p) => selectedProfiles.includes(p.id));
+  const selectedPlatforms = listOf(flags.platform, ['ios', 'android'] as const, 'platform');
+  const explicitPlatform = selectedPlatforms !== undefined;
+  const platforms: Platform[] = selectedPlatforms ?? ['ios', 'android'];
 
   const context = resolveContext(sweep, new Date().toISOString());
   const key = keyOf(context);
@@ -101,8 +147,11 @@ async function main(): Promise<void> {
         log(`• ${platform} — skipped: ${(error as Error).message}`);
         continue;
       }
-      log(`• ${platform} — FPS sweep`);
-      saveFps(key, await collectFps({ platform, buildMode, sweep, port, log }));
+      log(`• ${platform} — FPS sweep (profiles: ${profiles.map((p) => p.id).join(', ')})`);
+      saveFps(
+        key,
+        await collectFps({ platform, buildMode, sweep, port, profiles, thermal, replicates, order, seed, log })
+      );
     }
   }
 
