@@ -1,3 +1,4 @@
+import { effectiveFlags } from '../../benchmark/feature-flags';
 import { BenchmarkPlan, FpsMeasurement } from './protocol';
 
 /**
@@ -8,9 +9,10 @@ import { BenchmarkPlan, FpsMeasurement } from './protocol';
 const SERVER = process.env.EXPO_PUBLIC_BENCHMARK_SERVER ?? 'http://localhost:8099';
 
 export async function getPlan(): Promise<BenchmarkPlan> {
-  // Echo the RN flags baked into this bundle so the host can detect a stale build running the wrong
-  // profile (it asserts these match the profile it expects before trusting the sweep).
-  const flags = process.env.EXPO_PUBLIC_BENCHMARK_RN_FLAGS ?? '';
+  // Echo the RN flags that actually took effect (after override), so the host can reject a launch where
+  // the profile arg didn't arrive OR silently no-op'd — not just a stale bundle. The host compares this to
+  // the profile it relaunched with before trusting the sweep.
+  const flags = effectiveFlags.join(',');
   const response = await fetch(`${SERVER}/plan?flags=${encodeURIComponent(flags)}`);
   if (!response.ok) throw new Error(`plan request failed: ${response.status}`);
   return (await response.json()) as BenchmarkPlan;

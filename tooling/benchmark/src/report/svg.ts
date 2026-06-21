@@ -41,6 +41,8 @@ export interface Series {
   points: Point[];
   /** Render dashed (used to encode a second metric in the same platform color on the convergence trend). */
   dash?: boolean;
+  /** Optional per-point error whiskers (replicate dispersion), in the same y units as `points`. */
+  errors?: Array<{ x: number; lo: number; hi: number }>;
 }
 
 interface ChartOptions {
@@ -156,8 +158,20 @@ export function lineChart(options: ChartOptions, series: Series[], theme: Theme)
       const dots = s.points
         .map((p) => `<circle cx="${f.sx(p.x).toFixed(1)}" cy="${f.sy(p.y).toFixed(1)}" r="3.5" fill="${s.color}"/>`)
         .join('');
+      const whiskers = (s.errors ?? [])
+        .map((e) => {
+          const x = f.sx(e.x).toFixed(1);
+          const yLo = f.sy(e.lo).toFixed(1);
+          const yHi = f.sy(e.hi).toFixed(1);
+          return (
+            `<line x1="${x}" y1="${yLo}" x2="${x}" y2="${yHi}" stroke="${s.color}" stroke-width="1.5" opacity="0.45"/>` +
+            `<line x1="${(Number(x) - 3).toFixed(1)}" y1="${yHi}" x2="${(Number(x) + 3).toFixed(1)}" y2="${yHi}" stroke="${s.color}" stroke-width="1.5" opacity="0.45"/>` +
+            `<line x1="${(Number(x) - 3).toFixed(1)}" y1="${yLo}" x2="${(Number(x) + 3).toFixed(1)}" y2="${yLo}" stroke="${s.color}" stroke-width="1.5" opacity="0.45"/>`
+          );
+        })
+        .join('');
       const dash = s.dash ? ' stroke-dasharray="6 4"' : '';
-      return `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2.5"${dash}/>${dots}`;
+      return `${whiskers}<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2.5"${dash}/>${dots}`;
     })
     .join('\n');
   return wrap(f.width, f.height, [chrome(options, f, c), lines, legend(series, f, c)].join('\n'));

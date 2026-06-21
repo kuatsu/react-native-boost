@@ -10,13 +10,17 @@ import type {
   ProfileId,
   RunKey,
   RunResult,
+  ThermalLevel,
 } from './schema.ts';
 
-/** A run's FPS file as it sits on disk: legacy archives predate the `profile` axis, so it's optional here
- *  and `loadRun` is the single boundary that migrates it onto the in-memory `FpsMeasurement` shape. */
-type ArchivedFpsResult = Omit<FpsResult, 'measurements'> & {
-  measurements: Array<FpsSample & { profile?: ProfileId }>;
+/** A measurement as it sits on disk: legacy archives predate the `profile` axis (and the thermal fields),
+ *  so those are optional here; `loadRun` is the single boundary that migrates it onto `FpsMeasurement`. */
+type ArchivedMeasurement = Omit<FpsSample, 'thermalStart' | 'thermalEnd'> & {
+  profile?: ProfileId;
+  thermalStart?: ThermalLevel;
+  thermalEnd?: ThermalLevel;
 };
+type ArchivedFpsResult = Omit<FpsResult, 'measurements'> & { measurements: ArchivedMeasurement[] };
 
 /** The Boost commit SHA is the repo commit — Boost lives in this repo. */
 export const keyOf = (ctx: BenchContext): RunKey => ({ rnVersion: ctx.rnVersion, boostSha: ctx.gitSha });
@@ -52,7 +56,15 @@ export function loadRun(key: RunKey): RunResult | undefined {
   for (const platform of ['ios', 'android'] as Platform[]) {
     const r = readJson<ArchivedFpsResult>(join(dir, `${platform}.json`));
     if (r)
-      fps[platform] = { ...r, measurements: r.measurements.map((m) => ({ ...m, profile: m.profile ?? 'default' })) };
+      fps[platform] = {
+        ...r,
+        measurements: r.measurements.map((m) => ({
+          ...m,
+          profile: m.profile ?? 'default',
+          thermalStart: m.thermalStart ?? 'unknown',
+          thermalEnd: m.thermalEnd ?? 'unknown',
+        })),
+      };
   }
   return { context, fibers: readJson<FiberResult>(join(dir, 'fibers.json')), fps };
 }

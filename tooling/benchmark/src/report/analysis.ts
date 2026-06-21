@@ -1,18 +1,102 @@
 /**
- * Pure FPS-report math (no IO) so the cross-build anchor normalization and gain computations can be
- * unit-tested in isolation. See §4.2 of the plan: `baseline` and `baseline-optimized` come from two
- * separate builds captured minutes apart, so their absolute FPS isn't directly comparable. The `boost`
- * curve is flag-invariant (it renders the native host, bypassing the JS `Text` wrapper the flag trims),
- * so per load it's the common reference that stitches the two builds onto one thermal axis.
+ * Pure FPS-report math (no IO), unit-tested in isolation. Two regimes:
+ *
+ * - **Thermal runs** (the current methodology): one build, both profiles relaunched seconds apart and every
+ *   capture gated to a fixed thermal floor, so `default_off` and `core_off` are directly comparable. Gains
+ *   are direct ratios of replicate medians, and `validate` turns the old cross-build anchor into a pass/fail
+ *   sanity check (the flag-invariant Boost curves must agree; samples must be at the floor).
+ * - **Legacy runs** (pre-thermal archives): two separate builds captured minutes apart, so absolute FPS
+ *   isn't directly comparable. The flag-invariant Boost curve is the per-load reference that `anchoredCore`
+ *   uses to lift the core build onto the baseline build's axis. Kept unchanged so old reports stay identical.
+ *
+ * `isThermalRun` selects the regime; the report renders accordingly.
  */
 
-import type { BoostMode, FpsResult, ProfileId } from '../schema.ts';
+import type { BoostMode, FpsMeasurement, FpsResult, ProfileId, ThermalLevel } from '../schema.ts';
+
+/** Heat ordering for thermal levels; `unknown` ranks below `nominal` so it never reads as "the worst
+ *  observed" in the informational report note (gating treats unknown as hot — that lives in the runner). */
+const THERMAL_RANK: Record<ThermalLevel, number> = { unknown: -1, nominal: 0, fair: 1, serious: 2, critical: 3 };
+
+/** The hottest thermal level any sample observed, or `null` when none carried a known level (legacy runs
+ *  predate the thermal signal) — callers suppress the thermal note in that case. */
+export function worstThermalLevel(result: FpsResult): ThermalLevel | null {
+  let worst: ThermalLevel | null = null;
+  let worstRank = -1;
+  const consider = (level: ThermalLevel): void => {
+    if (THERMAL_RANK[level] > worstRank) {
+      worstRank = THERMAL_RANK[level];
+      worst = level;
+    }
+  };
+  for (const m of result.measurements) {
+    consider(m.thermalStart);
+    consider(m.thermalEnd);
+  }
+  return worst;
+}
 
 /** Boost curves should match across the two builds; a per-load divergence beyond this marks the run
  *  anchor-suspect (thermal drift the anchor can't be trusted to correct). */
 export const ANCHOR_DIVERGENCE_TOLERANCE = 0.08;
 
 export const gainPct = (off: number, on: number): number => (off === 0 ? 0 : ((on - off) / off) * 100);
+
+/** Linear-interpolated quantile of an already-ascending-sorted array. */
+function quantile(sortedAscending: number[], q: number): number {
+  if (sortedAscending.length === 0) return 0;
+  const position = (sortedAscending.length - 1) * q;
+  const lower = Math.floor(position);
+  const upper = sortedAscending[lower + 1];
+  return upper === undefined
+    ? sortedAscending[lower]
+    : sortedAscending[lower] + (position - lower) * (upper - sortedAscending[lower]);
+}
+
+export function median(values: number[]): number {
+  return quantile(
+    [...values].sort((a, b) => a - b),
+    0.5
+  );
+}
+
+/** One (profile, boost, load) cell reduced over its replicates: the median FPS plus a dispersion band. */
+export interface AggregatedPoint {
+  load: number;
+  profile: ProfileId;
+  boost: BoostMode;
+  /** Median avgFps over the cell's replicates. */
+  fps: number;
+  /** Interquartile range (p75 − p25) of avgFps — the error band the report draws. */
+  iqr: number;
+  /** How many replicate samples fed this cell. */
+  samples: number;
+}
+
+/** Reduce raw replicated measurements to one point per (profile, boost, load), median + IQR over replicates. */
+export function aggregate(result: FpsResult): AggregatedPoint[] {
+  const groups = new Map<string, FpsMeasurement[]>();
+  for (const measurement of result.measurements) {
+    const key = `${measurement.profile}|${measurement.boost}|${measurement.load}`;
+    const list = groups.get(key);
+    if (list) list.push(measurement);
+    else groups.set(key, [measurement]);
+  }
+  const points: AggregatedPoint[] = [];
+  for (const list of groups.values()) {
+    const sortedFps = list.map((m) => m.avgFps).sort((a, b) => a - b);
+    const { load, profile, boost } = list[0];
+    points.push({
+      load,
+      profile,
+      boost,
+      fps: quantile(sortedFps, 0.5),
+      iqr: quantile(sortedFps, 0.75) - quantile(sortedFps, 0.25),
+      samples: list.length,
+    });
+  }
+  return points.sort((a, b) => a.load - b.load);
+}
 
 export function loadsOf(result: FpsResult): number[] {
   return [...new Set(result.measurements.map((m) => m.load))].sort((a, b) => a - b);
@@ -22,8 +106,11 @@ export function hasProfile(result: FpsResult, profile: ProfileId): boolean {
   return result.measurements.some((m) => m.profile === profile);
 }
 
+/** Median avgFps for a (profile, boost, load) cell over its replicates (a single-replicate cell = that
+ *  value, so legacy runs are unchanged); 0 if the cell wasn't measured. */
 export function fpsAt(result: FpsResult, load: number, profile: ProfileId, boost: BoostMode): number {
-  return result.measurements.find((m) => m.load === load && m.profile === profile && m.boost === boost)?.avgFps ?? 0;
+  const matches = result.measurements.filter((m) => m.load === load && m.profile === profile && m.boost === boost);
+  return matches.length === 0 ? 0 : median(matches.map((m) => m.avgFps));
 }
 
 /** One load's three comparable FPS values, with the core build anchored onto the baseline build's axis. */
@@ -62,7 +149,133 @@ export function anchoredCore(result: FpsResult): AnchoredPoint[] | undefined {
   });
 }
 
-/** Boost-vs-baseline FPS gain (%) at the heaviest load — the headline number, within build 1. */
+// ── Thermal-run regime: direct gains at a common floor + a pass/fail validator ──────────────────────────
+
+/** FPS within this margin of the detected refresh ceiling carries no signal → that load is "clamped"
+ *  (matches the runner's budget-focus threshold). */
+const CLAMP_EPSILON_FPS = 2;
+
+/** The thermal floor a published run is validated against (the default the runner gates to). */
+const VALIDATION_FLOOR: ThermalLevel = 'fair';
+
+/** Replicate dispersion (IQR as a fraction of the cell's median) above this marks a cell too noisy to trust. */
+const MAX_RELATIVE_IQR = 0.2;
+
+/** Whether this run carries the thermal signal (so it was gated + replicated → direct gains + validation),
+ *  vs a legacy pre-thermal archive (→ the cross-build anchor). */
+export function isThermalRun(result: FpsResult): boolean {
+  return worstThermalLevel(result) !== null;
+}
+
+/** One load's three directly-comparable median FPS values (single build, gated to a common floor), with
+ *  dispersion bands and whether the load is informative (not pinned at the refresh ceiling). */
+export interface ConvergencePoint {
+  load: number;
+  baseline: number;
+  boost: number;
+  baselineOptimized: number;
+  baselineIqr: number;
+  boostIqr: number;
+  baselineOptimizedIqr: number;
+  /** False when every condition pins at the refresh ceiling (no FPS signal to compare). */
+  informative: boolean;
+}
+
+/** Direct three-series points for a thermal run (no anchor), or `undefined` unless it holds BOTH profiles. */
+export function convergencePoints(result: FpsResult): ConvergencePoint[] | undefined {
+  if (!hasProfile(result, 'core') || !hasProfile(result, 'default')) return undefined;
+  const cells = aggregate(result);
+  const ceiling = cells.length === 0 ? 0 : Math.max(...cells.map((c) => c.fps));
+  const cellAt = (load: number, profile: ProfileId, boost: BoostMode): AggregatedPoint | undefined =>
+    cells.find((c) => c.load === load && c.profile === profile && c.boost === boost);
+  return loadsOf(result).map((load) => {
+    const baseline = cellAt(load, 'default', 'off');
+    const boost = cellAt(load, 'default', 'on');
+    const coreOff = cellAt(load, 'core', 'off');
+    const baselineFps = baseline?.fps ?? 0;
+    return {
+      load,
+      baseline: baselineFps,
+      boost: boost?.fps ?? 0,
+      baselineOptimized: coreOff?.fps ?? 0,
+      baselineIqr: baseline?.iqr ?? 0,
+      boostIqr: boost?.iqr ?? 0,
+      baselineOptimizedIqr: coreOff?.iqr ?? 0,
+      informative: baselineFps > 0 && baselineFps < ceiling - CLAMP_EPSILON_FPS,
+    };
+  });
+}
+
+/** Whether a thermalEnd reading is at-or-below the validation floor (a knowable level — `unknown` fails,
+ *  since we can't confirm it). */
+function isFloorValid(level: ThermalLevel): boolean {
+  return level !== 'unknown' && THERMAL_RANK[level] <= THERMAL_RANK[VALIDATION_FLOOR];
+}
+
+/** The pass/fail verdict that replaces the old anchor correction for thermal runs: the run is valid iff
+ *  every capture was at the floor, the flag-invariant Boost curves agree, and replicates are tight. */
+export interface ValidationReport {
+  valid: boolean;
+  /** Loads with a capture above the floor, each with the worst level observed there. */
+  thermalBreaches: string[];
+  /** Informative loads where the two flag-invariant Boost curves disagree beyond tolerance. */
+  boostDivergences: string[];
+  /** Cells whose replicate IQR exceeded MAX_RELATIVE_IQR of the median. */
+  dispersions: string[];
+}
+
+export function validate(result: FpsResult): ValidationReport {
+  const worstBreach = new Map<number, ThermalLevel>();
+  for (const m of result.measurements) {
+    if (
+      !isFloorValid(m.thermalEnd) &&
+      THERMAL_RANK[m.thermalEnd] > THERMAL_RANK[worstBreach.get(m.load) ?? 'unknown']
+    ) {
+      worstBreach.set(m.load, m.thermalEnd);
+    }
+  }
+  const thermalBreaches = [...worstBreach.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([load, level]) => `load ${load}: captured at ${level} (> floor ${VALIDATION_FLOOR})`);
+
+  const boostDivergences: string[] = [];
+  const points = convergencePoints(result);
+  if (points) {
+    for (const p of points) {
+      if (!p.informative) continue;
+      const coreBoost = fpsAt(result, p.load, 'core', 'on');
+      if (coreBoost === 0 || p.boost === 0) continue;
+      const divergence = Math.abs(p.boost / coreBoost - 1);
+      if (divergence > ANCHOR_DIVERGENCE_TOLERANCE) {
+        boostDivergences.push(
+          `load ${p.load}: flag-invariant Boost curves diverge ${(divergence * 100).toFixed(1)}% ` +
+            `(> ${(ANCHOR_DIVERGENCE_TOLERANCE * 100).toFixed(0)}% tolerance)`
+        );
+      }
+    }
+  }
+
+  const dispersions: string[] = [];
+  for (const cell of aggregate(result)) {
+    if (cell.samples > 1 && cell.fps > 0 && cell.iqr / cell.fps > MAX_RELATIVE_IQR) {
+      dispersions.push(
+        `load ${cell.load} (${cell.profile}/${cell.boost}): replicate IQR ${cell.iqr.toFixed(1)}fps ` +
+          `(${((cell.iqr / cell.fps) * 100).toFixed(0)}% of median)`
+      );
+    }
+  }
+
+  return {
+    valid: thermalBreaches.length === 0 && boostDivergences.length === 0 && dispersions.length === 0,
+    thermalBreaches,
+    boostDivergences,
+    dispersions,
+  };
+}
+
+// ── Headline gains (regime-aware) ───────────────────────────────────────────────────────────────────────
+
+/** Boost-vs-baseline FPS gain (%) at the heaviest load — the headline number. */
 export function peakBoostGain(result: FpsResult): number | undefined {
   const loads = loadsOf(result);
   if (loads.length === 0) return undefined;
@@ -70,12 +283,21 @@ export function peakBoostGain(result: FpsResult): number | undefined {
   return gainPct(fpsAt(result, load, 'default', 'off'), fpsAt(result, load, 'default', 'on'));
 }
 
-/** Core-vs-baseline FPS gain (%) at the heaviest load, anchored across builds; `undefined` if no core. */
+/** Core-vs-baseline FPS gain (%) at the heaviest load; `undefined` if the run isn't a two-profile run.
+ *  Thermal runs use the direct ratio of medians (single build, common floor); legacy runs anchor across
+ *  the two builds — so old archives keep their existing trend value. */
 export function peakCoreGain(result: FpsResult): number | undefined {
+  if (!hasProfile(result, 'core') || !hasProfile(result, 'default')) return undefined;
+  const loads = loadsOf(result);
+  if (loads.length === 0) return undefined;
+  const load = Math.max(...loads);
+  if (isThermalRun(result)) {
+    const baseline = fpsAt(result, load, 'default', 'off');
+    return baseline === 0 ? undefined : gainPct(baseline, fpsAt(result, load, 'core', 'off'));
+  }
   const points = anchoredCore(result);
   if (!points || points.length === 0) return undefined;
-  const maxLoad = Math.max(...points.map((p) => p.load));
-  const point = points.find((p) => p.load === maxLoad);
+  const point = points.find((p) => p.load === load);
   if (!point || point.baseline === 0) return undefined;
   return gainPct(point.baseline, point.baselineOptimized);
 }

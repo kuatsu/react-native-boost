@@ -1,4 +1,4 @@
-import type { ProfileSpec, SweepConfig } from './schema.ts';
+import type { OrderMode, ProfileSpec, SweepConfig, ThermalPolicy } from './schema.ts';
 
 /**
  * Default sweep. Loads are rows rendered per side (each row = 6 churning Text cells): 34→300 spans
@@ -24,6 +24,26 @@ export const BUILD_PROFILES: ProfileSpec[] = [
   { id: 'default', label: 'Baseline', rnFlags: [] },
   { id: 'core', label: 'Core-optimized', rnFlags: ['reduceDefaultPropsInText'] },
 ];
+
+/**
+ * Default thermal gating: cool to `fair` before each capture (not `nominal` — sustained-load tests can't
+ * reach it and would stall), wait at most 90s (then capture hot + flag), poll once a second. `fair` sits
+ * below the throttle knee on both iOS and Android, so captures at-or-below it are directly comparable.
+ */
+export const DEFAULT_THERMAL: ThermalPolicy = {
+  floor: 'fair',
+  maxWaitMs: 90_000,
+  pollMs: 1000,
+};
+
+/** How many times each (profile, boost, load) cell is measured by default; the report medians over them. */
+export const DEFAULT_REPLICATES = 3;
+
+/** Default load visitation order across replicate passes — palindrome averages out a linear time-trend. */
+export const DEFAULT_ORDER: OrderMode = 'palindrome';
+
+/** Default PRNG seed for the 'shuffle' order (reproducible runs). */
+export const DEFAULT_SEED = 1337;
 
 /** Fixed local port for the results server. Baked into the benchmark build via env. */
 export const DEFAULT_SERVER_PORT = 8099;

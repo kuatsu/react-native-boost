@@ -11,6 +11,12 @@
 
 export type BoostMode = 'on' | 'off';
 
+/** Device thermal state at capture time, recorded with every sample so the host can gate/validate on it. */
+export type ThermalLevel = 'nominal' | 'fair' | 'serious' | 'critical' | 'unknown';
+
+/** Load visitation order across replicate passes (decorrelates load from elapsed time). */
+export type OrderMode = 'ascending' | 'palindrome' | 'shuffle';
+
 /** The sweep the app pulls from the server on boot. */
 export interface BenchmarkPlan {
   loads: number[];
@@ -18,6 +24,16 @@ export interface BenchmarkPlan {
   captureMs: number;
   tickMs: number;
   boostModes: BoostMode[];
+  /** Cool the device to ≤ this thermal level before each capture (bounded by thermalMaxWaitMs). */
+  thermalFloor: ThermalLevel;
+  thermalMaxWaitMs: number;
+  thermalPollMs: number;
+  /** How many times to measure each (boost, load) cell. */
+  replicates: number;
+  /** Order to visit loads in across replicate passes. */
+  order: OrderMode;
+  /** Seed for the 'shuffle' order's PRNG. */
+  seed: number;
 }
 
 /** One captured config the app posts back. */
@@ -30,4 +46,9 @@ export interface FpsMeasurement {
   droppedPct: number;
   frames: number;
   durationMs: number;
+  /** Thermal state at the start / end of the capture window — the heat the sample was taken under. */
+  thermalStart: ThermalLevel;
+  thermalEnd: ThermalLevel;
+  /** Which replicate of this (boost, load) cell this is (0-based). */
+  replicate: number;
 }

@@ -1,60 +1,47 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync, spawn } from 'node:child_process';
 import { exampleDir } from './paths.ts';
-import type { BuildMode, DeviceInfo } from './schema.ts';
+import type { BuildMode, DeviceInfo, ProfileSpec } from './schema.ts';
 
-/**
- * Force Android's release JS bundle to be regenerated on the next build. Gradle's bundle task is
- * up-to-date-cached on JS *source* changes only — it can't see the per-profile feature flags, which are
- * baked via the `EXPO_PUBLIC_BENCHMARK_RN_FLAGS` env. Without this, a second profile silently reuses the
- * first profile's bundle (the staleness handshake catches it, but the run dies). iOS re-bundles every
- * build via its script phase, so it never hits this. Build cache is off, so deleting the task's output
- * dirs is enough to make Gradle (and Metro, which picks up `EXPO_PUBLIC_*` changes) re-run.
- */
-function clearAndroidReleaseBundle(): void {
-  for (const dir of ['app/build/generated/assets/react', 'app/build/generated/res/react']) {
-    rmSync(join(exampleDir(), 'android', dir), { recursive: true, force: true });
-  }
-}
+const IOS_BUNDLE_ID = 'com.kuatsu-mkrause.react-native-boost-example';
+const ANDROID_PACKAGE = 'com.kuatsumkrause.reactnativeboostexample';
+const ANDROID_ACTIVITY = '.MainActivity';
 
-function expoArgs(device: DeviceInfo, buildMode: BuildMode): string[] {
-  // Release embeds the JS bundle (env baked in at build time), so no Metro dev server is needed and the
-  // process exits after launch. Debug keeps Metro attached.
-  const release = buildMode === 'release';
+function expoArgs(device: DeviceInfo): string[] {
+  // The benchmark only measures release: the JS bundle is embedded (env baked at build time), no Metro dev
+  // server is needed, and the CLI process exits after install+launch — that exit is the build-done signal.
   if (device.platform === 'ios') {
-    // iOS resolves a simulator/device by UDID.
-    return [
-      'expo',
-      'run:ios',
-      '--device',
-      device.id,
-      ...(release ? ['--configuration', 'Release', '--no-bundler'] : []),
-    ];
+    return ['expo', 'run:ios', '--device', device.id, '--configuration', 'Release', '--no-bundler'];
   }
-  // Android's `--device` matches AVD names, not adb serials — target via ANDROID_SERIAL (set in launchApp).
-  return ['expo', 'run:android', ...(release ? ['--variant', 'release', '--no-bundler'] : [])];
+  // Android's `--device` matches AVD names, not adb serials — target via ANDROID_SERIAL (set in buildAndInstall).
+  return ['expo', 'run:android', '--variant', 'release', '--no-bundler'];
 }
 
-export interface Launch {
-  child: ChildProcess;
-  /** Rejects only on a non-zero exit (a build/install failure). A clean exit is expected for release
-   *  builds — the app keeps running after the process detaches — so it intentionally never resolves. */
-  buildFailure: Promise<never>;
+/** Best-effort exec that ignores failures — e.g. terminating an app instance that may not be running. */
+function tryExecFile(command: string, args: string[]): void {
+  try {
+    execFileSync(command, args, { stdio: 'ignore' });
+  } catch {
+    // ignore
+  }
 }
 
 /**
- * Build, install, and launch the example app on `device` via the Expo CLI, with the benchmark env baked
- * into the (release) JS bundle. Reuses the existing native project for an incremental build.
+ * Build + install the example app on `device` once (release). The profile is **not** baked — it's selected
+ * per launch by `relaunchWithProfile`, so the whole sweep runs against one build (no per-profile rebuild,
+ * no cross-build thermal drift). Release `expo run:*` builds, installs, launches once, then the CLI process
+ * exits; that clean exit is the build-done signal. Resolves on success, rejects on a build/install failure.
  */
-export function launchApp(device: DeviceInfo, buildMode: BuildMode, env: Record<string, string>): Launch {
+export function buildAndInstall(device: DeviceInfo, buildMode: BuildMode, env: Record<string, string>): Promise<void> {
+  if (buildMode !== 'release') {
+    return Promise.reject(
+      new Error('launch-arg profile selection requires --mode release (debug keeps Metro attached and never detaches)')
+    );
+  }
   // Refresh the `.unoptimized` twins the A/B render depends on (the `preios`/`preandroid` hooks are
   // bypassed by calling the Expo CLI directly).
   execFileSync('node', ['scripts/gen-unoptimized.mjs'], { cwd: exampleDir(), stdio: 'ignore' });
 
-  if (device.platform === 'android' && buildMode === 'release') clearAndroidReleaseBundle();
-
-  const args = expoArgs(device, buildMode);
+  const args = expoArgs(device);
   // ANDROID_SERIAL pins adb (and Expo's install/launch) to the detected emulator/device.
   const targeting = device.platform === 'android' ? { ANDROID_SERIAL: device.id } : {};
   const child = spawn('pnpm', ['exec', ...args], {
@@ -62,11 +49,50 @@ export function launchApp(device: DeviceInfo, buildMode: BuildMode, env: Record<
     stdio: 'inherit',
     env: { ...process.env, ...env, ...targeting },
   });
-  const buildFailure = new Promise<never>((_resolve, reject) => {
-    child.on('exit', (code) => {
-      if (code !== null && code !== 0) reject(new Error(`\`expo ${args[1]}\` exited with code ${code}`));
-    });
+  return new Promise<void>((resolve, reject) => {
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`\`expo ${args[1]}\` exited with code ${code}`))
+    );
     child.on('error', reject);
   });
-  return { child, buildFailure };
+}
+
+/**
+ * Terminate any running instance and relaunch the installed app with `profile`'s RN flags passed as a
+ * launch argument (`--rn-flags=` on iOS, `rnFlags` intent extra on Android), so the profile is selected at
+ * launch. Synchronous: the launch command returns once the OS has started the app (it then runs detached);
+ * whether it actually came up is confirmed by the server handshake, not here.
+ */
+export function relaunchWithProfile(device: DeviceInfo, profile: ProfileSpec): void {
+  const flags = profile.rnFlags.join(',');
+  if (device.platform === 'ios') {
+    if (device.kind === 'simulator') {
+      tryExecFile('xcrun', ['simctl', 'terminate', device.id, IOS_BUNDLE_ID]);
+      execFileSync('xcrun', ['simctl', 'launch', device.id, IOS_BUNDLE_ID, `--rn-flags=${flags}`], { stdio: 'ignore' });
+    } else {
+      execFileSync(
+        'xcrun',
+        [
+          'devicectl',
+          'device',
+          'process',
+          'launch',
+          '--device',
+          device.id,
+          '--terminate-existing',
+          IOS_BUNDLE_ID,
+          `--rn-flags=${flags}`,
+        ],
+        { stdio: 'ignore' }
+      );
+    }
+    return;
+  }
+  // force-stop ends the singleTask process so a fresh JS init reads the new intent extra.
+  tryExecFile('adb', ['-s', device.id, 'shell', 'am', 'force-stop', ANDROID_PACKAGE]);
+  execFileSync(
+    'adb',
+    ['-s', device.id, 'shell', 'am', 'start', '-n', `${ANDROID_PACKAGE}/${ANDROID_ACTIVITY}`, '--es', 'rnFlags', flags],
+    { stdio: 'ignore' }
+  );
 }
