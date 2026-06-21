@@ -40,7 +40,7 @@ Commit messages follow Conventional Commits; a commitlint pre-commit hook enforc
   - `react-native-boost/runtime` — the runtime helper library (`src/runtime`), imported into user code by the plugin
 - `packages/react-native-time-to-render` — a private RN TurboModule used by the example app to measure render time for benchmarking
 - `apps/example` — Expo benchmark and example app
-- `apps/docs` — Docusaurus documentation site
+- `apps/docs` — Fumadoc documentation site
 
 ### Plugin pipeline (`src/plugin`)
 

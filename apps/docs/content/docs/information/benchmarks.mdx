@@ -51,3 +51,21 @@ There's also a second, device-independent measurement. For a single row, we coun
 <ThemedImage light={fibersLight} dark={fibersDark} alt="React Native Boost — React tree nodes with and without Boost" />
 
 Fewer nodes means less for React to build and re-check on every frame.
+
+### Time-to-mount
+
+For previous versions of React Native, we also published benchmarks showing heavy performance improvements in initial render (mounting) times. `Text` components optimized through React Native Boost rendered up to 50% faster on iOS, and around 20% faster on Android, compared to the baseline standard `Text` component.
+
+Thanks to various improvements to the reconciler and other internals in React Native 0.78, this advantage has shrunken to only around ~4-6% in recent benchmarks. React Native Boost remains advantageous for frequently-updated screens, less so for screens with only a lot of static components.
+
+### `reduceDefaultPropsInText` feature flag in React Native
+
+In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced for the native `Text` component. React Native's long-term goal is to reduce the overhead of the `Text` and `View` components directly in React Native core, eliminating the need to use the native underlying components, an effort that has been started with this feature flag.
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/TextNativeComponent.js#L77-L78"
+  code={`// Additional note: Our long term plan is to reduce the overhead of the <Text>
+// and <View> wrappers so that we no longer have any reason to export these APIs.`}
+/>
+
+In our benchmarks, we couldn't find a measurable difference between enabling or disabling this feature flag in `Text` components, with `NativeText`, the component React Native Boost uses under the hood, remaining the most performant option.
