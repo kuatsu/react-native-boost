@@ -1,5 +1,32 @@
 # Changelog
 
+# [1.2.0](https://github.com/kuatsu/react-native-boost/compare/v1.1.0...v1.2.0) (2026-06-21)
+
+
+### Bug Fixes
+
+* **benchmark:** fail fast on bad CLI flags and bound fibers subprocess ([39e6cfe](https://github.com/kuatsu/react-native-boost/commit/39e6cfe382bdcd8e3577e9cfb3b3fef0620e613c))
+* **example:** fix broken iOS debug build ([93bd413](https://github.com/kuatsu/react-native-boost/commit/93bd4138913c6b87242264ba44e1d6e9f352b5ea))
+* fix some a11y props being dropped on optimized components ([150c6a4](https://github.com/kuatsu/react-native-boost/commit/150c6a456a5d0402b6662a427ae63b9fbf032d01))
+* **text:** don't drop the `accessible` default on styled Text ([f48a8ec](https://github.com/kuatsu/react-native-boost/commit/f48a8ec6148ebfccd1f333c752d032ad9c5b36c9))
+* **text:** match RN Text accessibility/disabled reconciliation ([daf0156](https://github.com/kuatsu/react-native-boost/commit/daf0156095d3d8f4d79fd76bd2b1c90b5987f053))
+* **time-to-render:** fix broken Android build ([c815914](https://github.com/kuatsu/react-native-boost/commit/c8159141d96f1127941ccfdba1d6ce7c66bc62bc))
+
+
+### Features
+
+* **benchmark:** `reduceDefaultPropsInText` benchmark + thermal-robustness ([#25](https://github.com/kuatsu/react-native-boost/issues/25)) ([c9cbc5d](https://github.com/kuatsu/react-native-boost/commit/c9cbc5d2638d463f2752e221226b88100ea6d477))
+* **benchmark:** add cross-platform FPS + fiber benchmark suite ([35ea313](https://github.com/kuatsu/react-native-boost/commit/35ea31320bae597b79ebc9735cf13c2e990d58e1))
+* **example:** add example orderbook app showcasing FPS improvement ([f14604e](https://github.com/kuatsu/react-native-boost/commit/f14604e3c712f86bf02cf15dddefe0617051f736))
+* **text:** bail on Text and unknown ancestors ([ab25510](https://github.com/kuatsu/react-native-boost/commit/ab25510658d3407479e4a3e7c30de4b458f0875c))
+* **text:** optimize Text with primitive children beyond strings ([eb61bdb](https://github.com/kuatsu/react-native-boost/commit/eb61bdbfa5678886ca472057631d4481ebe063c1))
+* **view:** optimize Views with a style prop ([a3a2125](https://github.com/kuatsu/react-native-boost/commit/a3a21254447abf939db3371de78c7b836022225b))
+
+
+### Performance Improvements
+
+* **text:** resolve the `accessible` default at build time ([c85fd7e](https://github.com/kuatsu/react-native-boost/commit/c85fd7ebcf1308198341ba210ee4a6907835b8c2))
+
 # [1.1.0](https://github.com/kuatsu/react-native-boost/compare/v1.0.0...v1.1.0) (2026-03-18)
 
 
