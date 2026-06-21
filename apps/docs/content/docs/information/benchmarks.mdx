@@ -13,16 +13,16 @@ once the app can't keep up, FPS drops and the interface starts to stutter.
 
 ## Results
 
-**iOS** — the baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while Boost
+**iOS**: The baseline starts dropping frames early and falls to ~24 FPS under the heaviest load, while Boost
 holds a solid 60 FPS far longer and stays roughly **66% faster** at the top end.
 
 ![React Native Boost — iOS frame rate vs render load](./img/fps-ios-light.svg)
 
-**Android** — same shape, with Boost about **60% faster** at the heaviest load.
+**Android**: Same shape, with Boost about **60% faster** at the heaviest load.
 
 ![React Native Boost — Android frame rate vs render load](./img/fps-android-light.svg)
 
-## How the benchmark works
+## Methodology
 
 The test screen is a live crypto-style order book: two stacked columns of rows, each
 row a few pieces of `Text`, all updating many times per second from a simulated price feed.
@@ -37,7 +37,7 @@ Each run is a clean A/B on identical inputs:
 
 Everything runs as a **release/production build on the New Architecture**.
 
-### The structural saving
+### Secondary benchmark
 
 There's also a second, device-independent measurement. For a single row, we count the **React tree nodes**
 (fibers). One of the ways React Native Boost impacts an app's performance is by deleting a layer of these fibers per element it optimizes.
