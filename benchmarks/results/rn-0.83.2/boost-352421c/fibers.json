@@ -1,0 +1,309 @@
+{
+  "measurements": [
+    {
+      "load": 34,
+      "on": {
+        "fibers": 340,
+        "hosts": 204
+      },
+      "off": {
+        "fibers": 544,
+        "hosts": 204
+      },
+      "saved": {
+        "fibers": 204,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 48,
+      "on": {
+        "fibers": 480,
+        "hosts": 288
+      },
+      "off": {
+        "fibers": 768,
+        "hosts": 288
+      },
+      "saved": {
+        "fibers": 288,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 62,
+      "on": {
+        "fibers": 620,
+        "hosts": 372
+      },
+      "off": {
+        "fibers": 992,
+        "hosts": 372
+      },
+      "saved": {
+        "fibers": 372,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 76,
+      "on": {
+        "fibers": 760,
+        "hosts": 456
+      },
+      "off": {
+        "fibers": 1216,
+        "hosts": 456
+      },
+      "saved": {
+        "fibers": 456,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 90,
+      "on": {
+        "fibers": 900,
+        "hosts": 540
+      },
+      "off": {
+        "fibers": 1440,
+        "hosts": 540
+      },
+      "saved": {
+        "fibers": 540,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 104,
+      "on": {
+        "fibers": 1040,
+        "hosts": 624
+      },
+      "off": {
+        "fibers": 1664,
+        "hosts": 624
+      },
+      "saved": {
+        "fibers": 624,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 118,
+      "on": {
+        "fibers": 1180,
+        "hosts": 708
+      },
+      "off": {
+        "fibers": 1888,
+        "hosts": 708
+      },
+      "saved": {
+        "fibers": 708,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 132,
+      "on": {
+        "fibers": 1320,
+        "hosts": 792
+      },
+      "off": {
+        "fibers": 2112,
+        "hosts": 792
+      },
+      "saved": {
+        "fibers": 792,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 146,
+      "on": {
+        "fibers": 1460,
+        "hosts": 876
+      },
+      "off": {
+        "fibers": 2336,
+        "hosts": 876
+      },
+      "saved": {
+        "fibers": 876,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 160,
+      "on": {
+        "fibers": 1600,
+        "hosts": 960
+      },
+      "off": {
+        "fibers": 2560,
+        "hosts": 960
+      },
+      "saved": {
+        "fibers": 960,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 174,
+      "on": {
+        "fibers": 1740,
+        "hosts": 1044
+      },
+      "off": {
+        "fibers": 2784,
+        "hosts": 1044
+      },
+      "saved": {
+        "fibers": 1044,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 188,
+      "on": {
+        "fibers": 1880,
+        "hosts": 1128
+      },
+      "off": {
+        "fibers": 3008,
+        "hosts": 1128
+      },
+      "saved": {
+        "fibers": 1128,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 202,
+      "on": {
+        "fibers": 2020,
+        "hosts": 1212
+      },
+      "off": {
+        "fibers": 3232,
+        "hosts": 1212
+      },
+      "saved": {
+        "fibers": 1212,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 216,
+      "on": {
+        "fibers": 2160,
+        "hosts": 1296
+      },
+      "off": {
+        "fibers": 3456,
+        "hosts": 1296
+      },
+      "saved": {
+        "fibers": 1296,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 230,
+      "on": {
+        "fibers": 2300,
+        "hosts": 1380
+      },
+      "off": {
+        "fibers": 3680,
+        "hosts": 1380
+      },
+      "saved": {
+        "fibers": 1380,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 244,
+      "on": {
+        "fibers": 2440,
+        "hosts": 1464
+      },
+      "off": {
+        "fibers": 3904,
+        "hosts": 1464
+      },
+      "saved": {
+        "fibers": 1464,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 258,
+      "on": {
+        "fibers": 2580,
+        "hosts": 1548
+      },
+      "off": {
+        "fibers": 4128,
+        "hosts": 1548
+      },
+      "saved": {
+        "fibers": 1548,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 272,
+      "on": {
+        "fibers": 2720,
+        "hosts": 1632
+      },
+      "off": {
+        "fibers": 4352,
+        "hosts": 1632
+      },
+      "saved": {
+        "fibers": 1632,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 286,
+      "on": {
+        "fibers": 2860,
+        "hosts": 1716
+      },
+      "off": {
+        "fibers": 4576,
+        "hosts": 1716
+      },
+      "saved": {
+        "fibers": 1716,
+        "hosts": 0
+      }
+    },
+    {
+      "load": 300,
+      "on": {
+        "fibers": 3000,
+        "hosts": 1800
+      },
+      "off": {
+        "fibers": 4800,
+        "hosts": 1800
+      },
+      "saved": {
+        "fibers": 1800,
+        "hosts": 0
+      }
+    }
+  ],
+  "perRow": {
+    "fibersOn": 5,
+    "fibersOff": 8,
+    "savedPerRow": 3
+  }
+}

@@ -8,11 +8,12 @@ RN evolves.
 ## Usage
 
 ```bash
-pnpm benchmark                       # fibers + FPS on every available platform (release), then graphs
+pnpm benchmark                       # fibers + FPS (both profiles) on every available platform, then graphs
 pnpm benchmark -- --only fibers      # headless structural metric only — no device, no build
 pnpm benchmark -- --platform ios     # one platform
 pnpm benchmark -- --loads 34,160,300 # override the load sweep (rows per side; on-device range 34–300)
 pnpm benchmark -- --mode debug       # debug build instead of release
+pnpm benchmark -- --profiles default # only the stock-RN profile (today's two-series output; ~½ the FPS time)
 pnpm benchmark -- --report-only      # redraw graphs + index from the existing archive
 ```
 
@@ -31,6 +32,27 @@ running emulator. The platform is skipped (with a note) if nothing is available,
 - **Fibers** — a headless, device-free render of one list row through the real RN wrapper pipeline, counting
   the React tree nodes Boost removes. Deterministic; doubles as a correctness guard.
 
+### Three series: baseline, core-optimized, Boost
+
+RN core is now trimming the same JS-`Text` wrapper overhead Boost removes — the first lever is the
+`reduceDefaultPropsInText` feature flag (RN ≥ 0.82). So the FPS sweep runs under two **build profiles**:
+
+- **`default`** — stock RN (`baseline`).
+- **`core`** — stock RN **plus the curated set of RN-core overhead-reduction flags** (`config.ts`'s
+  `BUILD_PROFILES`). Its baseline (`baseline-optimized`) is the new middle series.
+
+The flag is read once at RN module-init, so it's a property of the **whole build**, not a render step — each
+profile is a separate build (the override is baked in via `EXPO_PUBLIC_BENCHMARK_RN_FLAGS`). The headline
+becomes a **convergence**: as core improves across RN versions, does `baseline-optimized` rise to meet
+`boost`? Because the two profiles build minutes apart, the flag-invariant `boost` curve is used as a
+per-load **thermal anchor** to put `baseline-optimized` on the baseline build's axis; a per-load boost-curve
+divergence past 8% marks the run anchor-suspect (warned in the report).
+
+Running both profiles roughly **doubles the FPS wall-clock** (two builds + two sweeps per platform); the
+fibers stage is profile-agnostic and runs once. Use `--profiles default` for the fast, two-series path while
+iterating. On RN < 0.82 the `core` profile no-ops (forcing an absent flag is ignored), so `baseline-optimized`
+correctly equals `baseline` for those versions.
+
 ## Architecture
 
 A four-stage pipeline joined by one typed JSON contract (`src/schema.ts`):
@@ -46,10 +68,12 @@ The FPS collector is the only device-coupled part. It:
 1. auto-detects the target (`device.ts`) and the host the app should call (`localhost` for an iOS sim,
    `10.0.2.2` for an Android emulator, the LAN IP for a physical device);
 2. stands up an HTTP control server (`server.ts`) that serves the sweep plan and collects results;
-3. builds + launches the app via the Expo CLI (`driver.ts`) with `EXPO_PUBLIC_BENCHMARK=1` and
-   `EXPO_PUBLIC_BENCHMARK_SERVER` baked in;
+3. for each build profile, builds + launches the app via the Expo CLI (`driver.ts`) with
+   `EXPO_PUBLIC_BENCHMARK=1`, `EXPO_PUBLIC_BENCHMARK_SERVER`, and the profile's
+   `EXPO_PUBLIC_BENCHMARK_RN_FLAGS` baked in, then verifies the running bundle echoes those flags on the
+   plan request (a staleness handshake — a cached bundle running the wrong profile fails the run loudly);
 4. the app's self-driving mode (`apps/example/src/screens/benchmark-runner`) pulls the plan, runs the
-   sweep, and POSTs each measurement back.
+   sweep, and POSTs each sample back; the host stamps the build `profile` onto each on receipt.
 
 ## Output
 

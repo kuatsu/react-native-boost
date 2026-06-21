@@ -21,7 +21,7 @@ export const THEMES: Record<Theme, ThemeColors> = {
 };
 
 /** Semantic series colors — saturated enough to read on either theme's backdrop. */
-export const SERIES = { boost: '#0ecb81', baseline: '#f6465d' } as const;
+export const SERIES = { boost: '#0ecb81', baseline: '#f6465d', coreOptimized: '#f0b90b' } as const;
 
 const SERIES_COLORS = ['#0ecb81', '#f0b90b', '#4a9eff', '#f6465d', '#b07cff', '#ff9f43'];
 
@@ -39,6 +39,8 @@ export interface Series {
   name: string;
   color: string;
   points: Point[];
+  /** Render dashed (used to encode a second metric in the same platform color on the convergence trend). */
+  dash?: boolean;
 }
 
 interface ChartOptions {
@@ -130,8 +132,11 @@ function legend(series: Series[], f: Frame, c: ThemeColors): string {
     .map((s, i) => {
       const x = f.plotRight - 150;
       const y = f.plotTop + 8 + i * 20;
+      const swatch = s.dash
+        ? `<line x1="${x}" y1="${y - 3}" x2="${x + 12}" y2="${y - 3}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="4 3"/>`
+        : `<rect x="${x}" y="${y - 9}" width="12" height="12" rx="2" fill="${s.color}"/>`;
       return (
-        `<rect x="${x}" y="${y - 9}" width="12" height="12" rx="2" fill="${s.color}"/>` +
+        swatch +
         `<text x="${x + 18}" y="${y + 1}" fill="${c.text}" font-size="12" font-family="system-ui,sans-serif">${escape(s.name)}</text>`
       );
     })
@@ -151,7 +156,8 @@ export function lineChart(options: ChartOptions, series: Series[], theme: Theme)
       const dots = s.points
         .map((p) => `<circle cx="${f.sx(p.x).toFixed(1)}" cy="${f.sy(p.y).toFixed(1)}" r="3.5" fill="${s.color}"/>`)
         .join('');
-      return `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2.5"/>${dots}`;
+      const dash = s.dash ? ' stroke-dasharray="6 4"' : '';
+      return `<polyline points="${points}" fill="none" stroke="${s.color}" stroke-width="2.5"${dash}/>${dots}`;
     })
     .join('\n');
   return wrap(f.width, f.height, [chrome(options, f, c), lines, legend(series, f, c)].join('\n'));

@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { collectFibers } from './collectors/fibers.ts';
 import { collectFps } from './collectors/fps.ts';
-import { DEFAULT_SERVER_PORT, DEFAULT_SWEEP } from './config.ts';
+import { BUILD_PROFILES, DEFAULT_SERVER_PORT, DEFAULT_SWEEP } from './config.ts';
 import { resolveContext } from './context.ts';
 import { detectDevice } from './device.ts';
 import { writeArchiveIndex, writeReport, writeRunReport } from './report/index.ts';
@@ -28,6 +28,8 @@ function parseArgs(argv: string[]): Flags {
 }
 
 /** Validate a flag's value against an allowed set, failing loudly instead of casting a typo through. */
+function oneOf<T extends string>(value: string, allowed: readonly T[], flag: string): T;
+function oneOf<T extends string>(value: string | true | undefined, allowed: readonly T[], flag: string): T | undefined;
 function oneOf<T extends string>(value: string | true | undefined, allowed: readonly T[], flag: string): T | undefined {
   if (value === undefined) return undefined;
   if (value === true || !allowed.includes(value as T)) {
@@ -40,6 +42,16 @@ function oneOf<T extends string>(value: string | true | undefined, allowed: read
 function valueOf(value: string | true | undefined, flag: string): string | undefined {
   if (value === true) throw new Error(`--${flag} requires a value`);
   return value;
+}
+
+/** Parse a comma-separated flag into a list, validating every item against `allowed`; `undefined` if unset. */
+function listOf<T extends string>(
+  value: string | true | undefined,
+  allowed: readonly T[],
+  flag: string
+): T[] | undefined {
+  const raw = valueOf(value, flag);
+  return raw === undefined ? undefined : raw.split(',').map((item) => oneOf(item.trim(), allowed, flag));
 }
 
 const log = (message: string): void => {
@@ -62,11 +74,12 @@ async function main(): Promise<void> {
     throw new Error('--port must be an integer between 1 and 65535');
   }
   const only = oneOf(flags.only, ['fibers', 'fps'] as const, 'only');
-  const platformArg = valueOf(flags.platform, 'platform');
-  const explicitPlatform = platformArg !== undefined;
-  const platforms: Platform[] = explicitPlatform
-    ? platformArg.split(',').map((p) => oneOf(p.trim(), ['ios', 'android'] as const, 'platform')!)
-    : ['ios', 'android'];
+  const profileIds = BUILD_PROFILES.map((p) => p.id);
+  const selectedProfiles = listOf(flags.profiles, profileIds, 'profiles') ?? profileIds;
+  const profiles = BUILD_PROFILES.filter((p) => selectedProfiles.includes(p.id));
+  const selectedPlatforms = listOf(flags.platform, ['ios', 'android'] as const, 'platform');
+  const explicitPlatform = selectedPlatforms !== undefined;
+  const platforms: Platform[] = selectedPlatforms ?? ['ios', 'android'];
 
   const context = resolveContext(sweep, new Date().toISOString());
   const key = keyOf(context);
@@ -101,8 +114,8 @@ async function main(): Promise<void> {
         log(`• ${platform} — skipped: ${(error as Error).message}`);
         continue;
       }
-      log(`• ${platform} — FPS sweep`);
-      saveFps(key, await collectFps({ platform, buildMode, sweep, port, log }));
+      log(`• ${platform} — FPS sweep (profiles: ${profiles.map((p) => p.id).join(', ')})`);
+      saveFps(key, await collectFps({ platform, buildMode, sweep, port, profiles, log }));
     }
   }
 

@@ -2,7 +2,11 @@
  * Wire contract between the benchmark suite's HTTP server and this self-driving app mode. Kept as a
  * tiny standalone copy (rather than importing the suite's schema) so the Expo app has no build-time
  * dependency on the tooling package — the field names are the contract. Must stay in sync with the
- * matching types in `tooling/benchmark/src/schema.ts` (`BenchmarkPlan`, `FpsMeasurement`, `BoostMode`).
+ * matching types in `tooling/benchmark/src/schema.ts` (`BenchmarkPlan`, `FpsSample`, `BoostMode`).
+ *
+ * Note: the build-flag `profile` is deliberately NOT on the wire. The flag is baked into this bundle, so
+ * the host knows which profile is running and stamps it onto each sample on receipt — the app never
+ * sends it. The app does echo its baked flags on the plan request for the staleness handshake.
  */
 
 export type BoostMode = 'on' | 'off';

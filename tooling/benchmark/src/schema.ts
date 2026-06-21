@@ -9,6 +9,23 @@ export type BuildMode = 'release' | 'debug';
 export type BoostMode = 'on' | 'off';
 export type DeviceKind = 'simulator' | 'emulator' | 'device';
 
+/**
+ * The build-time flag profile a config was captured under — orthogonal to `boost`. `default` is stock
+ * RN; `core` bakes the curated set of RN-core overhead-reduction feature flags (see `BUILD_PROFILES`).
+ * Unlike `boost` (a per-render twin swap), a profile is a property of the whole build: the flags are
+ * read once at RN module-init, so each app process exhibits exactly one profile.
+ */
+export type ProfileId = 'default' | 'core';
+
+/** A build profile: an id, a display label, and the RN feature flags it forces on at build time. */
+export interface ProfileSpec {
+  id: ProfileId;
+  /** Display label, e.g. 'Baseline' | 'Core-optimized'. */
+  label: string;
+  /** RN feature flags forced `true` at build time (applied-if-present; absent flags no-op on old RN). */
+  rnFlags: string[];
+}
+
 /** Identifies a run's archive directory: the RN version and the Boost commit SHA benchmarked. */
 export interface RunKey {
   rnVersion: string;
@@ -36,6 +53,8 @@ export interface BenchContext {
   /** ISO timestamp; passed in (Date.now is avoided inside collectors for determinism). */
   timestamp: string;
   sweep: SweepConfig;
+  /** The exact RN flags the `core` profile baked for this run — provenance for the moving flag set. */
+  coreFlags: string[];
 }
 
 export interface DeviceInfo {
@@ -47,8 +66,12 @@ export interface DeviceInfo {
   id: string;
 }
 
-/** One captured config: a given load with Boost on or off. */
-export interface FpsMeasurement {
+/**
+ * One captured config as it crosses the wire (the app→host POST body), before the host stamps the
+ * build profile. The app never sends `profile` — the flag is baked into its bundle, so the host knows
+ * which profile is running and stamps it on receipt (see `FpsMeasurement`).
+ */
+export interface FpsSample {
   load: number;
   boost: BoostMode;
   avgFps: number;
@@ -58,6 +81,11 @@ export interface FpsMeasurement {
   droppedPct: number;
   frames: number;
   durationMs: number;
+}
+
+/** One archived config: a wire sample stamped with the build-flag profile it was captured under. */
+export interface FpsMeasurement extends FpsSample {
+  profile: ProfileId;
 }
 
 export interface FpsResult {
