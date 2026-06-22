@@ -129,7 +129,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
   });
 
   // Process props
-  fixNegativeNumberOfLines({ path, logger });
+  fixNegativeNumberOfLines({ path, logger, file });
   renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
@@ -167,36 +167,67 @@ function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>, parent: t.JSXEl
 }
 
 /**
- * Fixes negative numberOfLines values by setting them to 0.
+ * Replicates `Text`'s non-negative `numberOfLines` rule. A literal value is clamped at build time — a
+ * negative becomes `0` with a compile-time warning, a non-negative is left untouched. A non-literal value
+ * (its sign unknowable at build time) is wrapped in the runtime `clampNumberOfLines` helper, which mirrors
+ * RN exactly (negative/`NaN` → `0`; `null`/`undefined` untouched).
  */
-function fixNegativeNumberOfLines({ path, logger }: { path: NodePath<t.JSXOpeningElement>; logger: PluginLogger }) {
+function fixNegativeNumberOfLines({
+  path,
+  logger,
+  file,
+}: {
+  path: NodePath<t.JSXOpeningElement>;
+  logger: PluginLogger;
+  file: HubFile;
+}) {
   for (const attribute of path.node.attributes) {
     if (
-      t.isJSXAttribute(attribute) &&
-      t.isJSXIdentifier(attribute.name, { name: 'numberOfLines' }) &&
-      attribute.value &&
-      t.isJSXExpressionContainer(attribute.value)
+      !t.isJSXAttribute(attribute) ||
+      !t.isJSXIdentifier(attribute.name, { name: 'numberOfLines' }) ||
+      !attribute.value ||
+      !t.isJSXExpressionContainer(attribute.value) ||
+      !t.isExpression(attribute.value.expression)
     ) {
-      let originalValue: number | undefined;
-      if (t.isNumericLiteral(attribute.value.expression)) {
-        originalValue = attribute.value.expression.value;
-      } else if (
-        t.isUnaryExpression(attribute.value.expression) &&
-        attribute.value.expression.operator === '-' &&
-        t.isNumericLiteral(attribute.value.expression.argument)
-      ) {
-        originalValue = -attribute.value.expression.argument.value;
-      }
-      if (originalValue !== undefined && originalValue < 0) {
+      continue;
+    }
+
+    const expression = attribute.value.expression;
+    const literalValue = staticNumberOfLines(expression);
+
+    if (literalValue !== undefined) {
+      if (literalValue < 0) {
         logger.warning({
           component: 'Text',
           path,
-          message: `'numberOfLines' must be a non-negative number, received: ${originalValue}. The value will be set to 0.`,
+          message: `'numberOfLines' must be a non-negative number, received: ${literalValue}. The value will be set to 0.`,
         });
         attribute.value.expression = t.numericLiteral(0);
       }
+      continue;
     }
+
+    const clampIdentifier = addFileImportHint({
+      file,
+      nameHint: 'clampNumberOfLines',
+      path,
+      importName: 'clampNumberOfLines',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    attribute.value.expression = t.callExpression(t.identifier(clampIdentifier.name), [expression]);
   }
+}
+
+/**
+ * The build-time numeric value of a `numberOfLines` expression when it is a numeric literal or a
+ * unary-minus numeric literal; `undefined` for any other (non-literal) expression.
+ */
+function staticNumberOfLines(expression: t.Expression): number | undefined {
+  if (t.isNumericLiteral(expression)) return expression.value;
+  if (t.isUnaryExpression(expression) && expression.operator === '-' && t.isNumericLiteral(expression.argument)) {
+    return -expression.argument.value;
+  }
+  return undefined;
 }
 
 /**

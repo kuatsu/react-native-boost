@@ -4,6 +4,7 @@ import {
   processAccessibilityProps,
   processViewAccessibilityProps,
   getDefaultTextAccessible,
+  clampNumberOfLines,
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
 } from '..';
@@ -314,5 +315,26 @@ describe('processViewAccessibilityProps', () => {
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toBeUndefined();
     expect('accessible' in normalized).toBe(false);
+  });
+});
+
+describe('clampNumberOfLines', () => {
+  it('clamps negative values to 0', () => {
+    expect(clampNumberOfLines(-1)).toBe(0);
+    expect(clampNumberOfLines(-10)).toBe(0);
+  });
+
+  it('clamps NaN to 0 (RN uses !(value >= 0))', () => {
+    expect(clampNumberOfLines(Number.NaN)).toBe(0);
+  });
+
+  it('passes non-negative values through untouched', () => {
+    expect(clampNumberOfLines(0)).toBe(0);
+    expect(clampNumberOfLines(5)).toBe(5);
+  });
+
+  it('passes null/undefined through untouched (RN guards with != null)', () => {
+    expect(clampNumberOfLines(null)).toBeNull();
+    expect(clampNumberOfLines(undefined)).toBeUndefined();
   });
 });
