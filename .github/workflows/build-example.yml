@@ -22,7 +22,7 @@ concurrency:
 jobs:
   ios:
     name: Build iOS (Debug)
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     env:
       # CocoaPods aborts with an Encoding::CompatibilityError when the locale is
@@ -93,4 +93,4 @@ jobs:
 
       - name: Build Android app
         working-directory: apps/example/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace --info
