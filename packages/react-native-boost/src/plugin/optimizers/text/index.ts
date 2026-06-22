@@ -20,6 +20,7 @@ import {
   hasExpoRouterLinkParentWithAsChild,
   extractStyleAttribute,
   extractSelectableAndUpdateStyle,
+  tryBuildStaticTextStyle,
   ancestorBailoutChecks,
 } from '../../utils/common';
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
@@ -242,6 +243,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
 
   // --- Style ---
   let selectableAttribute: t.JSXAttribute | undefined;
+  let staticStyleAttribute: t.JSXAttribute | undefined;
   if (styleExpr) {
     // Attempt a compile-time extraction of `userSelect`
     const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
@@ -253,15 +255,23 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
       );
     }
 
-    const flattenIdentifier = addFileImportHint({
-      file,
-      nameHint: 'processTextStyle',
-      path,
-      importName: 'processTextStyle',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
-    const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
-    spreadAttributes.push(t.jsxSpreadAttribute(flattenedStyleExpr));
+    // A fully static style is normalized at build time and emitted as a direct `style={...}` object,
+    // dropping the per-render `processTextStyle` call. Dynamic styles still go through the runtime
+    // helper, where the WeakMap reference cache and `StyleSheet.flatten` are the actual win.
+    const staticStyle = tryBuildStaticTextStyle(styleExpr);
+    if (staticStyle) {
+      staticStyleAttribute = t.jsxAttribute(t.jsxIdentifier('style'), t.jsxExpressionContainer(staticStyle));
+    } else {
+      const flattenIdentifier = addFileImportHint({
+        file,
+        nameHint: 'processTextStyle',
+        path,
+        importName: 'processTextStyle',
+        moduleName: RUNTIME_MODULE_NAME,
+      });
+      const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
+      spreadAttributes.push(t.jsxSpreadAttribute(flattenedStyleExpr));
+    }
   }
 
   // ============================================
@@ -290,9 +300,13 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   // appending it unconditionally is safe.
   const accessibleAttribute = shouldNormalize ? undefined : buildAccessibleDefault(path, file, platform);
 
-  path.node.attributes = [...spreadAttributes, selectableAttribute, ...remainingAttributes, accessibleAttribute].filter(
-    (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
-  );
+  path.node.attributes = [
+    ...spreadAttributes,
+    selectableAttribute,
+    staticStyleAttribute,
+    ...remainingAttributes,
+    accessibleAttribute,
+  ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
 }
 
 /**

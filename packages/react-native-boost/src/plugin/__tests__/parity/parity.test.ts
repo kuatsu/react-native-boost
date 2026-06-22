@@ -29,8 +29,14 @@ const TEXT_CASES = [
   '<Text accessibilityState={{ disabled: true }}>hello</Text>',
   '<Text numberOfLines={2}>hello</Text>',
   '<Text aria-busy={true}>hello</Text>',
-  '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the style spread
+  '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the build-time style
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
+  // Fully static styles are normalized at build time (object literal, no `processTextStyle`). Each
+  // exercises a conversion the wrapper does at runtime; the flattened prop bags must still match.
+  '<Text style={{ fontWeight: 700 }}>hello</Text>', // numeric fontWeight → string
+  '<Text style={{ verticalAlign: "middle" }}>hello</Text>', // verticalAlign → textAlignVertical
+  '<Text style={{ userSelect: "none", color: "red" }}>hello</Text>', // userSelect → selectable
+  '<Text style={[{ color: "red" }, { fontSize: 16 }]}>hello</Text>', // array merged (last wins)
   // `id` → `nativeID` build-time rename; `id` wins over an explicit `nativeID`.
   '<Text id="x">hello</Text>',
   '<Text id="x" nativeID="y">hello</Text>',
@@ -88,9 +94,26 @@ const VIEW_CASES = [
 // a silent loss of optimization — from masquerading as a passing parity test.
 const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
 
+// Flatten a `style` value the way the native host does (`StyleSheet.flatten`): a top-level array
+// flattens left-to-right with last-key-wins, recursing into nested arrays; non-object entries
+// contribute nothing. Run on the raw value (before the JSON clean) so an `{ key: undefined }` override
+// correctly deletes the key, exactly as the runtime merge does.
+const flattenStyle = (style: unknown): unknown => {
+  if (!Array.isArray(style)) return style;
+  const result: Record<string, unknown> = {};
+  for (const entry of style) {
+    const flat = flattenStyle(entry);
+    if (flat && typeof flat === 'object') Object.assign(result, flat);
+  }
+  return result;
+};
+
 // Treat `undefined`-valued keys as absent and deep-clean nested objects (also drops function values
-// such as event handlers) so the comparison is a clean structural prop-bag equality.
-const normalize = (props: Record<string, unknown>) => JSON.parse(JSON.stringify(props));
+// such as event handlers) so the comparison is a clean structural prop-bag equality. The `style` prop
+// is flattened first so Boost's build-time-merged object compares equal to the wrapper's original
+// array — the property the native host actually sees is the flattened style, not its authored shape.
+const normalize = (props: Record<string, unknown>) =>
+  JSON.parse(JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props));
 
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {

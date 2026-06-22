@@ -1,6 +1,10 @@
 import { NodePath, types as t } from '@babel/core';
 import { ACCESSIBILITY_PROPERTIES } from '../constants';
-import { USER_SELECT_STYLE_TO_SELECTABLE_PROP } from '../constants';
+import { USER_SELECT_STYLE_TO_SELECTABLE_PROP, VERTICAL_ALIGN_TO_TEXT_ALIGN_VERTICAL } from '../constants';
+
+// A key that matches this can be emitted as a bare `t.identifier`; anything else (e.g. `aria-label`)
+// must become a string-literal property key.
+const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
 /**
  * Checks if the JSX element has a blacklisted property.
@@ -251,9 +255,8 @@ export const buildPropertiesFromAttributes = (attributes: (t.JSXAttribute | t.JS
         value = t.nullLiteral();
       }
       // If the key is not a valid JavaScript identifier (e.g. "aria-label"), use a string literal.
-      const validIdentifierRegex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
       const keyNode =
-        typeof key === 'string' && validIdentifierRegex.test(key) ? t.identifier(key) : t.stringLiteral(key.toString());
+        typeof key === 'string' && VALID_JS_IDENTIFIER.test(key) ? t.identifier(key) : t.stringLiteral(key.toString());
 
       arguments_.push(t.objectExpression([t.objectProperty(keyNode, value)]));
     }
@@ -402,6 +405,144 @@ export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): boolea
   }
 
   return undefined; // not statically analysable
+}
+
+/**
+ * Whether a node is a fully static literal tree — a value the plugin can resolve and reproduce at
+ * build time without evaluating anything at runtime. Primitives (string/number/boolean/null and a
+ * unary-minus numeric) qualify, as do object/array literals whose every leaf is itself such a tree.
+ * Anything that could only be known at runtime (identifiers, member/call/template/conditional/logical
+ * expressions, spreads, computed keys, getters/setters/methods) makes the whole tree non-static.
+ *
+ * Used by {@link tryBuildStaticTextStyle} to decide whether a `style` value can be normalized at
+ * build time. Nested object/array values (e.g. `transform`, `shadowOffset`) are carried verbatim —
+ * they are not flattened, only validated as static.
+ */
+export const isStaticLiteralTree = (node: t.Node): boolean => {
+  if (t.isStringLiteral(node) || t.isNumericLiteral(node) || t.isBooleanLiteral(node) || t.isNullLiteral(node)) {
+    return true;
+  }
+
+  if (t.isUnaryExpression(node) && node.operator === '-' && t.isNumericLiteral(node.argument)) {
+    return true;
+  }
+
+  if (t.isObjectExpression(node)) {
+    return node.properties.every(
+      (property) =>
+        t.isObjectProperty(property) &&
+        !property.computed &&
+        (t.isIdentifier(property.key) || t.isStringLiteral(property.key)) &&
+        t.isExpression(property.value) &&
+        isStaticLiteralTree(property.value)
+    );
+  }
+
+  if (t.isArrayExpression(node)) {
+    // A hole (`[1, , 2]`) yields `null`; treat its presence as non-static and bail.
+    return node.elements.every((element) => element != null && isStaticLiteralTree(element));
+  }
+
+  return false;
+};
+
+const staticPropertyName = (property: t.ObjectProperty): string =>
+  t.isIdentifier(property.key) ? property.key.name : (property.key as t.StringLiteral).value;
+
+/**
+ * Whether an array element of a `style` value flattens to a falsy result at runtime and therefore
+ * contributes nothing, matching `StyleSheet.flatten`'s `if (computedStyle)` skip. Limited to the
+ * literal forms that provably flatten to falsy (`null` / `false` / `undefined` / `0`); any other
+ * primitive literal element is left for the caller to bail on rather than guessing.
+ */
+const isSkippableFalsyElement = (element: t.Expression | t.SpreadElement): boolean =>
+  t.isNullLiteral(element) ||
+  (t.isBooleanLiteral(element) && element.value === false) ||
+  t.isIdentifier(element, { name: 'undefined' }) ||
+  (t.isNumericLiteral(element) && element.value === 0);
+
+/**
+ * Attempts to reproduce, at build time, exactly what the runtime `processTextStyle` helper would
+ * compute for a `style` value — but only when the value is fully static. On success it returns a
+ * single normalized `ObjectExpression` (the merged, converted style) the caller emits as a direct
+ * `style={...}` attribute, dropping the per-render helper call. On any dynamic or uncertain input it
+ * returns `undefined`, leaving the caller to fall back to `{...processTextStyle(styleExpr)}`.
+ *
+ * The merge mirrors `StyleSheet.flatten` (top-level array flattened left-to-right, last key wins;
+ * nested value arrays/objects kept verbatim; falsy literal elements skipped) followed by the helper's
+ * three conversions (numeric `fontWeight` → string, `verticalAlign` → `textAlignVertical`,
+ * `userSelect` already lifted to `selectable` upstream). It biases toward bailing: any case it cannot
+ * prove equivalent to the runtime result yields `undefined`. It never mutates `styleExpr` (it builds
+ * fresh nodes), so a late bail still hands the original expression to the helper.
+ */
+export function tryBuildStaticTextStyle(styleExpr: t.Expression): t.ObjectExpression | undefined {
+  const collected: t.ObjectExpression[] = [];
+
+  // Flatten the top-level style into an ordered list of fully-static object literals, replicating
+  // `StyleSheet.flatten`'s recursion. Returns false to bail the whole style.
+  const collect = (expr: t.Expression | t.SpreadElement): boolean => {
+    if (t.isObjectExpression(expr)) {
+      if (!isStaticLiteralTree(expr)) return false;
+      collected.push(expr);
+      return true;
+    }
+
+    if (t.isArrayExpression(expr)) {
+      for (const element of expr.elements) {
+        if (element == null) continue; // hole → flattens to falsy → skipped
+        if (t.isObjectExpression(element) || t.isArrayExpression(element)) {
+          if (!collect(element)) return false;
+        } else if (isSkippableFalsyElement(element)) {
+          continue;
+        } else {
+          return false; // identifier, logical, member, call, non-falsy literal, spread → bail
+        }
+      }
+      return true;
+    }
+
+    return false; // top-level identifier / member / call / conditional / etc. → bail
+  };
+
+  if (!collect(styleExpr)) return undefined;
+
+  // Merge left-to-right (last key wins), exactly as `flattenStyle` does.
+  const merged = new Map<string, t.Expression>();
+  for (const object of collected) {
+    for (const property of object.properties) {
+      const objectProperty = property as t.ObjectProperty;
+      merged.set(staticPropertyName(objectProperty), t.cloneNode(objectProperty.value as t.Expression, true));
+    }
+  }
+
+  // `userSelect` is removed from literals by `extractSelectableAndUpdateStyle` before this runs. If a
+  // key remains, the extractor could not resolve its value, so the style is not fully static — bail.
+  if (merged.has('userSelect')) return undefined;
+
+  const fontWeight = merged.get('fontWeight');
+  if (fontWeight) {
+    if (t.isNumericLiteral(fontWeight)) {
+      merged.set('fontWeight', t.stringLiteral(String(fontWeight.value)));
+    } else if (t.isUnaryExpression(fontWeight) && fontWeight.operator === '-') {
+      return undefined; // negative weight is implausible; bail rather than guess
+    }
+    // A string-literal `fontWeight` is already in its native form and is left untouched.
+  }
+
+  const verticalAlign = merged.get('verticalAlign');
+  if (verticalAlign !== undefined) {
+    if (!t.isStringLiteral(verticalAlign)) return undefined;
+    const mapped = VERTICAL_ALIGN_TO_TEXT_ALIGN_VERTICAL[verticalAlign.value];
+    if (mapped === undefined) return undefined; // unknown key → defer to the runtime map
+    merged.delete('verticalAlign');
+    merged.set('textAlignVertical', t.stringLiteral(mapped));
+  }
+
+  const properties = [...merged].map(([key, value]) =>
+    t.objectProperty(VALID_JS_IDENTIFIER.test(key) ? t.identifier(key) : t.stringLiteral(key), value)
+  );
+
+  return t.objectExpression(properties);
 }
 
 /**

@@ -6,22 +6,8 @@ import {
 import { Text } from 'react-native';
 <_NativeText
   {..._processTextStyle({
-    color: 'red',
+    verticalAlign: 'sideways',
   })}
-  allowFontScaling={true}
-  ellipsizeMode={'tail'}
-  accessible={_getDefaultTextAccessible()}
-/>;
-<_NativeText
-  {..._processTextStyle([
-    {
-      color: 'red',
-    },
-    {
-      fontSize: 16,
-    },
-  ])}
-  selectable={true}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}
