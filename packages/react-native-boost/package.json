@@ -98,7 +98,7 @@
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/babel__helper-module-imports": "^7.0.0",
     "@types/babel__helper-plugin-utils": "^7.0.0",
-    "@types/node": "^24",
+    "@types/node": "^26",
     "babel-plugin-tester": "^12.0.0",
     "esbuild-node-externals": "^1.23.1",
     "fast-check": "^4.8.0",
