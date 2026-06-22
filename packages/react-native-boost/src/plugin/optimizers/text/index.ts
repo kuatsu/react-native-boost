@@ -219,10 +219,10 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
     );
 
   // ============================================
-  // 1. Prepare spread attributes (a11y / style)
+  // 1. Prepare the accessibility & style transforms
   // ============================================
 
-  const spreadAttributes: t.JSXSpreadAttribute[] = [];
+  let accessibilitySpread: t.JSXSpreadAttribute | undefined;
 
   // --- Accessibility & `disabled` ---
   if (shouldNormalize) {
@@ -238,14 +238,18 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
 
     const accessibilityObject = buildPropertiesFromAttributes(normalizedAttributes);
     const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
-    spreadAttributes.push(t.jsxSpreadAttribute(accessibilityExpr));
+    accessibilitySpread = t.jsxSpreadAttribute(accessibilityExpr);
   }
 
   // --- Style ---
+  // `Text` lets a `userSelect` in the style override a direct `selectable` prop. When the style is static
+  // enough to read `userSelect` at build time we emit the derived `selectable` as a literal and drop the
+  // now-dead direct prop; when it is only knowable at runtime, the `processTextStyle` spread carries
+  // the override and is emitted last so it still wins over the direct prop.
   let selectableAttribute: t.JSXAttribute | undefined;
   let staticStyleAttribute: t.JSXAttribute | undefined;
+  let styleSpread: t.JSXSpreadAttribute | undefined;
   if (styleExpr) {
-    // Attempt a compile-time extraction of `userSelect`
     const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
 
     if (selectableValue != null) {
@@ -270,7 +274,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
         moduleName: RUNTIME_MODULE_NAME,
       });
       const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
-      spreadAttributes.push(t.jsxSpreadAttribute(flattenedStyleExpr));
+      styleSpread = t.jsxSpreadAttribute(flattenedStyleExpr);
     }
   }
 
@@ -280,11 +284,21 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   const remainingAttributes: (t.JSXAttribute | t.JSXSpreadAttribute)[] = [];
 
   for (const attribute of currentAttributes) {
-    // Skip the style attribute (we have replaced it with a spread)
+    // Skip the style attribute (we have replaced it with a `style` object or `processTextStyle` spread)
     if (styleAttribute && attribute === styleAttribute) continue;
 
     // Skip the props we routed through `processAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
+
+    // A build-time `userSelect`-derived `selectable` supersedes a direct `selectable` (RN's rule), so
+    // drop the now-dead direct prop instead of emitting it alongside the derived literal.
+    if (
+      selectableAttribute &&
+      t.isJSXAttribute(attribute) &&
+      t.isJSXIdentifier(attribute.name, { name: 'selectable' })
+    ) {
+      continue;
+    }
 
     remainingAttributes.push(attribute);
   }
@@ -300,11 +314,18 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   // appending it unconditionally is safe.
   const accessibleAttribute = shouldNormalize ? undefined : buildAccessibleDefault(path, file, platform);
 
+  // ============================================
+  // 4. Assemble the final attribute list
+  // ============================================
+  // `styleSpread` (the runtime `processTextStyle` call) is emitted AFTER the direct attributes so a
+  // `userSelect`-derived `selectable` it computes at runtime overrides a direct `selectable`, mirroring
+  // `Text`'s late `userSelect` override.
   path.node.attributes = [
-    ...spreadAttributes,
+    accessibilitySpread,
     selectableAttribute,
     staticStyleAttribute,
     ...remainingAttributes,
+    styleSpread,
     accessibleAttribute,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
 }
