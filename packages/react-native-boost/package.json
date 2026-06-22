@@ -87,9 +87,9 @@
     "minimatch": "^10.2.5"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-jsx": "^7.25.0",
-    "@babel/preset-react": "^7.25.0",
-    "@babel/preset-typescript": "^7.25.0",
+    "@babel/plugin-syntax-jsx": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
     "@react-native/babel-preset": "0.86.0",
     "@release-it/conventional-changelog": "^11.0.1",
     "@rollup/plugin-alias": "^6.0.0",
