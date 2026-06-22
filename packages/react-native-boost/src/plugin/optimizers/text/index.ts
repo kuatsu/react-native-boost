@@ -45,16 +45,25 @@ export const textBlacklistedProperties = new Set([
   'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
-// `id`/`nativeID` are renamed at build time for direct attributes, but a spread could smuggle either
-// through untranslated, so a spread carrying one of these still bails.
-const ID_RENAME_KEYS = new Set(['id', 'nativeID']);
-
 /**
  * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`,
  * which `Text` reconciles against `accessibilityState.disabled`. They are collected into a single
  * helper call and stripped from the element so they are not also emitted verbatim.
  */
 const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled']);
+
+/**
+ * Props the optimizer normalizes, translates, renames, or clamps for direct attributes but cannot reach
+ * inside a spread. A spread that may carry any of these forces a bail — an unresolvable spread bails
+ * unconditionally, a resolvable one bails only when its object literal contains a guarded key — deferring
+ * to the wrapper, which handles them correctly. Mirrors View's `VIEW_SPREAD_GUARD_KEYS`.
+ *
+ * TODO: rather than bail, route a resolvable spread's contents through `processAccessibilityProps` /
+ * `processTextStyle` (and the `numberOfLines` clamp) so these elements keep optimizing. Deferred because
+ * it requires replicating RN's spread→direct merge precedence across the a11y merge, `disabled`
+ * reconciliation, and style.
+ */
+const TEXT_SPREAD_GUARD_KEYS = new Set([...NORMALIZED_PROPERTIES, 'style', 'numberOfLines', 'id', 'nativeID']);
 
 /**
  * Type guard for a direct JSX attribute whose name is in {@link NORMALIZED_PROPERTIES}.
@@ -75,8 +84,8 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
       shouldBail: () => hasBlacklistedProperty(path, textBlacklistedProperties),
     },
     {
-      reason: 'has id/nativeID in a spread prop',
-      shouldBail: () => hasBlacklistedPropertyInSpread(path, ID_RENAME_KEYS),
+      reason: 'has a spread that may carry a translated, normalized, or clamped prop',
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, TEXT_SPREAD_GUARD_KEYS),
     },
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
@@ -129,7 +138,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
   });
 
   // Process props
-  fixNegativeNumberOfLines({ path, logger });
+  fixNegativeNumberOfLines({ path, logger, file });
   renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
@@ -167,36 +176,67 @@ function hasInvalidChildren(path: NodePath<t.JSXOpeningElement>, parent: t.JSXEl
 }
 
 /**
- * Fixes negative numberOfLines values by setting them to 0.
+ * Replicates `Text`'s non-negative `numberOfLines` rule. A literal value is clamped at build time — a
+ * negative becomes `0` with a compile-time warning, a non-negative is left untouched. A non-literal value
+ * (its sign unknowable at build time) is wrapped in the runtime `clampNumberOfLines` helper, which mirrors
+ * RN exactly (negative/`NaN` → `0`; `null`/`undefined` untouched).
  */
-function fixNegativeNumberOfLines({ path, logger }: { path: NodePath<t.JSXOpeningElement>; logger: PluginLogger }) {
+function fixNegativeNumberOfLines({
+  path,
+  logger,
+  file,
+}: {
+  path: NodePath<t.JSXOpeningElement>;
+  logger: PluginLogger;
+  file: HubFile;
+}) {
   for (const attribute of path.node.attributes) {
     if (
-      t.isJSXAttribute(attribute) &&
-      t.isJSXIdentifier(attribute.name, { name: 'numberOfLines' }) &&
-      attribute.value &&
-      t.isJSXExpressionContainer(attribute.value)
+      !t.isJSXAttribute(attribute) ||
+      !t.isJSXIdentifier(attribute.name, { name: 'numberOfLines' }) ||
+      !attribute.value ||
+      !t.isJSXExpressionContainer(attribute.value) ||
+      !t.isExpression(attribute.value.expression)
     ) {
-      let originalValue: number | undefined;
-      if (t.isNumericLiteral(attribute.value.expression)) {
-        originalValue = attribute.value.expression.value;
-      } else if (
-        t.isUnaryExpression(attribute.value.expression) &&
-        attribute.value.expression.operator === '-' &&
-        t.isNumericLiteral(attribute.value.expression.argument)
-      ) {
-        originalValue = -attribute.value.expression.argument.value;
-      }
-      if (originalValue !== undefined && originalValue < 0) {
+      continue;
+    }
+
+    const expression = attribute.value.expression;
+    const literalValue = staticNumberOfLines(expression);
+
+    if (literalValue !== undefined) {
+      if (literalValue < 0) {
         logger.warning({
           component: 'Text',
           path,
-          message: `'numberOfLines' must be a non-negative number, received: ${originalValue}. The value will be set to 0.`,
+          message: `'numberOfLines' must be a non-negative number, received: ${literalValue}. The value will be set to 0.`,
         });
         attribute.value.expression = t.numericLiteral(0);
       }
+      continue;
     }
+
+    const clampIdentifier = addFileImportHint({
+      file,
+      nameHint: 'clampNumberOfLines',
+      path,
+      importName: 'clampNumberOfLines',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    attribute.value.expression = t.callExpression(t.identifier(clampIdentifier.name), [expression]);
   }
+}
+
+/**
+ * The build-time numeric value of a `numberOfLines` expression when it is a numeric literal or a
+ * unary-minus numeric literal; `undefined` for any other (non-literal) expression.
+ */
+function staticNumberOfLines(expression: t.Expression): number | undefined {
+  if (t.isNumericLiteral(expression)) return expression.value;
+  if (t.isUnaryExpression(expression) && expression.operator === '-' && t.isNumericLiteral(expression.argument)) {
+    return -expression.argument.value;
+  }
+  return undefined;
 }
 
 /**
@@ -219,10 +259,10 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
     );
 
   // ============================================
-  // 1. Prepare spread attributes (a11y / style)
+  // 1. Prepare the accessibility & style transforms
   // ============================================
 
-  const spreadAttributes: t.JSXSpreadAttribute[] = [];
+  let accessibilitySpread: t.JSXSpreadAttribute | undefined;
 
   // --- Accessibility & `disabled` ---
   if (shouldNormalize) {
@@ -238,14 +278,18 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
 
     const accessibilityObject = buildPropertiesFromAttributes(normalizedAttributes);
     const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
-    spreadAttributes.push(t.jsxSpreadAttribute(accessibilityExpr));
+    accessibilitySpread = t.jsxSpreadAttribute(accessibilityExpr);
   }
 
   // --- Style ---
+  // `Text` lets a `userSelect` in the style override a direct `selectable` prop. When the style is static
+  // enough to read `userSelect` at build time we emit the derived `selectable` as a literal and drop the
+  // now-dead direct prop; when it is only knowable at runtime, the `processTextStyle` spread carries
+  // the override and is emitted last so it still wins over the direct prop.
   let selectableAttribute: t.JSXAttribute | undefined;
   let staticStyleAttribute: t.JSXAttribute | undefined;
+  let styleSpread: t.JSXSpreadAttribute | undefined;
   if (styleExpr) {
-    // Attempt a compile-time extraction of `userSelect`
     const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
 
     if (selectableValue != null) {
@@ -270,7 +314,7 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
         moduleName: RUNTIME_MODULE_NAME,
       });
       const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
-      spreadAttributes.push(t.jsxSpreadAttribute(flattenedStyleExpr));
+      styleSpread = t.jsxSpreadAttribute(flattenedStyleExpr);
     }
   }
 
@@ -280,11 +324,21 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   const remainingAttributes: (t.JSXAttribute | t.JSXSpreadAttribute)[] = [];
 
   for (const attribute of currentAttributes) {
-    // Skip the style attribute (we have replaced it with a spread)
+    // Skip the style attribute (we have replaced it with a `style` object or `processTextStyle` spread)
     if (styleAttribute && attribute === styleAttribute) continue;
 
     // Skip the props we routed through `processAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
+
+    // A build-time `userSelect`-derived `selectable` supersedes a direct `selectable` (RN's rule), so
+    // drop the now-dead direct prop instead of emitting it alongside the derived literal.
+    if (
+      selectableAttribute &&
+      t.isJSXAttribute(attribute) &&
+      t.isJSXIdentifier(attribute.name, { name: 'selectable' })
+    ) {
+      continue;
+    }
 
     remainingAttributes.push(attribute);
   }
@@ -300,11 +354,18 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   // appending it unconditionally is safe.
   const accessibleAttribute = shouldNormalize ? undefined : buildAccessibleDefault(path, file, platform);
 
+  // ============================================
+  // 4. Assemble the final attribute list
+  // ============================================
+  // `styleSpread` (the runtime `processTextStyle` call) is emitted AFTER the direct attributes so a
+  // `userSelect`-derived `selectable` it computes at runtime overrides a direct `selectable`, mirroring
+  // `Text`'s late `userSelect` override.
   path.node.attributes = [
-    ...spreadAttributes,
+    accessibilitySpread,
     selectableAttribute,
     staticStyleAttribute,
     ...remainingAttributes,
+    styleSpread,
     accessibleAttribute,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
 }

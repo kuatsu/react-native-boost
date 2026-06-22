@@ -68,7 +68,7 @@ Thanks to various improvements to the reconciler and other internals in React Na
 
 ## `reduceDefaultPropsInText` feature flag in React Native
 
-In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced for the native `Text` component. React Native's long-term goal is to reduce the overhead of the `Text` and `View` components directly in React Native core, eliminating the need to use the native underlying components, an effort that has been started with this feature flag.
+In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced. It trimmed the `Text` wrapper's output so that unset accessibility/`aria-*` props no longer crossed the JS→native boundary on every render. It shipped disabled by default and has since **graduated**: in newer React Native the flag is gone and the optimized behavior is simply the default. It's one step in React Native's long-term goal of reducing the `Text` and `View` wrapper overhead directly in core. The [Deep Dive](/docs/information/deep-dive#react-natives-own-roadmap) traces its full lifecycle.
 
 <GitHubSnippet
   url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/TextNativeComponent.js#L77-L78"
@@ -76,4 +76,4 @@ In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced f
 // and <View> wrappers so that we no longer have any reason to export these APIs.`}
 />
 
-In our benchmark, the **core-optimized** series in the graphs enables `reduceDefaultPropsInText`. Under heavy render load it recovers roughly **8–15%** of the baseline's lost frame rate on iOS (a bit more on Android), but closes only part of the gap. `NativeText`, the component React Native Boost uses under the hood, stays well ahead — around a **50%** margin over the core-optimized build at the heaviest loads on iOS. As React Native lands more of these optimizations, we expect the core-optimized line to keep rising toward React Native Boost.
+In our benchmark, the **core-optimized** series in the graphs enables `reduceDefaultPropsInText` (on the React Native version measured here, where the flag still exists). Under heavy render load it recovers roughly **8–15%** of the baseline's lost frame rate on iOS (a bit more on Android), but closes only part of the gap. `NativeText`, the component React Native Boost uses under the hood, stays well ahead — around a **50%** margin over the core-optimized build at the heaviest loads on iOS. As React Native lands more of these optimizations, we expect the core-optimized line to keep rising toward React Native Boost.

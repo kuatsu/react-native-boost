@@ -1,23 +1,56 @@
 ---
 title: How It Works
-description: Understand why React Native Boost makes your app faster, and how the Babel optimizer decides when transformations are safe.
+description: Why React Native Boost makes your app faster (the short version).
 ---
 
-React Native components such as `Text` and `View` are JavaScript wrappers around their native implementations.
-Those wrappers handle many edge cases, but they also add a considerable amount of runtime overhead.
+In React Native, `Text` and `View` aren't quite what they appear to be. They look like basic building blocks, but each one is a small JavaScript component that runs **every time it renders**, wrapping a lower-level native component underneath.
 
-React Native Boost analyzes your code at build time and replaces these components with their native equivalents fully automatically. The plugin performs static analysis on your code to determine when it's provably safe to optimize a component and when it's not.
+That wrapper is genuinely useful. It handles a lot of edge cases and powers conveniences like `aria-*` props, `userSelect`, and clamping `numberOfLines`. But most of the time your `Text` or `View` uses none of that, and the wrapper's work is pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
-Optimized components are imported from `react-native-boost/runtime`, not directly from `react-native`, which allows us graceful fallback for web targets
-and other non-native environments when native internals are unavailable.
+React Native Boost removes the wrapper when it isn't needed.
 
-## Static Analysis
+## The one-sentence version
 
-For each candidate component, the plugin verifies conditions such as:
+At build time, Boost rewrites `Text` and `View` elements into the native components they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
 
-- Import source checks (for example, imported from `react-native`)
-- Prop compatibility checks
-- Ancestor and context safety checks
-- Children/structure checks
+## A quick before and after
 
-If any safety requirement is not met, the component is left unchanged, preventing behavioral changes and other bugs.
+```tsx
+// You write:
+<Text>Hello</Text>
+
+// Boost compiles it to (simplified):
+<NativeText allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
+```
+
+`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlines above. Boost just skips the middleman. The defaults the wrapper would have applied are baked in at build time, so what ends up on screen is identical.
+
+These optimized components are imported from `react-native-boost/runtime` rather than `react-native` directly. That indirection lets them fall back to the standard components on web and other platforms where the native versions aren't available.
+
+## Only when it's safe
+
+Boost never changes how your app looks or behaves. It rewrites a component only when it can **prove** that doing so is safe. For each `Text` or `View` it checks a lot of things. For example:
+
+- Is this really the `react-native` component, or some other `Text` from another library?
+- Are its props fully compatible with the underlying native component?
+- Is it in a safe spot in the tree (for example, not nested inside another `Text`)?
+
+If any check fails, Boost leaves that component exactly as it was. The bias is strongly toward safety: it would rather miss an optimization than risk a bug.
+
+<Cards>
+  <Card
+    title="Deep Dive"
+    href="/docs/information/deep-dive"
+    description="The wrapper tax, the full call graph, the plugin internals, and the safety proofs in detail."
+  />
+  <Card
+    title="Coverage & Bailouts"
+    href="/docs/information/optimization-coverage"
+    description="Exactly what gets optimized, what gets skipped, and why."
+  />
+  <Card
+    title="Benchmarks"
+    href="/docs/information/benchmarks"
+    description="How much faster, and how it's measured."
+  />
+</Cards>

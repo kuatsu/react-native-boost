@@ -5,10 +5,9 @@ import {
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
+  selectable={false}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
-  {..._processTextStyle({
-    verticalAlign: 'sideways',
-  })}
+  {..._processTextStyle(dynamicStyle)}
   accessible={_getDefaultTextAccessible()}
 />;

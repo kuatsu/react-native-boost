@@ -75,7 +75,7 @@ Optionally, you can configure the Babel plugin with a few options described in t
 
 ## How it works
 
-A technical rundown of how the plugin works can be found in the [docs](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works).
+A [short overview of how the plugin works](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works) as well as [a technical deep dive](https://react-native-boost.oss.kuatsu.de/docs/information/deep-dive) can be found in the documentation.
 
 ## Contributing
 

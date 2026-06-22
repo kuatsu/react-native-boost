@@ -10,12 +10,14 @@ const styles = StyleSheet.create({
   },
 });
 <_NativeText
-  {..._processTextStyle(dynamicStyle)}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  {..._processTextStyle(dynamicStyle)}
   accessible={_getDefaultTextAccessible()}
 />;
 <_NativeText
+  allowFontScaling={true}
+  ellipsizeMode={'tail'}
   {..._processTextStyle([
     {
       a: 1,
@@ -24,13 +26,11 @@ const styles = StyleSheet.create({
       b: 2,
     },
   ])}
-  allowFontScaling={true}
-  ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}
 />;
 <_NativeText
-  {..._processTextStyle(styles.foo)}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  {..._processTextStyle(styles.foo)}
   accessible={_getDefaultTextAccessible()}
 />;

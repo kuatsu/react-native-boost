@@ -1,0 +1,412 @@
+---
+title: Technical Deep Dive
+description: A technical tour of the Text and View wrappers, the render-time tax they impose, and how React Native Boost removes it at build time.
+---
+
+This page is the long version of [How It Works](/docs/information/how-it-works). It walks through what the
+`Text` and `View` wrappers actually do on every render, traces a single element from JSX all the way to
+a native shadow node, and then shows exactly how the Babel plugin and its runtime helpers collapse that
+work safely.
+
+<Callout>
+  This has last been updated for React Native 0.85 and React Native Boost 1.3.0.
+</Callout>
+
+## `Text` and `View` are not host components
+
+It's tempting to think of `Text` and `View` as native platform primitives. Surprisingly (even to many senior RN developers), they aren't. They are ordinary JavaScript **function components** that each render a
+lower-level component underneath:
+
+- `Text` renders `NativeText` (the host component `RCTText`), or `NativeVirtualText` (`RCTVirtualText`) when nested inside another `Text`.
+- `View` renders `ViewNativeComponent` (the host component `RCTView`).
+
+Those underlying components are the real primitives. At runtime they resolve to the plain string `'RCTText'` and `'RCTView'` respectively, and React reconciles that to a **host component**. It builds the shadow node directly, with no JavaScript component fiber in between.
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Components/View/ViewNativeComponent.js#L18-L21"
+  code={`const ViewNativeComponent: HostComponent<Props> =
+  NativeComponentRegistry.get<Props>('RCTView', () => ({
+    uiViewClassName: 'RCTView',
+  }));`}
+/>
+
+`NativeComponentRegistry.get(...)` registers the view config and **returns the name string**. `ViewNativeComponent` is literally `'RCTView'`, the same is true of `NativeText`:
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/TextNativeComponent.js#L79-L82"
+  code={`export const NativeText: HostComponent<NativeTextProps> =
+  createReactNativeComponentClass('RCTText', () =>
+    createViewConfig(textViewConfig),
+  ) as any;`}
+/>
+
+The wrapper exists to translate ergonomic, cross-platform props into the props the host component actually
+understands, and to manage some JS-side state (specifically, `TextAncestorContext` and pressability). The crucial
+detail is that **all of that translation runs in JavaScript, on every render**, even when your element uses none
+of it. They are rare edge cases producing real overhead for _every_ element.
+
+## Itemizing this tax
+
+### `Text`
+
+The `Text` wrapper is a single 550+ line file. Each time React renders a `<Text>`, its function body runs top to bottom.
+Even a bare `<Text>Hello</Text>` pays for:
+
+- A **function-component invocation** and the React fiber that backs it.
+- **Destructuring ~35 named props** out of `props`; every one a property read, most resolving to `undefined`.
+- **`aria-*` → `accessibility*` translation**: an `aria-label` coalesce, plus a five-field `accessibilityState` merge that allocates a fresh object whenever any `aria-*` state prop is set.
+- **`disabled` ↔ `accessibilityState.disabled` reconciliation**.
+- A **`Platform.select`** to resolve the default `accessible` value.
+- An **`isPressable`** computation and `accessibilityRole`/`role` link defaulting.
+- **`processColor(selectionColor)`** when a selection color is set.
+- A **`numberOfLines` clamp** (with a dev-only `console.error` for negatives).
+- A **`flattenStyle` walk** of the `style` prop, followed by `fontWeight` number→string conversion, `userSelect` lookup, and `verticalAlign` → `textAlignVertical` mapping, each potentially allocating an `overrides` object and a new `[style, overrides]` array:
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/Text.js#L188-L215"
+  code={`  let processedStyle = flattenStyle<TextStyleProp>(_style);
+  if (processedStyle != null) {
+    let overrides: ?{...TextStyleInternal} = null;
+    if (typeof processedStyle.fontWeight === 'number') {
+      overrides = overrides || ({} as {...TextStyleInternal});
+      overrides.fontWeight =
+        // $FlowFixMe[incompatible-type]
+        String(processedStyle.fontWeight) as TextStyleInternal['fontWeight'];
+    }
+
+    if (processedStyle.userSelect != null) {
+      _selectable = userSelectToSelectableMap[processedStyle.userSelect];
+      overrides = overrides || ({} as {...TextStyleInternal});
+      overrides.userSelect = undefined;
+    }
+
+    if (processedStyle.verticalAlign != null) {
+      overrides = overrides || ({} as {...TextStyleInternal});
+      overrides.textAlignVertical =
+        verticalAlignToTextAlignVerticalMap[processedStyle.verticalAlign];
+      overrides.verticalAlign = undefined;
+    }
+
+    if (overrides != null) {
+      // $FlowFixMe[incompatible-type]
+      _style = [_style, overrides];
+    }
+  }`}
+/>
+
+- A **`useContext(TextAncestorContext)`** subscription, used to decide whether to render as `RCTText` or `RCTVirtualText`. Once a fiber subscribes to a context, React must re-render it whenever that context value changes.
+- A decision about whether to wrap the output in a **`<TextAncestorContext value={true}>` provider** which, when installed, is itself an extra fiber with its own context push/pop in the commit phase:
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/Text.js#L311-L336"
+  code={`  if (children == null) {
+    return nativeText;
+  }
+
+  // If the children do not contain a JSX element it would not be possible to have a
+  // nested \`Text\` component so we can skip adding the \`TextAncestorContext\` context wrapper
+  // which has a performance overhead. Since we do this for performance reasons we need
+  // to keep the check simple to avoid regressing overall perf. For this reason the
+  // \`children.length\` constant is set to \`3\`, this should be a reasonable tradeoff
+  // to capture the majority of \`Text\` uses but also not make this check too expensive.
+  if (Array.isArray(children) && children.length <= 3) {
+    let hasNonTextChild = false;
+    for (let child of children) {
+      if (child != null && typeof child === 'object') {
+        hasNonTextChild = true;
+        break;
+      }
+    }
+    if (!hasNonTextChild) {
+      return nativeText;
+    }
+  } else if (typeof children !== 'object') {
+    return nativeText;
+  }
+
+  return <TextAncestorContext value={true}>{nativeText}</TextAncestorContext>;`}
+/>
+
+Importantly, none of this is expensive individually. The problem is the multiplier. A list row might contain a dozen
+`Text` elements, a screen a few hundred. And the tax is paid by
+every single one, on every single UI commit.
+
+### `View`
+
+The `View` wrapper is a lot leaner. Still, on each render it subscribes to `TextAncestorContext`, destructures 17 named props, runs a series of
+`aria-*` translations, and decides whether to flip the context back to `false` for its descendants:
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Components/View/View.js#L28-L50"
+  code={`component View(ref?: React.RefSetter<ViewInstance>, ...props: ViewProps) {
+  const hasTextAncestor = use(TextAncestorContext);
+
+  const {
+    accessibilityState,
+    accessibilityValue,
+    'aria-busy': ariaBusy,
+    'aria-checked': ariaChecked,
+    'aria-disabled': ariaDisabled,
+    'aria-expanded': ariaExpanded,
+    'aria-hidden': ariaHidden,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledBy,
+    'aria-live': ariaLive,
+    'aria-selected': ariaSelected,
+    'aria-valuemax': ariaValueMax,
+    'aria-valuemin': ariaValueMin,
+    'aria-valuenow': ariaValueNow,
+    'aria-valuetext': ariaValueText,
+    id,
+    tabIndex,
+    ...otherProps
+  } = props;`}
+/>
+
+## From JSX to pixels: the call graph
+
+Consider `<Text>Hello</Text>`. Here is the path it travels, with and without Boost.
+
+<Mermaid
+  chart={`flowchart TD
+  src["Text element in your JSX"] --> q{"What type does React see?"}
+  q -- "react-native Text (a function)" --> w["React renders a wrapper fiber"]
+  w --> work["Wrapper re-runs its whole body"]
+  work --> ret["Wrapper returns the RCTText host element"]
+  ret --> host["React renders an RCTText host fiber"]
+  q -- "Boost: NativeText (the string RCTText)" --> host
+  host --> node["completeWork builds a ParagraphShadowNode"]
+  node --> raw["A child RawTextShadowNode holds the string Hello"]
+  raw --> paint["Yoga calls TextLayoutManager to measure, then layout and paint"]`}
+/>
+
+Without Boost, React sees a **function** type and renders a component fiber. It has to run everything in the
+section above before the wrapper can even return the `RCTText` element. With Boost, React skips straight to the host fiber. Everything between "wrapper fiber" and "host fiber" disappears.
+
+The host side is identical either way. A single `<Text>Hello</Text>` always produces **two** shadow
+nodes: a `ParagraphShadowNode` and a `RawTextShadowNode` child for the string (mounted as the `RCTText` and `RCTRawText` views).
+Boost doesn't touch any of that. It only removes the JavaScript that ran *before* the host node was ever
+created.
+
+The same is true of the React tree. Boost deletes the wrapper fiber (and, where the wrapper would have
+added one, the `TextAncestorContext` provider fiber):
+
+<Mermaid
+  chart={`flowchart TB
+  subgraph withoutBoost["Without Boost"]
+    direction TB
+    w1["Text (wrapper fiber)"] --> w2["TextAncestorContext.Provider (sometimes)"]
+    w2 --> w3["RCTText (host fiber)"]
+    w3 --> w4["RCTRawText (host fiber)"]
+  end
+  subgraph withBoost["With Boost"]
+    direction TB
+    b3["RCTText (host fiber)"] --> b4["RCTRawText (host fiber)"]
+  end`}
+/>
+
+Fewer fibers means less for React to build, diff, and commit on every frame (something our
+[React tree node benchmark](/docs/information/benchmarks#number-of-react-tree-nodes) measures).
+
+## What Boost emits
+
+Boost's core move is to swap the JSX element's type from `Text`/`View` to `NativeText`/`NativeView`
+(imported from `react-native-boost/runtime`), after reproducing (at *build time*) whatever inescapable
+work the wrapper would have done for the specific element.
+
+### Text
+
+The simplest case bakes in the defaults the wrapper would have applied, too:
+
+```tsx
+// in
+<Text>Hello</Text>
+
+// out
+import { getDefaultTextAccessible as _getDefaultTextAccessible, NativeText as _NativeText } from 'react-native-boost/runtime';
+import { Text } from 'react-native';
+
+<_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>Hello</_NativeText>;
+```
+
+`accessible` is
+platform-specific (`true` on iOS, `false` on Android, omitted on web). When Metro tells Boost which
+platform it's bundling for at compile time, the literal is inlined directly (`accessible={true}`); *only when it doesn't* (though it usually does!) it falls
+back to the tiny [`getDefaultTextAccessible()`](/docs/runtime-library) runtime helper shown above. `allowFontScaling` and `ellipsizeMode` are simply the wrapper's defaults, inlined.
+
+A **fully static** style is normalized at build time and emitted as a plain object with no runtime call at
+all:
+
+```tsx
+// in
+<Text style={{ color: 'red' }} />
+
+// out (style normalized at build time)
+<_NativeText style={{ color: 'red' }} allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()} />;
+```
+
+A **dynamic** style is routed through the `processTextStyle` runtime helper instead, where a reference
+cache and a single `StyleSheet.flatten` are the win (more on that below):
+
+```tsx
+// in
+<Text style={dynamicStyle} />
+
+// out
+<_NativeText {..._processTextStyle(dynamicStyle)} allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()} />;
+```
+
+Accessibility and `aria-*` props (and `disabled`) are collected into a single `processAccessibilityProps`
+call; a negative `numberOfLines` literal is rewritten to `0`; an `id` is renamed to `nativeID`; a static
+`userSelect` is lifted out of the style into a top-level `selectable` prop.
+
+### View
+
+`View` optimizes even with a `style` prop, since the wrapper passes style through unchanged:
+
+```tsx
+<View />                          →  <_NativeView />
+<View style={{ width: 1 }} />     →  <_NativeView style={{ width: 1 }} />
+<View id="x" />                   →  <_NativeView nativeID="x" />
+<View tabIndex={0} />             →  <_NativeView focusable={true} />
+<View aria-live="off" />          →  <_NativeView accessibilityLiveRegion="none" />
+```
+
+Static `aria-*`/`tabIndex`/`id` props are translated into their native counterparts **at build time**.
+Dynamic values, or `aria-*` state/value groups that the wrapper merges, are routed through the
+`processViewAccessibilityProps` helper:
+
+```tsx
+// in
+<View aria-label={label} />
+
+// out
+<_NativeView {..._processViewAccessibilityProps(Object.assign({}, { 'aria-label': label }))} />;
+```
+
+For the complete matrix of what's optimized, translated, and skipped, see
+[Coverage & Bailouts](/docs/information/optimization-coverage).
+
+## Inside the plugin
+
+The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`
+optimizer and the `View` optimizer; each follows the same shape.
+
+<Mermaid
+  chart={`flowchart TD
+  el["JSXOpeningElement (Text or View)"] --> g{"Resolves to the react-native component?"}
+  g -- no --> skip["Leave unchanged"]
+  g -- yes --> b{"Does any bailout check fail?"}
+  b -- "yes, and no @boost-force" --> skip
+  b -- "no, or @boost-force" --> rw["Rewrite props, swap type to NativeText / NativeView"]
+  rw --> imp["Inject the runtime import (cached once per file)"]`}
+/>
+
+### Proving the element is really `react-native`'s
+
+Two gates run first, and neither can be overridden:
+
+- **`isValidJSXComponent`** walks from the JSX tag back to its binding and checks the *imported* name, so `import { Text as RNText } from 'react-native'` still resolves to `Text`.
+- **`isReactNativeImport`** verifies the binding's import source is literally `'react-native'`. A local `const Text = SomeLib.Text`, or an import from an internal deep path, does not qualify.
+
+### The bailout checks
+
+Each optimizer defines a list of **bailout checks**. If any fires (and the line isn't marked
+`@boost-force`), the element is left untouched and logged as `skipped`. The checks encode "for this prop
+or shape, the wrapper does something the host can't, or that Boost can't prove equivalent". This could be blacklisted
+props, an unresolvable spread, non-primitive `Text` children, an unsafe ancestor, and so on.
+
+A subtle one worth highlighting: `Text` children must be **provably primitive** (a string or number). A
+non-string child could smuggle in a nested element, including another `<Text>`, which would break the
+`TextAncestorContext` invariant. So `<Text>{name}</Text>` is optimized only when `name` provably resolves
+to a string/number; `<Text>{maybeJSX()}</Text>` is not.
+
+### Ancestor classification
+
+The most intricate check is shared by both optimizers. An element nested inside a `Text` must render as
+the *inline* host (`RCTVirtualText`), not the *block* host — so before optimizing, the plugin walks **up**
+the tree and classifies the ancestor chain as one of:
+
+- `safe` — no `Text` ancestor anywhere up the chain → optimize.
+- `text` — a `react-native` `Text` is an ancestor → skip.
+- `unknown` — an ancestor is a component the plugin can't resolve → skip, unless you opt in.
+
+The walk is more than a parent scan. It resolves JSX member expressions (`RN.View`), follows aliased
+identifiers, recurses into **local function components** (including `memo()`/`forwardRef()` wrappers and
+`props.children` render paths), and uses `WeakSet`s to break cycles in mutually-recursive components. When
+it can't prove safety, it returns `unknown` and bails. False-positives (a missed optimization) are, as everywhere in the plugin, preferred over
+false-negatives (a regression).
+
+The `unknown` case is *often* safe in practice (third-party components rarely wrap children in `Text`), but there are still cases where optimizing components with an `unknown` ancestor could genuinely cause regressions. Therefore, Boost provides
+explicit opt-in escape hatches: `dangerouslyOptimizeViewWithUnknownAncestors` and
+`dangerouslyOptimizeTextWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
+
+### Rewriting and import injection
+
+Once an element passes, the optimizer rewrites its props (the build-time translations above), then swaps
+the JSX type and injects the needed import. Imports are **cached per file** on the Babel file object, so
+even though the visitor fires thousands of times, each runtime symbol is imported exactly once.
+
+## The runtime helpers
+
+`react-native-boost/runtime` is the small library the generated code calls into. For reference, its full
+API lives on the [Runtime Library](/docs/runtime-library) page. The most load-bearing pieces are:
+
+- **`NativeText` / `NativeView`** resolve `unstable_NativeText` / `unstable_NativeView` from `react-native` at module load, and **gracefully fall back** to the standard `Text`/`View` on web or any runtime where these exports are missing.
+- **`processTextStyle(style)`** does the same flatten-and-normalize work as the wrapper, with one small difference: it **caches by reference in a `WeakMap`**. When you pass a `StyleSheet.create` reference, the first call flattens it and every later call returns the cached result. The wrapper re-flattens on every render. (Only stable references hit the cache; an inline `style={{…}}` is a fresh reference each render, so it re-flattens either way.)
+- **`processAccessibilityProps(props)`** mirrors `Text`'s `aria-*` translation, `accessibilityState` merge, `disabled` reconciliation, and platform `accessible` default. It runs only when the element actually has accessibility props.
+- **`processViewAccessibilityProps(props)`** does the same for `View`'s ARIA cluster (`aria-labelledby` split, live-region mapping, state/value aggregation, `tabIndex` → `focusable`).
+
+## Why it's safe
+
+Boost is built on one strict contract: **never change rendered output, layout, or the accessibility tree.** Skipping a `Text` that could have been optimized just leaves
+performance on the table; optimizing one that needed the wrapper would be a correctness bug with potential UI or behavior regressions.
+
+Two escape hatches let you override the analysis when *you* know more than the plugin can prove:
+[`@boost-force`](/docs/configuration/boost-decorator#boost-force) on a single element, or the
+`dangerouslyOptimize*WithUnknownAncestors` options for whole-project ancestor resolution. Both are named
+to signal that you've taken ownership of the correctness argument.
+
+## React Native's own roadmap
+
+The wrappers are not meant to live forever. React Native's core team has clearly stated the goal is to reduce the JS overhead as much as possible, making direct use of the native host components unnecessary:
+
+<GitHubSnippet
+  url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/TextNativeComponent.js#L77-L78"
+  code={`// Additional note: Our long term plan is to reduce the overhead of the <Text>
+// and <View> wrappers so that we no longer have any reason to export these APIs.`}
+/>
+
+The first example for this is the
+`reduceDefaultPropsInText` feature flag: introduced in RN 0.82, it made the
+`Text` wrapper assign derived accessibility/`aria-*` props **only when defined** (and spread the rest)
+instead of always passing a fixed set of named props, so that prop keys whose value was `undefined` no longer
+crossed the JS→native boundary. The feature flag **graduated** to default behavior in RN 0.85.
+
+It's a real improvement. However, the wrapper continues to destructure every
+prop, flatten styles, subscribe to context, and run as its own fiber on every render.
+
+So, **React Native core is optimizing the runtime, while Boost patches the call site at build-time.** At some point in the future, in an ideal scenario, the JS wrapper components could become performant enough to make Boost genuinely unnecessary. However, today, it still offers a genuine performance improvement for a lot of apps.
+
+<Cards>
+  <Card
+    title="Coverage & Bailouts"
+    href="/docs/information/optimization-coverage"
+    description="The full matrix: what's optimized, translated, and skipped."
+  />
+  <Card
+    title="Benchmarks"
+    href="/docs/information/benchmarks"
+    description="How much faster, and the methodology behind the numbers."
+  />
+  <Card
+    title="Runtime Library"
+    href="/docs/runtime-library"
+    description="The helper API the generated code calls into."
+  />
+  <Card
+    title="Configuration"
+    href="/docs/configuration/configure"
+    description="Plugin options, including the dangerous ancestor flags."
+  />
+</Cards>
