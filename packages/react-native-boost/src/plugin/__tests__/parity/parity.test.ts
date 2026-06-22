@@ -13,6 +13,7 @@ vi.mock('../../../runtime/components/native-view', async () => ({
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, boostOptimizes } from './boost';
+import { normalize } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
 
@@ -93,27 +94,6 @@ const VIEW_CASES = [
 // View cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
 // a silent loss of optimization — from masquerading as a passing parity test.
 const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
-
-// Flatten a `style` value the way the native host does (`StyleSheet.flatten`): a top-level array
-// flattens left-to-right with last-key-wins, recursing into nested arrays; non-object entries
-// contribute nothing. Run on the raw value (before the JSON clean) so an `{ key: undefined }` override
-// correctly deletes the key, exactly as the runtime merge does.
-const flattenStyle = (style: unknown): unknown => {
-  if (!Array.isArray(style)) return style;
-  const result: Record<string, unknown> = {};
-  for (const entry of style) {
-    const flat = flattenStyle(entry);
-    if (flat && typeof flat === 'object') Object.assign(result, flat);
-  }
-  return result;
-};
-
-// Treat `undefined`-valued keys as absent and deep-clean nested objects (also drops function values
-// such as event handlers) so the comparison is a clean structural prop-bag equality. The `style` prop
-// is flattened first so Boost's build-time-merged object compares equal to the wrapper's original
-// array — the property the native host actually sees is the flattened style, not its authored shape.
-const normalize = (props: Record<string, unknown>) =>
-  JSON.parse(JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props));
 
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {

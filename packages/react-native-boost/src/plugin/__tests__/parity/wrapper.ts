@@ -1,11 +1,8 @@
-import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { transformSync } from '@babel/core';
 import * as React from 'react';
 import { renderAndCaptureAll, renderAndCaptureSingle, type Capture } from './capture';
-import { setPlatformOS } from './mocks/Platform';
-
-let counter = 0;
+import { writeAndImportFresh } from './generated';
+import { setPlatformOS, type PlatformOS } from './mocks/Platform';
 
 /**
  * Compile a JSX body against RN's deep wrapper sources and return its default-exported component. The
@@ -13,11 +10,11 @@ let counter = 0;
  * `@babel/preset-react`, written to `__generated__/`, and dynamically imported so its `react-native`
  * deep imports and `react/jsx-runtime` import resolve through the parity vite pipeline.
  */
-async function compileWrapperCase(os: 'ios' | 'android', jsxBody: string): Promise<React.ComponentType> {
+async function compileWrapperCase(os: PlatformOS, jsxBody: string, preamble = ''): Promise<React.ComponentType> {
   setPlatformOS(os); // Text.js reads Platform.select at render time
   const source =
     `import Text from 'react-native/Libraries/Text/Text';\n` +
-    `import View from 'react-native/Libraries/Components/View/View';\n` +
+    `import View from 'react-native/Libraries/Components/View/View';\n${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,
@@ -25,9 +22,7 @@ async function compileWrapperCase(os: 'ios' | 'android', jsxBody: string): Promi
     filename: 'wrapper-case.jsx',
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
   });
-  const file = fileURLToPath(new URL(`./__generated__/wrapper-${os}-${counter++}.js`, import.meta.url));
-  writeFileSync(file, out!.code!);
-  const mod = await import(/* @vite-ignore */ file);
+  const mod = await writeAndImportFresh('wrapper', out!.code!);
   return mod.default;
 }
 
@@ -35,8 +30,8 @@ async function compileWrapperCase(os: 'ios' | 'android', jsxBody: string): Promi
  * Render the REAL React Native `Text`/`View` wrapper for a single-host JSX body and return the prop
  * bag its native host received. This is the oracle the Boost output is compared against.
  */
-export async function captureWrapper(os: 'ios' | 'android', jsxBody: string): Promise<Capture> {
-  const Case = await compileWrapperCase(os, jsxBody);
+export async function captureWrapper(os: PlatformOS, jsxBody: string, preamble = ''): Promise<Capture> {
+  const Case = await compileWrapperCase(os, jsxBody, preamble);
   return renderAndCaptureSingle(React.createElement(Case));
 }
 
@@ -45,7 +40,7 @@ export async function captureWrapper(os: 'ios' | 'android', jsxBody: string): Pr
  * Used by nested cases (e.g. `<Text>x <Text>y</Text></Text>`) where the wrapper renders an outer
  * `NativeText` and an inner `NativeVirtualText`.
  */
-export async function captureWrapperHosts(os: 'ios' | 'android', jsxBody: string): Promise<Capture[]> {
-  const Case = await compileWrapperCase(os, jsxBody);
+export async function captureWrapperHosts(os: PlatformOS, jsxBody: string, preamble = ''): Promise<Capture[]> {
+  const Case = await compileWrapperCase(os, jsxBody, preamble);
   return renderAndCaptureAll(React.createElement(Case));
 }
