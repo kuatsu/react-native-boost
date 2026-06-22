@@ -1,5 +1,20 @@
 # Changelog
 
+# [1.3.0](https://github.com/kuatsu/react-native-boost/compare/v1.2.0...v1.3.0) (2026-06-22)
+
+
+### Bug Fixes
+
+* **text:** bail on normalized/style props in resolvable spreads ([f89e22e](https://github.com/kuatsu/react-native-boost/commit/f89e22e6b60abc08775b830ae88c288da681d5ef)), closes [#27](https://github.com/kuatsu/react-native-boost/issues/27)
+* **text:** clamp dynamic numberOfLines ([3819356](https://github.com/kuatsu/react-native-boost/commit/3819356733b8ce0237317b7d9cde1f8d88c8acf3)), closes [#28](https://github.com/kuatsu/react-native-boost/issues/28)
+* **text:** fix `userSelect` / `selectable` prop ordering ([0a4ec0c](https://github.com/kuatsu/react-native-boost/commit/0a4ec0ce1ae9522464ec85c2fb86ead8322798a1)), closes [#29](https://github.com/kuatsu/react-native-boost/issues/29)
+
+
+### Features
+
+* **text:** inline static styles at build time, skipping a runtime call ([d012744](https://github.com/kuatsu/react-native-boost/commit/d0127446ef22a81e4abecd19e17ffbd877608f0b))
+* translate View aria/tabIndex props & handle id instead of bailing ([a23e8ef](https://github.com/kuatsu/react-native-boost/commit/a23e8ef8e048fd8fee498cb1d16806445c315d78))
+
 # [1.2.0](https://github.com/kuatsu/react-native-boost/compare/v1.1.0...v1.2.0) (2026-06-21)
 
 
