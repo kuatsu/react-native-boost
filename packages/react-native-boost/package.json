@@ -91,7 +91,7 @@
     "@babel/preset-react": "^7.25.0",
     "@babel/preset-typescript": "^7.25.0",
     "@react-native/babel-preset": "0.86.0",
-    "@release-it/conventional-changelog": "^10.0.0",
+    "@release-it/conventional-changelog": "^11.0.1",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-replace": "^6.0.2",
