@@ -45,16 +45,25 @@ export const textBlacklistedProperties = new Set([
   'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
-// `id`/`nativeID` are renamed at build time for direct attributes, but a spread could smuggle either
-// through untranslated, so a spread carrying one of these still bails.
-const ID_RENAME_KEYS = new Set(['id', 'nativeID']);
-
 /**
  * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`,
  * which `Text` reconciles against `accessibilityState.disabled`. They are collected into a single
  * helper call and stripped from the element so they are not also emitted verbatim.
  */
 const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled']);
+
+/**
+ * Props the optimizer normalizes, translates, renames, or clamps for direct attributes but cannot reach
+ * inside a spread. A spread that may carry any of these forces a bail — an unresolvable spread bails
+ * unconditionally, a resolvable one bails only when its object literal contains a guarded key — deferring
+ * to the wrapper, which handles them correctly. Mirrors View's `VIEW_SPREAD_GUARD_KEYS`.
+ *
+ * TODO: rather than bail, route a resolvable spread's contents through `processAccessibilityProps` /
+ * `processTextStyle` (and the `numberOfLines` clamp) so these elements keep optimizing. Deferred because
+ * it requires replicating RN's spread→direct merge precedence across the a11y merge, `disabled`
+ * reconciliation, and style.
+ */
+const TEXT_SPREAD_GUARD_KEYS = new Set([...NORMALIZED_PROPERTIES, 'style', 'numberOfLines', 'id', 'nativeID']);
 
 /**
  * Type guard for a direct JSX attribute whose name is in {@link NORMALIZED_PROPERTIES}.
@@ -75,8 +84,8 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
       shouldBail: () => hasBlacklistedProperty(path, textBlacklistedProperties),
     },
     {
-      reason: 'has id/nativeID in a spread prop',
-      shouldBail: () => hasBlacklistedPropertyInSpread(path, ID_RENAME_KEYS),
+      reason: 'has a spread that may carry a translated, normalized, or clamped prop',
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, TEXT_SPREAD_GUARD_KEYS),
     },
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
