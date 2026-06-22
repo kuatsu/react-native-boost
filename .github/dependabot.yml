@@ -13,7 +13,57 @@ updates:
       prefix: chore
       prefix-development: chore
       include: scope
+    ignore:
+      # Expo SDK packages and the React Native core/ecosystem are version-locked
+      # to the Expo SDK release. They must be upgraded together via
+      # `expo install --fix` / the SDK upgrade guide, never one at a time.
+      # react/react-dom are pinned to the exact versions
+      # Expo bundles (see apps/example), so they belong here too.
+      - dependency-name: 'expo'
+      - dependency-name: 'expo-*'
+      - dependency-name: '@expo/*'
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-web'
+      - dependency-name: 'react-native-safe-area-context'
+      - dependency-name: 'react-native-screens'
+      - dependency-name: '@react-native/*'
+      - dependency-name: '@react-native-community/*'
+      - dependency-name: '@react-navigation/*'
+      # These majors are breaking and coupled to the rest of the toolchain, so
+      # they are upgraded deliberately rather than by an automated PR.
+      - dependency-name: '@babel/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'ts-morph'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
     groups:
+      babel:
+        patterns:
+          - '@babel/*'
+        update-types:
+          - minor
+          - patch
+      docs:
+        patterns:
+          - 'fumadocs*'
+          - 'next'
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+          - 'tailwind-merge'
+          - 'lucide-react'
+          - 'mermaid'
+          - 'ts-morph'
+          - 'postcss'
+        update-types:
+          - minor
+          - patch
       production-dependencies:
         dependency-type: production
         update-types:
