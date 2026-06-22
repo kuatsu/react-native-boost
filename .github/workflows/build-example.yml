@@ -1,0 +1,96 @@
+name: Build example app
+
+on:
+  push:
+    branches:
+      - main
+    paths: &paths
+      - 'apps/example/**'
+      - 'packages/react-native-boost/**'
+      - 'pnpm-lock.yaml'
+      - '.github/actions/setup/**'
+      - '.github/workflows/build-example.yml'
+  pull_request:
+    branches:
+      - main
+    paths: *paths
+
+concurrency:
+  group: build-example-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: Build iOS (Debug)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      # CocoaPods aborts with an Encoding::CompatibilityError when the locale is
+      # unset in a non-interactive shell; force a UTF-8 locale for `pod install`.
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Generate unoptimized twins
+        run: pnpm --filter react-native-boost-example run gen:unoptimized
+
+      - name: Prebuild iOS project
+        working-directory: apps/example
+        run: npx expo prebuild --platform ios
+
+      - name: Build iOS app
+        working-directory: apps/example/ios
+        run: |
+          set -o pipefail
+          workspace=$(ls -d *.xcworkspace | head -n1)
+          scheme=${workspace%.xcworkspace}
+          xcodebuild build \
+            -workspace "$workspace" \
+            -scheme "$scheme" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+  android:
+    name: Build Android (Debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Generate unoptimized twins
+        run: pnpm --filter react-native-boost-example run gen:unoptimized
+
+      - name: Prebuild Android project
+        working-directory: apps/example
+        run: npx expo prebuild --platform android
+
+      - name: Build Android app
+        working-directory: apps/example/android
+        run: ./gradlew assembleDebug --no-daemon
