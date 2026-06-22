@@ -1,8 +1,15 @@
-import { TextProps, TextStyle, StyleSheet, Platform } from 'react-native';
+import { TextProps, TextStyle, StyleSheet, Platform, processColor as rnProcessColor } from 'react-native';
+import type { ColorValue, ProcessedColorValue } from 'react-native';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
 const propsCache = new WeakMap();
+
+// Resolve RN's `processColor` once. The `typeof` guard degrades to a passthrough on
+// a non-RN host that lacks it (see {@link processSelectionColor}); the web build never reaches this — it
+// uses the separate `index.web.ts` shim.
+const processColor: ((color?: ColorValue | number) => ProcessedColorValue | null | undefined) | undefined =
+  typeof rnProcessColor === 'function' ? rnProcessColor : undefined;
 
 /**
  * Normalizes `Text` style values for `NativeText`.
@@ -46,6 +53,31 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
 
   props.style = style;
   return props;
+}
+
+/**
+ * Mirrors the `selectionColor` normalization `Text` performs before handing off to its native host:
+ * `selectionColor != null ? processColor(selectionColor) : undefined` (Text.js). Returns a spreadable
+ * prop bag so the plugin can inline it at the JSX call site like {@link processTextStyle}.
+ *
+ * @param selectionColor - The raw `selectionColor` prop (CSS color string, int, or `PlatformColor`).
+ * @returns `{ selectionColor }` with the processed value, or an empty object when nothing should be
+ *   emitted: a `null`/`undefined` input collapses to `{}`, and a value `processColor` rejects (returns
+ *   `undefined`, e.g. an unparseable color string) is likewise omitted, mirroring `Text`'s
+ *   `if (_selectionColor !== undefined)` guard. A `null` from `processColor` (a rejected `PlatformColor`)
+ *   is preserved, since `Text` forwards that.
+ * @remarks
+ * No caching: keys are commonly primitives (`'red'`, `0xff0000ff`) that a `WeakMap` rejects, and
+ * `processColor` is already cheap. When `processColor` is unavailable (a non-RN host) the raw value is
+ * passed through rather than dropped, the least-surprising degradation.
+ */
+export function processSelectionColor(selectionColor?: ColorValue | number | null): {
+  selectionColor?: ColorValue | ProcessedColorValue | null;
+} {
+  if (selectionColor == null) return {};
+  if (processColor === undefined) return { selectionColor };
+  const processed = processColor(selectionColor);
+  return processed === undefined ? {} : { selectionColor: processed };
 }
 
 /**

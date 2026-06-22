@@ -19,6 +19,7 @@ import {
   isPrimitiveChild,
   hasExpoRouterLinkParentWithAsChild,
   extractStyleAttribute,
+  extractSelectionColor,
   extractSelectableAndUpdateStyle,
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
@@ -38,7 +39,6 @@ export const textBlacklistedProperties = new Set([
   'onStartShouldSetResponder',
   'pressRetentionOffset',
   'suppressHighlighting',
-  'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
 
 /**
@@ -67,7 +67,14 @@ const NORMALIZED_PROPERTIES = new Set([
  * it requires replicating RN's spread→direct merge precedence across the a11y merge, `disabled`
  * reconciliation, and style.
  */
-const TEXT_SPREAD_GUARD_KEYS = new Set([...NORMALIZED_PROPERTIES, 'style', 'numberOfLines', 'id', 'nativeID']);
+const TEXT_SPREAD_GUARD_KEYS = new Set([
+  ...NORMALIZED_PROPERTIES,
+  'style',
+  'numberOfLines',
+  'id',
+  'nativeID',
+  'selectionColor',
+]);
 
 /**
  * Type guard for a direct JSX attribute whose name is in {@link NORMALIZED_PROPERTIES}.
@@ -322,6 +329,28 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
     }
   }
 
+  // --- selectionColor ---
+  // `Text` runs `selectionColor` through `processColor` before handing it to its native host (a CSS color
+  // string / `PlatformColor` becomes the packed value the host expects). We reproduce that single
+  // normalization at runtime via a `processSelectionColor` spread, mirroring the `processTextStyle`
+  // mechanism — any expression flows through unchanged, so no `@boost-force` is needed for a dynamic
+  // value. A spread-carried `selectionColor` bails upstream (`TEXT_SPREAD_GUARD_KEYS`) rather than
+  // forwarding the prop un-normalized.
+  const { selectionColorAttribute, selectionColorExpr } = extractSelectionColor(currentAttributes);
+  let selectionColorSpread: t.JSXSpreadAttribute | undefined;
+  if (selectionColorExpr) {
+    const selectionColorIdentifier = addFileImportHint({
+      file,
+      nameHint: 'processSelectionColor',
+      path,
+      importName: 'processSelectionColor',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    selectionColorSpread = t.jsxSpreadAttribute(
+      t.callExpression(t.identifier(selectionColorIdentifier.name), [selectionColorExpr])
+    );
+  }
+
   // ============================================
   // 2. Collect the remaining (non-processed) attributes
   // ============================================
@@ -333,6 +362,9 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
 
     // Skip the props we routed through `processAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
+
+    // Skip the selectionColor attribute (replaced with a `processSelectionColor` spread)
+    if (selectionColorAttribute && attribute === selectionColorAttribute) continue;
 
     // A build-time `userSelect`-derived `selectable` supersedes a direct `selectable` (RN's rule), so
     // drop the now-dead direct prop instead of emitting it alongside the derived literal.
@@ -363,8 +395,10 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   // ============================================
   // `styleSpread` (the runtime `processTextStyle` call) is emitted AFTER the direct attributes so a
   // `userSelect`-derived `selectable` it computes at runtime overrides a direct `selectable`, mirroring
-  // `Text`'s late `userSelect` override.
+  // `Text`'s late `userSelect` override. `selectionColorSpread` writes a disjoint key (`selectionColor`),
+  // so its position is free — it leads for readability.
   path.node.attributes = [
+    selectionColorSpread,
     accessibilitySpread,
     selectableAttribute,
     staticStyleAttribute,

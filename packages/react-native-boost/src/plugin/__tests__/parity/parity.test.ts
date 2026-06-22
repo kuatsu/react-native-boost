@@ -38,6 +38,9 @@ const TEXT_CASES = [
   '<Text aria-hidden accessibilityElementsHidden={false}>hello</Text>',
   '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the build-time style
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
+  // `selectionColor` runs through `processColor` (a non-identity mock packs "red" → an int), so both
+  // sides must emit the packed value — proving Boost calls processColor, not a raw forward.
+  '<Text selectionColor="red">hello</Text>',
   // Fully static styles are normalized at build time (object literal, no `processTextStyle`). Each
   // exercises a conversion the wrapper does at runtime; the flattened prop bags must still match.
   '<Text style={{ fontWeight: 700 }}>hello</Text>', // numeric fontWeight → string

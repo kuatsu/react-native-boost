@@ -368,6 +368,40 @@ export function extractStyleAttribute(attributes: Array<t.JSXAttribute | t.JSXSp
 }
 
 /**
+ * Extracts a direct `selectionColor` JSX attribute and the expression to run through the runtime
+ * `processSelectionColor` helper. A string literal (`selectionColor="red"`), a non-empty expression
+ * container (`selectionColor={expr}`), or a valueless `selectionColor` (the boolean `true`) yields both
+ * the attribute and its color expression. `Text` runs even a `true` through `processColor` (which yields
+ * `undefined`, omitting the prop), so routing it through the helper matches that rather than forwarding
+ * a raw `true` to the native host. A `selectionColor={}` (empty container) has no expression and is left
+ * verbatim (returns `{}`); React resolves it to `undefined`, which the native host omits — already
+ * matching `Text`.
+ *
+ * @returns The attribute node and its color expression when extractable; otherwise an empty object.
+ */
+export function extractSelectionColor(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): {
+  selectionColorAttribute?: t.JSXAttribute;
+  selectionColorExpr?: t.Expression;
+} {
+  for (const attribute of attributes) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'selectionColor' })) {
+      const value = attribute.value;
+      if (t.isStringLiteral(value)) {
+        return { selectionColorAttribute: attribute, selectionColorExpr: value };
+      }
+      if (t.isJSXExpressionContainer(value) && !t.isJSXEmptyExpression(value.expression)) {
+        return { selectionColorAttribute: attribute, selectionColorExpr: value.expression };
+      }
+      if (value === null) {
+        return { selectionColorAttribute: attribute, selectionColorExpr: t.booleanLiteral(true) };
+      }
+      return {};
+    }
+  }
+  return {};
+}
+
+/**
  * Attempts to statically extract the `userSelect` style property from a style expression.
  *
  * If the `userSelect` value can be resolved at compile-time, the property is removed from the

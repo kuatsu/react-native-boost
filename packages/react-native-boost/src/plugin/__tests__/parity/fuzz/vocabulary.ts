@@ -124,6 +124,11 @@ export const TEXT_VOCAB: PropSpec[] = [
   { name: 'style', arb: styleValue, disposition: 'static → build-time merge; dynamic → processTextStyle' },
   { name: 'id', arb: str, disposition: 'renamed → nativeID' },
   { name: 'nativeID', arb: str, disposition: 'pass-through; id wins if both present' },
+  {
+    name: 'selectionColor',
+    arb: withNullish(fc.constantFrom('"red"', '"blue"')),
+    disposition: 'translate → processColor; null/undefined omitted',
+  },
   // Pure pass-throughs.
   { name: 'testID', arb: withNullish(str), disposition: 'pass-through' },
   {
@@ -181,7 +186,6 @@ export const TEXT_BLACKLIST_SAMPLE: PropSpec[] = [
   { name: 'onPressIn', arb: fc.constant('() => {}'), disposition: 'bail; press handler' },
   { name: 'onLongPress', arb: fc.constant('() => {}'), disposition: 'bail; press handler' },
   { name: 'suppressHighlighting', arb: bool, disposition: 'bail' },
-  { name: 'selectionColor', arb: fc.constant('"red"'), disposition: 'bail' },
   { name: 'pressRetentionOffset', arb: fc.constant('{ top: 1, bottom: 1, left: 1, right: 1 }'), disposition: 'bail' },
 ];
 

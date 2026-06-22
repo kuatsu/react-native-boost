@@ -5,6 +5,13 @@ import { GenericStyleProp } from './types';
 
 export const processTextStyle = (style: GenericStyleProp<TextStyle>) => ({ style }) as Partial<TextProps>;
 
+// react-native-web's `Text` accepts `selectionColor` and resolves colors itself, so there is no native
+// int to pack — pass the value through untouched (mirroring the other web shims). Keeping the
+// `{}`-on-null omission means the injected spread is a no-op when the prop is absent.
+export function processSelectionColor(selectionColor?: unknown): { selectionColor?: unknown } {
+  return selectionColor == null ? {} : { selectionColor };
+}
+
 // On Web there is no platform-specific `accessible` default to apply; react-native-web's `Text`
 // derives accessibility from the rendered DOM. Returning `undefined` makes the injected
 // `accessible={getDefaultTextAccessible()}` a no-op.

@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, afterEach } from 'vitest';
 import {
   processTextStyle,
+  processSelectionColor,
   processAccessibilityProps,
   processViewAccessibilityProps,
   getDefaultTextAccessible,
@@ -35,6 +36,10 @@ vi.mock('react-native', () => {
     StyleSheet: {
       flatten: (style: any) => style,
     },
+    // Distinguishable stand-in for RN's `processColor` so `processSelectionColor` can be asserted to
+    // actually call it (a named color → packed int) rather than passing the value through unchanged.
+    // `'invalid'` → `undefined` models RN rejecting an unparseable color.
+    processColor: (color: unknown) => (color === 'red' ? 0xffff0000 : color === 'invalid' ? undefined : color),
   };
 });
 
@@ -98,6 +103,26 @@ describe('processTextStyle', () => {
     expect((result.style as TextStyle).margin).toBe(10);
     expect((result.style as TextStyle).userSelect).toBeUndefined();
     expect((result.style as TextStyle).verticalAlign).toBeUndefined();
+  });
+});
+
+describe('processSelectionColor', () => {
+  it('omits the prop for null/undefined input', () => {
+    expect(processSelectionColor(null)).toEqual({});
+    expect(processSelectionColor(undefined)).toEqual({});
+    expect(processSelectionColor()).toEqual({});
+  });
+
+  it('runs the value through processColor', () => {
+    expect(processSelectionColor('red')).toEqual({ selectionColor: 0xffff0000 });
+  });
+
+  it('forwards the processColor result for an already-processed value', () => {
+    expect(processSelectionColor(0x12345678)).toEqual({ selectionColor: 0x12345678 });
+  });
+
+  it('omits the prop when processColor rejects the value', () => {
+    expect(processSelectionColor('invalid')).toEqual({});
   });
 });
 
