@@ -39,6 +39,9 @@ jobs:
       - name: Generate unoptimized twins
         run: pnpm --filter react-native-boost-example run gen:unoptimized
 
+      - name: Build package
+        run: pnpm package build
+
       - name: Prebuild iOS project
         working-directory: apps/example
         run: npx expo prebuild --platform ios
@@ -74,18 +77,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-gradle-
+          cache: gradle
 
       - name: Generate unoptimized twins
         run: pnpm --filter react-native-boost-example run gen:unoptimized
+
+      - name: Build package
+        run: pnpm package build
 
       - name: Prebuild Android project
         working-directory: apps/example
@@ -93,4 +91,4 @@ jobs:
 
       - name: Build Android app
         working-directory: apps/example/android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace --info
+        run: ./gradlew :app:assembleDebug --no-daemon
