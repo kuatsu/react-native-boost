@@ -2,11 +2,11 @@ version: 2
 
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
+      time: '06:00'
       timezone: Europe/Berlin
     open-pull-requests-limit: 10
     commit-message:
@@ -26,11 +26,11 @@ updates:
           - patch
 
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
+      time: '06:00'
       timezone: Europe/Berlin
     commit-message:
       prefix: chore
@@ -38,4 +38,4 @@ updates:
     groups:
       github-actions:
         patterns:
-          - "*"
+          - '*'
