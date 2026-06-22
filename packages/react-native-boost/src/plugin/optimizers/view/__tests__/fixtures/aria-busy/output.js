@@ -4,12 +4,7 @@ import {
 } from 'react-native-boost/runtime';
 import { View } from 'react-native';
 <_NativeView
-  {..._processViewAccessibilityProps(
-    Object.assign(
-      {},
-      {
-        'aria-busy': true,
-      }
-    )
-  )}
+  {..._processViewAccessibilityProps({
+    'aria-busy': true,
+  })}
 />;

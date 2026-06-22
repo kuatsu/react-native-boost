@@ -4,17 +4,10 @@ import {
 } from 'react-native-boost/runtime';
 import { View } from 'react-native';
 <_NativeView
-  {..._processViewAccessibilityProps(
-    Object.assign(
-      {},
-      {
-        accessibilityValue: {
-          now: 1,
-        },
-      },
-      {
-        'aria-valuenow': 5,
-      }
-    )
-  )}
+  {..._processViewAccessibilityProps({
+    'accessibilityValue': {
+      now: 1,
+    },
+    'aria-valuenow': 5,
+  })}
 />;

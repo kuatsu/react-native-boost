@@ -229,41 +229,57 @@ export const addDefaultProperty = (path: NodePath<t.JSXOpeningElement>, key: str
 };
 
 /**
- * Helper that builds an Object.assign expression out of the existing JSX attributes.
- * It handles both plain JSXAttributes and spread attributes.
+ * Builds an `ObjectProperty` from a single plain JSX attribute. A shorthand attribute (or empty
+ * expression container) resolves to boolean `true`. A key that is not a valid JS identifier (e.g.
+ * `aria-label`) becomes a string-literal property key.
+ */
+const buildObjectPropertyFromAttribute = (attribute: t.JSXAttribute): t.ObjectProperty => {
+  const key = attribute.name.name;
+  let value: t.Expression;
+  if (!attribute.value) {
+    value = t.booleanLiteral(true);
+  } else if (t.isStringLiteral(attribute.value)) {
+    value = attribute.value;
+  } else if (t.isJSXExpressionContainer(attribute.value)) {
+    value = t.isJSXEmptyExpression(attribute.value.expression) ? t.booleanLiteral(true) : attribute.value.expression;
+  } else {
+    value = t.nullLiteral();
+  }
+
+  const keyNode =
+    typeof key === 'string' && VALID_JS_IDENTIFIER.test(key) ? t.identifier(key) : t.stringLiteral(key.toString());
+
+  return t.objectProperty(keyNode, value);
+};
+
+/**
+ * Builds an expression that merges the given JSX attributes into a single props object. When none of
+ * the attributes is a spread (the common case) the result is a plain `ObjectExpression` literal — every
+ * attribute becomes one property, including the empty case which yields `{}`. When at least one spread
+ * is present the result is `Object.assign({}, …)` (one single-key object per plain attribute, each
+ * spread's argument as a bare merge source), because reproducing object-spread merge semantics requires
+ * the call. Either shape produces a structurally-equal object; only the construction differs.
  *
  * @param attributes - The attributes to build the expression from.
- * @returns The Object.assign expression.
+ * @returns An `ObjectExpression` (no spread) or an `Object.assign` `CallExpression` (spread present).
  */
 export const buildPropertiesFromAttributes = (attributes: (t.JSXAttribute | t.JSXSpreadAttribute)[]): t.Expression => {
+  if (!attributes.some((attribute) => t.isJSXSpreadAttribute(attribute))) {
+    const properties = attributes
+      .filter((attribute): attribute is t.JSXAttribute => t.isJSXAttribute(attribute))
+      .map((attribute) => buildObjectPropertyFromAttribute(attribute));
+    return t.objectExpression(properties);
+  }
+
   const arguments_: t.Expression[] = [];
   for (const attribute of attributes) {
     if (t.isJSXSpreadAttribute(attribute)) {
       arguments_.push(attribute.argument);
     } else if (t.isJSXAttribute(attribute)) {
-      const key = attribute.name.name;
-      let value: t.Expression;
-      if (!attribute.value) {
-        value = t.booleanLiteral(true);
-      } else if (t.isStringLiteral(attribute.value)) {
-        value = attribute.value;
-      } else if (t.isJSXExpressionContainer(attribute.value)) {
-        value = t.isJSXEmptyExpression(attribute.value.expression)
-          ? t.booleanLiteral(true)
-          : attribute.value.expression;
-      } else {
-        value = t.nullLiteral();
-      }
-      // If the key is not a valid JavaScript identifier (e.g. "aria-label"), use a string literal.
-      const keyNode =
-        typeof key === 'string' && VALID_JS_IDENTIFIER.test(key) ? t.identifier(key) : t.stringLiteral(key.toString());
-
-      arguments_.push(t.objectExpression([t.objectProperty(keyNode, value)]));
+      arguments_.push(t.objectExpression([buildObjectPropertyFromAttribute(attribute)]));
     }
   }
-  if (arguments_.length === 0) {
-    return t.objectExpression([]);
-  }
+
   return t.callExpression(t.memberExpression(t.identifier('Object'), t.identifier('assign')), [
     t.objectExpression([]),
     ...arguments_,
