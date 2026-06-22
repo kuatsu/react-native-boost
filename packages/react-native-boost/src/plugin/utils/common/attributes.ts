@@ -359,43 +359,42 @@ export function extractStyleAttribute(attributes: Array<t.JSXAttribute | t.JSXSp
  * prop is returned. When the value is unknown or the expression is not statically analysable,
  * `undefined` is returned and no modification is made.
  */
+function extractSelectableFromObjectExpression(objectExpr: t.ObjectExpression): boolean | undefined {
+  let selectableValue: boolean | undefined;
+
+  objectExpr.properties = objectExpr.properties.filter((property) => {
+    if (
+      !t.isObjectProperty(property) ||
+      (!t.isIdentifier(property.key, { name: 'userSelect' }) &&
+        !(t.isStringLiteral(property.key) && property.key.value === 'userSelect'))
+    ) {
+      return true; // keep property
+    }
+
+    if (t.isStringLiteral(property.value)) {
+      const mapped = USER_SELECT_STYLE_TO_SELECTABLE_PROP[property.value.value];
+      if (mapped !== undefined) {
+        selectableValue = mapped;
+      }
+    }
+
+    // Remove the `userSelect` property
+    return false;
+  });
+
+  return selectableValue;
+}
+
 export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): boolean | undefined {
-  // Helper to process a single ObjectExpression
-  const handleObjectExpression = (objectExpr: t.ObjectExpression): boolean | undefined => {
-    let selectableValue: boolean | undefined;
-
-    objectExpr.properties = objectExpr.properties.filter((property) => {
-      if (
-        !t.isObjectProperty(property) ||
-        (!t.isIdentifier(property.key, { name: 'userSelect' }) &&
-          !(t.isStringLiteral(property.key) && property.key.value === 'userSelect'))
-      ) {
-        return true; // keep property
-      }
-
-      if (t.isStringLiteral(property.value)) {
-        const mapped = USER_SELECT_STYLE_TO_SELECTABLE_PROP[property.value.value];
-        if (mapped !== undefined) {
-          selectableValue = mapped;
-        }
-      }
-
-      // Remove the `userSelect` property
-      return false;
-    });
-
-    return selectableValue;
-  };
-
   if (t.isObjectExpression(styleExpr)) {
-    return handleObjectExpression(styleExpr);
+    return extractSelectableFromObjectExpression(styleExpr);
   }
 
   if (t.isArrayExpression(styleExpr)) {
     let selectableValue: boolean | undefined;
     for (const element of styleExpr.elements) {
       if (element && t.isObjectExpression(element)) {
-        const value = handleObjectExpression(element);
+        const value = extractSelectableFromObjectExpression(element);
         if (value !== undefined) {
           selectableValue = value; // prefer last defined value
         }
