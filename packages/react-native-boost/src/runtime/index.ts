@@ -142,6 +142,95 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
   };
 }
 
+/**
+ * Normalizes accessibility and ARIA props for an optimized `NativeView`, mirroring the reconciliation
+ * the `View` wrapper performs before handing off to its native host.
+ *
+ * @param props - Accessibility and ARIA props.
+ * @returns Props with the ARIA cluster translated/aggregated into their native counterparts.
+ * @remarks
+ * Unlike {@link processAccessibilityProps} (the `Text` helper) there is no `accessible` default and no
+ * `disabled` reconciliation — the `View` wrapper does neither. A static `tabIndex` is folded to
+ * `focusable` at build time; only a dynamic `tabIndex` reaches this helper.
+ * - `aria-labelledby` → `accessibilityLabelledBy` (comma-split into a string array)
+ * - `aria-label` → `accessibilityLabel`
+ * - `aria-live` → `accessibilityLiveRegion` (`'off'` → `'none'`)
+ * - `aria-hidden` → `accessibilityElementsHidden` (+ `importantForAccessibility` when strictly `true`)
+ * - `tabIndex` → `focusable` (`!tabIndex`)
+ * - ARIA state fields aggregated into `accessibilityState` (`ariaX ?? accessibilityState?.x`)
+ * - ARIA value fields aggregated into `accessibilityValue` (`ariaX ?? accessibilityValue?.x`)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processViewAccessibilityProps(props: Record<string, any>): Record<string, any> {
+  const {
+    accessibilityState,
+    accessibilityValue,
+    ['aria-busy']: ariaBusy,
+    ['aria-checked']: ariaChecked,
+    ['aria-disabled']: ariaDisabled,
+    ['aria-expanded']: ariaExpanded,
+    ['aria-hidden']: ariaHidden,
+    ['aria-label']: ariaLabel,
+    ['aria-labelledby']: ariaLabelledBy,
+    ['aria-live']: ariaLive,
+    ['aria-selected']: ariaSelected,
+    ['aria-valuemax']: ariaValueMax,
+    ['aria-valuemin']: ariaValueMin,
+    ['aria-valuenow']: ariaValueNow,
+    ['aria-valuetext']: ariaValueText,
+    tabIndex,
+    ...restProperties
+  } = props;
+
+  const result = restProperties;
+
+  // Optional chaining (not a bare `!== undefined` guard) so a runtime-null `aria-labelledby` is
+  // skipped rather than throwing on `.split`, exactly as the wrapper does.
+  const parsedAriaLabelledBy = ariaLabelledBy?.split(/\s*,\s*/g);
+  if (parsedAriaLabelledBy !== undefined) result.accessibilityLabelledBy = parsedAriaLabelledBy;
+  if (ariaLabel !== undefined) result.accessibilityLabel = ariaLabel;
+  if (ariaLive !== undefined) result.accessibilityLiveRegion = ariaLive === 'off' ? 'none' : ariaLive;
+  if (ariaHidden !== undefined) {
+    result.accessibilityElementsHidden = ariaHidden;
+    if (ariaHidden === true) result.importantForAccessibility = 'no-hide-descendants';
+  }
+  if (tabIndex !== undefined) result.focusable = !tabIndex;
+
+  if (
+    accessibilityState != null ||
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    result.accessibilityState = {
+      busy: ariaBusy ?? accessibilityState?.busy,
+      checked: ariaChecked ?? accessibilityState?.checked,
+      disabled: ariaDisabled ?? accessibilityState?.disabled,
+      expanded: ariaExpanded ?? accessibilityState?.expanded,
+      selected: ariaSelected ?? accessibilityState?.selected,
+    };
+  }
+
+  if (
+    accessibilityValue != null ||
+    ariaValueMax != null ||
+    ariaValueMin != null ||
+    ariaValueNow != null ||
+    ariaValueText != null
+  ) {
+    result.accessibilityValue = {
+      max: ariaValueMax ?? accessibilityValue?.max,
+      min: ariaValueMin ?? accessibilityValue?.min,
+      now: ariaValueNow ?? accessibilityValue?.now,
+      text: ariaValueText ?? accessibilityValue?.text,
+    };
+  }
+
+  return result;
+}
+
 export * from './types';
 export * from './utils/constants';
 export * from './components/native-text';

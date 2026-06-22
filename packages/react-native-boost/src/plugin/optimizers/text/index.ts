@@ -7,11 +7,14 @@ import {
   addFileImportHint,
   buildPropertiesFromAttributes,
   hasAccessibilityProperty,
+  hasAmbiguousIdNativeID,
   hasBlacklistedProperty,
+  hasBlacklistedPropertyInSpread,
   isForcedLine,
   isIgnoredLine,
   isValidJSXComponent,
   isReactNativeImport,
+  renameIdToNativeID,
   replaceWithNativeComponent,
   isPrimitiveChild,
   hasExpoRouterLinkParentWithAsChild,
@@ -26,8 +29,6 @@ export const textBlacklistedProperties = new Set([
   // `importantForAccessibility`, which `processAccessibilityProps` does not yet handle. Passing it
   // through would drop it, so bail. TODO: handle this in the runtime helper instead.
   'aria-hidden',
-  'id',
-  'nativeID',
   'onLongPress',
   'onPress',
   'onPressIn',
@@ -42,6 +43,10 @@ export const textBlacklistedProperties = new Set([
   'suppressHighlighting',
   'selectionColor', // TODO: we can use react-native's internal `processColor` to process this at runtime
 ]);
+
+// `id`/`nativeID` are renamed at build time for direct attributes, but a spread could smuggle either
+// through untranslated, so a spread carrying one of these still bails.
+const ID_RENAME_KEYS = new Set(['id', 'nativeID']);
 
 /**
  * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`,
@@ -67,6 +72,14 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
     {
       reason: 'contains blacklisted props',
       shouldBail: () => hasBlacklistedProperty(path, textBlacklistedProperties),
+    },
+    {
+      reason: 'has id/nativeID in a spread prop',
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, ID_RENAME_KEYS),
+    },
+    {
+      reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
+      shouldBail: () => hasAmbiguousIdNativeID(path),
     },
     {
       reason: 'is a direct child of expo-router Link with asChild',
@@ -116,6 +129,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
 
   // Process props
   fixNegativeNumberOfLines({ path, logger });
+  renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
   processProps(path, file, platform);

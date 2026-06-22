@@ -1,10 +1,10 @@
 import { View } from 'react-native';
 <>
-  <View aria-label="x">
+  <View id={dynamicId} nativeID="y">
     <NotOptimized />
   </View>
   {/* @boost-force */}
-  <View aria-label="x">
+  <View id={dynamicId} nativeID="y">
     <ForceOptimized />
   </View>
 </>;

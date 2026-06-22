@@ -10,7 +10,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
 | `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
-| `View` | Imported from `react-native`, no blacklisted props, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+| `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
 
@@ -39,7 +39,8 @@ If any of these are present, the `Text` node is skipped:
 - Interaction/responder props (`onPress`, `onLongPress`, `onResponder*`, `pressRetentionOffset`, `suppressHighlighting`, etc.)
 - `selectionColor`
 - `aria-hidden`
-- `id`, `nativeID`
+
+`id` is renamed to `nativeID` at build time (`id` wins when both are present). `Text` bails only if `id`/`nativeID` arrive via a spread, or a dynamic `id` appears alongside a `nativeID`.
 
 ### Text structure checks
 
@@ -76,17 +77,23 @@ import { Text } from 'react-native';
 
 ## View Coverage
 
-`View` and `Text` share the same ancestor safety checks. `View` blacklists the props the
-`View` wrapper translates into native equivalents (e.g. `aria-*` → `accessibility*`, `tabIndex` → `focusable`), since
-passing those through unchanged would silently drop them.
+`View` and `Text` share the same ancestor safety checks. The `View` wrapper translates a few ergonomic props into
+native equivalents; Boost reproduces each translation at build time (or via a small runtime helper for dynamic values),
+so these props no longer force a bailout.
 
-### View blacklisted props
+### View translated props
 
-If any of these are present, the `View` node is skipped:
+- `aria-*` → `accessibility*` (`aria-label`, `aria-labelledby`, `aria-live`, `aria-hidden`, and the state/value groups)
+- `tabIndex` → `focusable`
+- `id` → `nativeID` (`id` wins when both are present)
 
-- Accessibility props (`accessible`, `accessibilityLabel`, `accessibilityState`, `aria-*`)
-- `tabIndex`
-- `id`, `nativeID`
+Everything else — including `accessible`, `accessibilityLabel`, and a lone `accessibilityState`/`accessibilityValue` —
+is passed through unchanged.
+
+### View prop bailouts
+
+- A spread that may carry one of the translated props, since Boost cannot reach inside it to translate.
+- A dynamic `id` alongside a `nativeID` (their runtime precedence cannot be resolved statically).
 
 ### Ancestor safety checks
 

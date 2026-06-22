@@ -15,6 +15,14 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
   return props;
 }
 
+// On Web the native components fall back to react-native-web's `View`, which performs its own
+// aria→accessibility translation, so the runtime helper passes props through untouched to avoid
+// double-translation.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processViewAccessibilityProps(props: Record<string, any>): Record<string, any> {
+  return props;
+}
+
 export * from './types';
 export * from './utils/constants';
 

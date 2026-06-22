@@ -2,6 +2,7 @@ import { vi, describe, it, expect, afterEach } from 'vitest';
 import {
   processTextStyle,
   processAccessibilityProps,
+  processViewAccessibilityProps,
   getDefaultTextAccessible,
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
@@ -220,5 +221,98 @@ describe('processAccessibilityProps', () => {
     const normalized = processAccessibilityProps({ disabled: false });
     expect(normalized.disabled).toBe(false);
     expect(normalized.accessibilityState).toBeUndefined();
+  });
+});
+
+describe('processViewAccessibilityProps', () => {
+  it('passes non-aria props through untouched', () => {
+    const normalized = processViewAccessibilityProps({ testID: 'v', pointerEvents: 'none' });
+    expect(normalized).toEqual({ testID: 'v', pointerEvents: 'none' });
+  });
+
+  it('translates aria-label to accessibilityLabel', () => {
+    expect(processViewAccessibilityProps({ 'aria-label': 'hello' }).accessibilityLabel).toBe('hello');
+  });
+
+  it('splits aria-labelledby on commas into accessibilityLabelledBy', () => {
+    expect(processViewAccessibilityProps({ 'aria-labelledby': 'a,  b , c' }).accessibilityLabelledBy).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+  });
+
+  it('skips a null aria-labelledby instead of throwing (matches the wrapper)', () => {
+    const normalized = processViewAccessibilityProps({ 'aria-labelledby': null });
+    expect(normalized.accessibilityLabelledBy).toBeUndefined();
+  });
+
+  it('translates a dynamic tabIndex to focusable, omitting it when undefined', () => {
+    expect(processViewAccessibilityProps({ tabIndex: 0 }).focusable).toBe(true);
+    expect(processViewAccessibilityProps({ tabIndex: 2 }).focusable).toBe(false);
+    expect('focusable' in processViewAccessibilityProps({ tabIndex: undefined })).toBe(false);
+  });
+
+  it('maps aria-live "off" to "none" and passes other values through', () => {
+    expect(processViewAccessibilityProps({ 'aria-live': 'off' }).accessibilityLiveRegion).toBe('none');
+    expect(processViewAccessibilityProps({ 'aria-live': 'polite' }).accessibilityLiveRegion).toBe('polite');
+  });
+
+  it('sets importantForAccessibility only when aria-hidden is strictly true', () => {
+    const hidden = processViewAccessibilityProps({ 'aria-hidden': true });
+    expect(hidden.accessibilityElementsHidden).toBe(true);
+    expect(hidden.importantForAccessibility).toBe('no-hide-descendants');
+
+    const notHidden = processViewAccessibilityProps({ 'aria-hidden': false });
+    expect(notHidden.accessibilityElementsHidden).toBe(false);
+    expect(notHidden.importantForAccessibility).toBeUndefined();
+
+    const truthy = processViewAccessibilityProps({ 'aria-hidden': 1 });
+    expect(truthy.accessibilityElementsHidden).toBe(1);
+    expect(truthy.importantForAccessibility).toBeUndefined();
+  });
+
+  it('aggregates aria state fields into accessibilityState', () => {
+    expect(processViewAccessibilityProps({ 'aria-busy': true, 'aria-disabled': false }).accessibilityState).toEqual({
+      busy: true,
+      checked: undefined,
+      disabled: false,
+      expanded: undefined,
+      selected: undefined,
+    });
+  });
+
+  it('merges aria state fields over a passed accessibilityState (aria wins)', () => {
+    expect(
+      processViewAccessibilityProps({ 'accessibilityState': { busy: false, checked: true }, 'aria-busy': true })
+        .accessibilityState
+    ).toEqual({ busy: true, checked: true, disabled: undefined, expanded: undefined, selected: undefined });
+  });
+
+  it('does not synthesize accessibilityState without a state field', () => {
+    expect(processViewAccessibilityProps({ 'aria-label': 'x' }).accessibilityState).toBeUndefined();
+  });
+
+  it('rebuilds accessibilityState from a lone passed accessibilityState', () => {
+    expect(processViewAccessibilityProps({ accessibilityState: { disabled: true } }).accessibilityState).toEqual({
+      busy: undefined,
+      checked: undefined,
+      disabled: true,
+      expanded: undefined,
+      selected: undefined,
+    });
+  });
+
+  it('aggregates aria value fields over a passed accessibilityValue (aria wins)', () => {
+    expect(
+      processViewAccessibilityProps({ 'accessibilityValue': { now: 1, min: 0 }, 'aria-valuenow': 5 }).accessibilityValue
+    ).toEqual({ max: undefined, min: 0, now: 5, text: undefined });
+  });
+
+  it('does not reconcile disabled or apply an accessible default (unlike the Text helper)', () => {
+    const normalized = processViewAccessibilityProps({ disabled: true });
+    expect(normalized.disabled).toBe(true);
+    expect(normalized.accessibilityState).toBeUndefined();
+    expect('accessible' in normalized).toBe(false);
   });
 });

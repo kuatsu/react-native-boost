@@ -31,25 +31,62 @@ const TEXT_CASES = [
   '<Text aria-busy={true}>hello</Text>',
   '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the style spread
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
+  // `id` → `nativeID` build-time rename; `id` wins over an explicit `nativeID`.
+  '<Text id="x">hello</Text>',
+  '<Text id="x" nativeID="y">hello</Text>',
+  '<Text nativeID="y">hello</Text>',
+  // Bailed (deferred to the wrapper): `id`/`nativeID` via spread, and a dynamic `id` alongside `nativeID`.
+  '<Text {...{ id: "x" }}>hello</Text>',
+  '<Text id={dynamicId} nativeID="y">hello</Text>',
 ];
+
+// Text cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
+// a silent loss of optimization — from masquerading as a passing parity test.
+const BAILED_TEXT_CASES = new Set([
+  '<Text {...{ id: "x" }}>hello</Text>',
+  '<Text id={dynamicId} nativeID="y">hello</Text>',
+]);
 
 const VIEW_CASES = [
   '<View testID="v" />',
   '<View accessibilityRole="button" />',
   '<View accessibilityValue={{ now: 5 }} />',
   '<View pointerEvents="none" />',
-  '<View aria-label="x" />', // blacklisted → Boost bails → defers to wrapper
-  '<View tabIndex={0} />', //   blacklisted → Boost bails → defers to wrapper
   // `style` is an identity pass-through (the wrapper does no style work) → Boost optimizes and must
   // match the wrapper byte-for-byte across shapes.
   '<View style={{ width: 1 }} />',
   '<View style={[{ width: 1 }, { height: 2 }]} />',
   '<View style={{ width: 1 }} testID="v" pointerEvents="none" collapsable={false} />',
+  // props the wrapper passes through untouched now optimize instead of bailing.
+  '<View accessible />',
+  '<View accessibilityLabel="x" />',
+  '<View nativeID="x" />',
+  '<View accessibilityState={{ disabled: true }} />',
+  '<View accessible accessibilityLabel="x" testID="v" />',
+  // `id` → `nativeID`; `id` wins over an explicit `nativeID`.
+  '<View id="x" />',
+  '<View id="x" nativeID="y" />',
+  // ARIA cluster + `tabIndex` translated/aggregated to native props.
+  '<View aria-label="x" />',
+  '<View aria-label="x" accessibilityLabel="y" />', // collision: aria-label overwrites accessibilityLabel
+  '<View aria-labelledby="a, b" />',
+  '<View aria-live="off" />',
+  '<View aria-live="polite" />',
+  '<View aria-hidden={true} />',
+  '<View aria-hidden={false} />',
+  '<View tabIndex={0} />',
+  '<View tabIndex={1} />',
+  '<View aria-busy={true} />',
+  '<View aria-checked={true} aria-disabled={false} aria-expanded={true} aria-selected={false} />',
+  '<View accessibilityState={{ busy: true }} aria-disabled={true} />',
+  '<View aria-valuenow={5} aria-valuemax={10} aria-valuemin={0} aria-valuetext="50%" />',
+  '<View accessibilityValue={{ now: 1 }} aria-valuenow={5} />',
+  '<View aria-hidden={true} aria-label="hello" tabIndex={0} aria-valuenow={5} aria-live="polite" />',
 ];
 
-// Cases Boost is expected to bail on (blacklisted props). Asserting the bail explicitly stops an
-// unexpected bailout — a silent loss of optimization — from masquerading as a passing parity test.
-const BAILED_VIEW_CASES = new Set(['<View aria-label="x" />', '<View tabIndex={0} />']);
+// View cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
+// a silent loss of optimization — from masquerading as a passing parity test.
+const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
 
 // Treat `undefined`-valued keys as absent and deep-clean nested objects (also drops function values
 // such as event handlers) so the comparison is a clean structural prop-bag equality.
@@ -59,8 +96,8 @@ describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
-      expect(boost.optimized).toBe(true); // every Text case here is expected to optimize
-      if (!boost.optimized) return;
+      expect(boost.optimized).toBe(!BAILED_TEXT_CASES.has(jsx));
+      if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));

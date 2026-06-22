@@ -42,18 +42,20 @@ npm start -- --clear
 
 ### Skip reason: `contains blacklisted props`
 
-This is expected for unsupported prop sets.
-
-Typical cases:
-
-- `Text` with press/responder props
-- `View` with accessibility props, `tabIndex`, or `id`/`nativeID`
+This is expected for unsupported prop sets, e.g. a `Text` with press/responder props, `selectionColor`, or
+`aria-hidden`. (`View` translates accessibility props, `tabIndex`, and `id` instead of skipping; see
+[Optimization Coverage](/docs/information/optimization-coverage#view-coverage).)
 
 Fix options:
 
 - Keep component as-is (recommended when semantics matter)
 - Move unsupported behavior to a different node when possible
 - Use `@boost-ignore` for explicit clarity
+
+### Skip reason: `has a spread that may carry a translated prop`
+
+A `View` with a spread (`{...props}`) Boost can't statically resolve, or that may contain a prop the `View` wrapper
+translates (`aria-*`, `tabIndex`, `id`).
 
 ### Skip reason: `has unresolved ancestor and dangerous optimization is disabled`
 

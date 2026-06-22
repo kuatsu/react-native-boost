@@ -48,6 +48,122 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
 };
 
 /**
+ * Like {@link hasBlacklistedProperty}, but only inspects spread attributes — direct attributes are
+ * ignored. Callers that can rewrite a direct attribute (e.g. the `id` → `nativeID` rename) handle it
+ * separately, but still need the conservative spread bail: an unresolvable spread, or a resolvable
+ * spread whose object contains a guarded key, could smuggle the prop through untranslated. The spread
+ * resolution semantics mirror {@link hasBlacklistedProperty} exactly.
+ *
+ * @param path - The path to the JSXOpeningElement.
+ * @param keys - The set of guarded keys.
+ * @returns true if any spread attribute could contribute one of `keys`.
+ */
+export const hasBlacklistedPropertyInSpread = (path: NodePath<t.JSXOpeningElement>, keys: Set<string>): boolean => {
+  return path.node.attributes.some((attribute) => {
+    if (!t.isJSXSpreadAttribute(attribute)) return false;
+
+    if (t.isIdentifier(attribute.argument)) {
+      const binding = path.scope.getBinding(attribute.argument.name);
+      let objectExpression: t.ObjectExpression | undefined;
+      if (binding) {
+        if (t.isVariableDeclarator(binding.path.node)) {
+          objectExpression = binding.path.node.init as t.ObjectExpression;
+        } else if (t.isObjectExpression(binding.path.node)) {
+          objectExpression = binding.path.node;
+        }
+      }
+      if (objectExpression && t.isObjectExpression(objectExpression)) {
+        return objectExpression.properties.some((property) => {
+          if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
+            return keys.has(property.key.name);
+          }
+          if (t.isObjectProperty(property) && t.isStringLiteral(property.key)) {
+            return keys.has(property.key.value);
+          }
+          return false;
+        });
+      }
+    }
+
+    // Bail if we can't resolve the spread attribute.
+    return true;
+  });
+};
+
+/**
+ * Mirrors the `Text` wrapper's `id ?? nativeID` precedence: renames a direct `id` JSX attribute to
+ * `nativeID`, and when both are present drops the explicit `nativeID` so `id` wins. Only direct
+ * attributes are touched — `id`/`nativeID` arriving via a spread are left for the caller's bailout
+ * logic (see {@link hasBlacklistedPropertyInSpread}). The ambiguous "both present and `id` is not
+ * statically non-null" case is expected to have already bailed (see {@link hasAmbiguousIdNativeID}).
+ * Mutates `path.node.attributes` in place. (The `View` optimizer emits its rename last instead, to
+ * win over a pass-through spread, so it does not use this helper.)
+ */
+export const renameIdToNativeID = (path: NodePath<t.JSXOpeningElement>): void => {
+  let idAttribute: t.JSXAttribute | undefined;
+  let nativeIdAttribute: t.JSXAttribute | undefined;
+
+  for (const attribute of path.node.attributes) {
+    if (!t.isJSXAttribute(attribute) || !t.isJSXIdentifier(attribute.name)) continue;
+    if (attribute.name.name === 'id') idAttribute = attribute;
+    else if (attribute.name.name === 'nativeID') nativeIdAttribute = attribute;
+  }
+
+  // A lone `nativeID` is already the native key — nothing to do.
+  if (!idAttribute) return;
+
+  idAttribute.name = t.jsxIdentifier('nativeID');
+  if (nativeIdAttribute) {
+    path.node.attributes = path.node.attributes.filter((attribute) => attribute !== nativeIdAttribute);
+  }
+};
+
+/**
+ * Returns true when both a direct `id` and a direct `nativeID` attribute are present and the `id`
+ * value is not statically provable to be non-null. The wrapper precedence is `id ?? nativeID`, so a
+ * runtime-null `id` falls back to `nativeID`; a static rename cannot replicate that fallback, so the
+ * caller must bail. When only `id` is present the rename is always safe (a null `id` yields
+ * `nativeID={null}`, equivalent to omitted for the native host), so this guards the both-present
+ * intersection only.
+ */
+export const hasAmbiguousIdNativeID = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  let idAttribute: t.JSXAttribute | undefined;
+  let hasNativeId = false;
+
+  for (const attribute of path.node.attributes) {
+    if (!t.isJSXAttribute(attribute) || !t.isJSXIdentifier(attribute.name)) continue;
+    if (attribute.name.name === 'id') idAttribute = attribute;
+    else if (attribute.name.name === 'nativeID') hasNativeId = true;
+  }
+
+  if (!idAttribute || !hasNativeId) return false;
+
+  return !isStaticallyNonNullValue(idAttribute.value);
+};
+
+/**
+ * Whether a JSX attribute value is statically provable to be non-null (and non-undefined). A shorthand
+ * boolean attribute (no value), a string literal, or an expression container wrapping a string/number/
+ * boolean/bigint/template literal qualifies. Anything that could evaluate to `null`/`undefined` at
+ * runtime (identifiers, member/call expressions, `null`, `undefined`) does not.
+ */
+const isStaticallyNonNullValue = (value: t.JSXAttribute['value']): boolean => {
+  if (!value) return true; // shorthand attribute → boolean `true`
+  if (t.isStringLiteral(value)) return true;
+  if (t.isJSXExpressionContainer(value)) {
+    const { expression } = value;
+    return (
+      t.isStringLiteral(expression) ||
+      t.isNumericLiteral(expression) ||
+      t.isBooleanLiteral(expression) ||
+      t.isBigIntLiteral(expression) ||
+      t.isTemplateLiteral(expression)
+    );
+  }
+  return false;
+};
+
+/**
  * Adds a default property to a JSX element if it's not already defined. It avoids adding a default
  * if it cannot statically determine whether the property is already set.
  *
