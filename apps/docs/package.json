@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "fumadocs-core": "16.10.5",
-    "fumadocs-mdx": "14.2.8",
+    "fumadocs-mdx": "15.0.12",
     "fumadocs-typescript": "^5.2.6",
     "fumadocs-ui": "16.10.5",
     "lucide-react": "^0.575.0",
