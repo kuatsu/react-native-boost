@@ -12,8 +12,11 @@
     "information/benchmarks",
     "---Configuration---",
     "configuration/configure",
-    "configuration/nativewind",
     "configuration/boost-decorator",
+    "---Compatibility---",
+    "compatibility/nativewind",
+    "compatibility/unistyles",
+    "compatibility/uniwind",
     "---Runtime Library---",
     "runtime-library/index"
   ]

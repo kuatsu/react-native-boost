@@ -1,0 +1,35 @@
+---
+title: Nativewind Support
+description: Keep Nativewind styling working on Boost-optimized components.
+---
+
+Compatibility and setup depends on your Nativewind version.
+
+## Nativewind v4
+
+Register Boost's native components with `cssInterop` at your app's entry point, before anything renders. Without this setup, Boost-optimized components lose all `className` styling.
+
+```jsx
+import { cssInterop } from 'nativewind';
+import { NativeText, NativeView } from 'react-native-boost/runtime';
+
+cssInterop(NativeText, { className: 'style' });
+cssInterop(NativeView, { className: 'style' });
+```
+
+### Known limitations
+
+A few Tailwind classes map to props that the JS `Text` wrapper used to translate. Boost skips that
+wrapper, so apply these via `style` instead of `className`:
+
+| Avoid | Use |
+| --- | --- |
+| `className="select-auto"` | `selectable` or `style={{ userSelect: 'auto' }}` |
+| `className="align-center"` | `style={{ textAlignVertical: 'center' }}` |
+
+The `style` forms work because Boost translates them for you; the same values from `className` reach the native
+host raw and are invalid.
+
+## Nativewind v5
+
+Technical feasibility for support is still being investigated.

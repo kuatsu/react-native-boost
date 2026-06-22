@@ -1,0 +1,24 @@
+---
+title: Uniwind Support
+description: Why React Native Boost and Uniwind are currently incompatible.
+---
+
+<Callout type="warn" title="Currently incompatible">
+  React Native Boost and [Uniwind](https://uniwind.dev) are currently incompatible. Enabling Boost in a Uniwind project drops `className` styling from optimized components entirely.
+</Callout>
+
+## What happens
+
+Uniwind resolves `className` to styles inside its own `Text`/`View` wrappers, which it swaps in via a
+Metro resolver. Boost rewrites `Text`/`View` to their native counterparts **before** that swap, so `className` is left as an unknown prop on the raw native component.
+
+## What breaks
+
+Any `Text`/`View` with a `className` (or a `*ClassName` prop such as `selectionColorClassName`):
+
+- All Tailwind styling is dropped, the element renders with no styles
+- Uniwind extras are lost too (press state, `selectionColorClassName`, line-clamp)
+
+## Roadmap
+
+Feasibility for Uniwind support is still being investigated.

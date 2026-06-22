@@ -1,0 +1,31 @@
+---
+title: Unistyles Support
+description: Why React Native Boost and Unistyles are currently incompatible.
+---
+
+<Callout type="warn" title="Currently incompatible">
+  React Native Boost and [Unistyles](https://www.unistyl.es) (v3) are currently incompatible. Enabling Boost in a Unistyles project can lead to dynamic styles becoming non-reactive.
+</Callout>
+
+## What happens
+
+Unistyles updates styles natively, outside of React. A component only updates if it registers itself
+with Unistyles' native engine at mount. Boost rewrites `Text`/`View` to their native counterparts
+**before** Unistyles can do this, so registration never happens.
+
+When this happens, the component renders correctly once, then never updates again.
+
+## What breaks
+
+Anything Unistyles drives at runtime stops applying to optimized components:
+
+- Theme and color-scheme (light/dark) changes
+- Breakpoint changes (rotation, resize, foldables)
+- Variants, insets, font scale, and other runtime dependencies
+
+Note that the initial render looks correct, so the problem is easy to miss in testing.
+
+## Roadmap
+
+Proper Unistyles support is technically possible and planned. See the [tracking issue #58 on
+GitHub](https://github.com/kuatsu/react-native-boost/issues/58).
