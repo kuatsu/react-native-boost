@@ -88,7 +88,7 @@
   },
   "devDependencies": {
     "@babel/plugin-syntax-jsx": "^7.25.0",
-    "@babel/preset-react": "^7.25.0",
+    "@babel/preset-react": "^8.0.1",
     "@babel/preset-typescript": "^7.25.0",
     "@react-native/babel-preset": "0.86.0",
     "@release-it/conventional-changelog": "^10.0.0",
