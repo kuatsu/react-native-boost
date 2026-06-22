@@ -3,7 +3,7 @@ import { TEXT_VOCAB, VIEW_VOCAB, TEXT_BLACKLIST_SAMPLE, type PropSpec } from './
 
 // The unit of generation is an abstract spec, not a raw string — fast-check shrinks the spec (drop an
 // attr, simplify a value, collapse dynamic→static) and the renderer turns it into valid JSX by
-// construction, so shrinking never explores malformed snippets (plan §5).
+// construction, so shrinking never explores malformed snippets.
 
 export type Tag = 'Text' | 'View';
 

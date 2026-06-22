@@ -1,8 +1,8 @@
 import fc from 'fast-check';
 
 // Broad curated vocabulary, seeded from the wrapper's destructure sets + the optimizers' handled/
-// blacklisted props + pass-throughs + uncurated probes (plan §6.1–6.2). Each entry is `{ name, arb,
-// disposition }`, where `arb` produces ONLY type-valid value source (plan §5.2 — a value that would
+// blacklisted props + pass-throughs + uncurated probes. Each entry is `{ name, arb,
+// disposition }`, where `arb` produces ONLY type-valid value source (a value that would
 // throw on both sides is a harness error, not a finding) and `disposition` documents the expected
 // optimizer behavior (a triage aid; not asserted).
 
@@ -44,7 +44,7 @@ const a11yValueObject = fc.constantFrom(
   '{ text: "half" }'
 );
 
-// Rich style generator (plan §6.4). Covers plain keys, the three conversions (numeric fontWeight →
+// Rich style generator. Covers plain keys, the three conversions (numeric fontWeight →
 // string, verticalAlign → textAlignVertical incl. an unknown key, userSelect → selectable incl. an
 // unknown key), arrays with nesting + last-key-wins overrides + falsy elements that StyleSheet.flatten
 // skips, and the edge values. The static/dynamic axis (applied by the generator) drives a fully-static

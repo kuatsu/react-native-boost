@@ -109,7 +109,7 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
           `(${(total / (elapsed / 1000)).toFixed(1)} cases/s)`
       );
 
-      // Anti-vacuous-green guard (plan §6.6): a generator drifting into all-bail would pass trivially.
+      // Anti-vacuous-green guard: a generator drifting into all-bail would pass trivially.
       expect(rate).toBeGreaterThan(0.5);
     },
     Math.max(30_000, NUM_RUNS * 80)
@@ -118,7 +118,7 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
 
 // ── Exhaustive cross-product: Text `disabled` × `accessibilityState.disabled` × `accessible` ────────
 // The reconcile in processAccessibilityProps has a genuinely non-trivial condition; enumerate the 27
-// combinations per platform rather than sampling them (plan §5.1.2).
+// combinations per platform rather than sampling them.
 const TRISTATE = ['absent', 'true', 'false'] as const;
 const disabledCombos = TRISTATE.flatMap((disabled) =>
   TRISTATE.flatMap((stateDisabled) => TRISTATE.map((accessible) => ({ disabled, stateDisabled, accessible })))
@@ -141,7 +141,7 @@ describe.skipIf(DISCOVER).each(['ios', 'android'] as const)('disabled reconcilia
 });
 
 // ── Discovery enumerator (local; FUZZ_DISCOVER=1). Catalogs every distinct divergence class over a
-// large sample instead of failing fast, so the Phase-2 backlog can be sized up front (plan §9). ──────
+// large sample instead of failing fast, so the Phase-2 backlog can be sized up front. ──────
 describe.runIf(DISCOVER)('parity fuzzing — discovery', () => {
   it(
     `enumerate divergence classes (seed=${SEED}, samples=${DISCOVER_SAMPLES})`,
