@@ -61,6 +61,29 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
 export const getDefaultTextAccessible = (): boolean | undefined => Platform.select({ ios: true, android: false });
 
 /**
+ * Translates `aria-hidden` into its native counterparts for the `Text` helper, mirroring `Text.js`'s
+ * legacy path: `aria-hidden` supplies `accessibilityElementsHidden`, falling back to an explicit value
+ * when it is nullish (`??`), and forces `importantForAccessibility` to `'no-hide-descendants'` only when
+ * it is strictly `true` (otherwise the explicit value is preserved). The `??` fallback is the legacy
+ * superset of the two RN `Text` implementations, so this is correct regardless of which path a given RN
+ * version runs.
+ *
+ * The `View` helper deliberately does NOT reuse this: `View.js` assigns `accessibilityElementsHidden`
+ * directly under an `=== undefined` guard (no `??`), so the two diverge for a nullish `aria-hidden` and
+ * must stay separate.
+ */
+function applyAriaHidden(
+  ariaHidden: unknown,
+  accessibilityElementsHidden?: unknown,
+  importantForAccessibility?: unknown
+): { accessibilityElementsHidden: unknown; importantForAccessibility: unknown } {
+  return {
+    accessibilityElementsHidden: ariaHidden ?? accessibilityElementsHidden,
+    importantForAccessibility: ariaHidden === true ? 'no-hide-descendants' : importantForAccessibility,
+  };
+}
+
+/**
  * Normalizes accessibility and ARIA props for runtime native components, mirroring the reconciliation
  * `Text` performs before handing off to its native host.
  *
@@ -70,6 +93,8 @@ export const getDefaultTextAccessible = (): boolean | undefined => Platform.sele
  * - Merges `aria-label` with `accessibilityLabel`
  * - Merges ARIA state fields into `accessibilityState`
  * - Reconciles `disabled` with `accessibilityState.disabled` (the explicit `disabled` prop wins)
+ * - Translates `aria-hidden` into `accessibilityElementsHidden` / `importantForAccessibility` (see
+ *   {@link applyAriaHidden}); `aria-hidden` wins over an explicitly-passed value
  * - Resolves the platform-specific `accessible` default (see {@link getDefaultTextAccessible})
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +108,9 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
     ['aria-disabled']: ariaDisabled,
     ['aria-expanded']: ariaExpanded,
     ['aria-selected']: ariaSelected,
+    ['aria-hidden']: ariaHidden,
+    accessibilityElementsHidden,
+    importantForAccessibility,
     accessible,
     disabled,
     ...restProperties
@@ -124,6 +152,12 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
     normalizedState = { ...normalizedState, disabled: normalizedDisabled };
   }
 
+  // `aria-hidden` → `accessibilityElementsHidden` / `importantForAccessibility`. The explicit native
+  // props are consumed (destructured out of `restProperties`) so `aria-hidden` wins over them, matching
+  // the wrapper; the plugin routes both into this call when `aria-hidden` is present.
+  const { accessibilityElementsHidden: normalizedElementsHidden, importantForAccessibility: normalizedImportant } =
+    applyAriaHidden(ariaHidden, accessibilityElementsHidden, importantForAccessibility);
+
   // Resolve `accessible` exactly as `Text` does: opt-out on iOS, off by default on Android. The
   // Android pressable case (`onPress`/`onLongPress`) never applies — press handlers bail out of
   // optimization — so an omitted prop falls back to the platform default.
@@ -137,6 +171,8 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
     ...restProperties,
     accessibilityLabel: normalizedLabel,
     accessibilityState: normalizedState,
+    accessibilityElementsHidden: normalizedElementsHidden,
+    importantForAccessibility: normalizedImportant,
     accessible: normalizedAccessible,
     disabled: normalizedDisabled,
   };
@@ -190,6 +226,9 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
   if (parsedAriaLabelledBy !== undefined) result.accessibilityLabelledBy = parsedAriaLabelledBy;
   if (ariaLabel !== undefined) result.accessibilityLabel = ariaLabel;
   if (ariaLive !== undefined) result.accessibilityLiveRegion = ariaLive === 'off' ? 'none' : ariaLive;
+  // Direct assignment under an `!== undefined` guard, matching `View.js` exactly. This is NOT the
+  // `Text` helper's `applyAriaHidden` rule (which uses `??`): the two diverge for a nullish value, so
+  // they must stay separate.
   if (ariaHidden !== undefined) {
     result.accessibilityElementsHidden = ariaHidden;
     if (ariaHidden === true) result.importantForAccessibility = 'no-hide-descendants';

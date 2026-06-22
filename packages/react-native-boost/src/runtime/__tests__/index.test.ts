@@ -223,6 +223,33 @@ describe('processAccessibilityProps', () => {
     expect(normalized.disabled).toBe(false);
     expect(normalized.accessibilityState).toBeUndefined();
   });
+
+  it('translates aria-hidden true to accessibilityElementsHidden and importantForAccessibility', () => {
+    const normalized = processAccessibilityProps({ 'aria-hidden': true });
+    expect(normalized.accessibilityElementsHidden).toBe(true);
+    expect(normalized.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('translates aria-hidden false without forcing importantForAccessibility', () => {
+    const normalized = processAccessibilityProps({ 'aria-hidden': false });
+    expect(normalized.accessibilityElementsHidden).toBe(false);
+    expect(normalized.importantForAccessibility).toBeUndefined();
+  });
+
+  it('lets aria-hidden win over an explicit accessibilityElementsHidden', () => {
+    const normalized = processAccessibilityProps({ 'aria-hidden': true, 'accessibilityElementsHidden': false });
+    expect(normalized.accessibilityElementsHidden).toBe(true);
+    expect(normalized.importantForAccessibility).toBe('no-hide-descendants');
+  });
+
+  it('falls back to an explicit accessibilityElementsHidden when aria-hidden is absent', () => {
+    const normalized = processAccessibilityProps({
+      accessibilityElementsHidden: true,
+      importantForAccessibility: 'no',
+    });
+    expect(normalized.accessibilityElementsHidden).toBe(true);
+    expect(normalized.importantForAccessibility).toBe('no');
+  });
 });
 
 describe('processViewAccessibilityProps', () => {

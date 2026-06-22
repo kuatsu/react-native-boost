@@ -11,6 +11,7 @@ export const ACCESSIBILITY_PROPERTIES = new Set([
   'aria-checked',
   'aria-disabled',
   'aria-expanded',
+  'aria-hidden',
   'aria-selected',
   'accessible',
 ]);

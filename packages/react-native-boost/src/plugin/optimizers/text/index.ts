@@ -26,10 +26,6 @@ import {
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
-  // The `Text` wrapper translates `aria-hidden` into `accessibilityElementsHidden` /
-  // `importantForAccessibility`, which `processAccessibilityProps` does not yet handle. Passing it
-  // through would drop it, so bail. TODO: handle this in the runtime helper instead.
-  'aria-hidden',
   'onLongPress',
   'onPress',
   'onPressIn',
@@ -46,11 +42,19 @@ export const textBlacklistedProperties = new Set([
 ]);
 
 /**
- * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`,
- * which `Text` reconciles against `accessibilityState.disabled`. They are collected into a single
- * helper call and stripped from the element so they are not also emitted verbatim.
+ * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`
+ * (reconciled against `accessibilityState.disabled`) and the explicit `accessibilityElementsHidden` /
+ * `importantForAccessibility` natives that `aria-hidden` reconciles against — collecting them lets the
+ * helper own the `aria-hidden` precedence instead of leaving them as direct attributes that would
+ * override the leading helper spread. They are collected into a single helper call and stripped from
+ * the element so they are not also emitted verbatim.
  */
-const NORMALIZED_PROPERTIES = new Set([...ACCESSIBILITY_PROPERTIES, 'disabled']);
+const NORMALIZED_PROPERTIES = new Set([
+  ...ACCESSIBILITY_PROPERTIES,
+  'disabled',
+  'accessibilityElementsHidden',
+  'importantForAccessibility',
+]);
 
 /**
  * Props the optimizer normalizes, translates, renames, or clamps for direct attributes but cannot reach

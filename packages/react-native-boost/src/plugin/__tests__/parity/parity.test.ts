@@ -30,6 +30,12 @@ const TEXT_CASES = [
   '<Text accessibilityState={{ disabled: true }}>hello</Text>',
   '<Text numberOfLines={2}>hello</Text>',
   '<Text aria-busy={true}>hello</Text>',
+  // `aria-hidden` → accessibilityElementsHidden (+ importantForAccessibility when strictly true); the
+  // last case has both present, so `aria-hidden` must win over the explicit `accessibilityElementsHidden`.
+  '<Text aria-hidden>hello</Text>',
+  '<Text aria-hidden={true}>hello</Text>',
+  '<Text aria-hidden={false}>hello</Text>',
+  '<Text aria-hidden accessibilityElementsHidden={false}>hello</Text>',
   '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the build-time style
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
   // Fully static styles are normalized at build time (object literal, no `processTextStyle`). Each
