@@ -83,7 +83,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: [u('./setup.ts')],
     // fibers.collect.ts is a benchmark collector that no-ops unless BENCH_FIBERS_OUT is set.
-    include: [u('./parity.test.ts'), u('./fibers.collect.ts')],
+    include: [u('./parity.test.ts'), u('./fibers.collect.ts'), u('./fuzz/fuzz.test.ts')],
     server: { deps: { inline: [/react-native/] } }, // force RN source through the transform pipeline
   },
 });

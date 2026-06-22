@@ -1,13 +1,10 @@
-import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { transformSync, type TransformCaller } from '@babel/core';
 import * as React from 'react';
 import boostPlugin from '../../index'; // src/plugin/index.ts — the full Boost plugin
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { renderAndCaptureSingle } from './capture';
-import { setPlatformOS } from './mocks/Platform';
-
-let counter = 0;
+import { writeAndImportFresh } from './generated';
+import { setPlatformOS, type PlatformOS } from './mocks/Platform';
 
 interface BoostBailed {
   optimized: false;
@@ -15,7 +12,7 @@ interface BoostBailed {
 
 interface BoostOptimized {
   optimized: true;
-  which?: string;
+  which: string;
   props: Record<string, unknown>;
 }
 
@@ -24,9 +21,11 @@ interface BoostOptimized {
  * per platform, so the plugin inlines build-time defaults exactly as in production). Returns the
  * generated code.
  */
-function transformBoostCase(os: 'ios' | 'android', jsxBody: string): string {
+function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): string {
   setPlatformOS(os);
-  const source = `import { Text, View } from 'react-native';\nexport default function Case(){ return ${jsxBody}; }`;
+  const source =
+    `import { Text, View } from 'react-native';\n${preamble}\n` +
+    `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,
     babelrc: false,
@@ -43,7 +42,7 @@ function transformBoostCase(os: 'ios' | 'android', jsxBody: string): string {
  * element. A compile-only check (no render), so nested snippets that produce multiple hosts can assert
  * deferral without tripping {@link renderAndCaptureSingle}.
  */
-export function boostOptimizes(os: 'ios' | 'android', jsxBody: string): boolean {
+export function boostOptimizes(os: PlatformOS, jsxBody: string): boolean {
   return transformBoostCase(os, jsxBody).includes(RUNTIME_MODULE_NAME);
 }
 
@@ -52,14 +51,16 @@ export function boostOptimizes(os: 'ios' | 'android', jsxBody: string): boolean 
  * are mocked to the shared capturers by the test). Returns `{ optimized: false }` when Boost bailed —
  * it then defers to the wrapper, so the case is equivalent by construction and the test skips it.
  */
-export async function captureBoost(os: 'ios' | 'android', jsxBody: string): Promise<BoostBailed | BoostOptimized> {
-  const code = transformBoostCase(os, jsxBody);
+export async function captureBoost(
+  os: PlatformOS,
+  jsxBody: string,
+  preamble = ''
+): Promise<BoostBailed | BoostOptimized> {
+  const code = transformBoostCase(os, jsxBody, preamble);
   // Single-element snippet: the runtime import is injected iff that element was optimized.
   if (!code.includes(RUNTIME_MODULE_NAME)) return { optimized: false };
 
-  const file = fileURLToPath(new URL(`./__generated__/boost-${counter++}.js`, import.meta.url));
-  writeFileSync(file, code);
-  const mod = await import(/* @vite-ignore */ file);
+  const mod = await writeAndImportFresh('boost', code);
   const { which, props } = renderAndCaptureSingle(React.createElement(mod.default));
   return { optimized: true, which, props };
 }

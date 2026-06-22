@@ -1,8 +1,10 @@
 // Switchable Platform mock. `Text.js` reads `Platform.OS` / `Platform.select` at render time, so the
 // parity test flips the OS via `setPlatformOS` before each wrapper render.
-let os: 'ios' | 'android' = 'ios';
+export type PlatformOS = 'ios' | 'android';
 
-export function setPlatformOS(value: 'ios' | 'android') {
+let os: PlatformOS = 'ios';
+
+export function setPlatformOS(value: PlatformOS) {
   os = value;
 }
 
