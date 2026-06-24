@@ -2,6 +2,7 @@ import { NodePath, types as t } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import { FileImportOptions, HubFile } from '../../types';
 import { RUNTIME_MODULE_NAME } from '../constants';
+import { markOptimizedHost } from './optimized-host';
 
 /**
  * Adds a hint to the file object to ensure that a specific import is added only once and cached on the file object.
@@ -78,6 +79,10 @@ export const replaceWithNativeComponent = (
 
   // Get the current name of the component, which may be aliased (i.e. Text -> RNText)
   const currentName = (path.node.name as t.JSXIdentifier).name;
+
+  // Record what this element was optimized into so the ancestor walk can classify it once it becomes a
+  // descendant's ancestor (the injected import is not yet resolvable via scope this traversal).
+  markOptimizedHost(path.node, nativeComponentName === 'NativeText' ? 'text' : 'view');
 
   // Replace the component with its native counterpart
   const jsxName = path.node.name as t.JSXIdentifier;

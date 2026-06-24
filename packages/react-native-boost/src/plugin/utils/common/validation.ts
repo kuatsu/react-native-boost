@@ -4,7 +4,13 @@ import { HubFile } from '../../types';
 import { minimatch } from 'minimatch';
 import nodePath from 'node:path';
 import PluginError from '../plugin-error';
-import { UNISTYLES_MODULE_NAME } from '../constants';
+import {
+  UNISTYLES_MODULE_NAME,
+  UNISTYLES_NATIVE_TEXT_MODULE,
+  UNISTYLES_NATIVE_VIEW_MODULE,
+  RUNTIME_MODULE_NAME,
+} from '../constants';
+import { getOptimizedHostKind } from './optimized-host';
 
 /**
  * Checks if the file is in the list of ignored files.
@@ -243,6 +249,12 @@ function classifyJSXElementAsAncestor(
   path: NodePath<t.JSXElement>,
   context: AncestorAnalysisContext
 ): AncestorClassification {
+  // An ancestor Boost already rewrote earlier in this same traversal: classify it by the host it
+  // became (Text → inline-text context, View → normal context). This is checked before the import-based
+  // paths because the freshly-injected host import is not yet resolvable via scope.
+  const optimizedHostKind = getOptimizedHostKind(path.node.openingElement);
+  if (optimizedHostKind) return optimizedHostKind === 'text' ? 'text' : 'safe';
+
   const openingElementName = path.node.openingElement.name;
 
   if (t.isJSXIdentifier(openingElementName)) {
@@ -323,12 +335,40 @@ function classifyModuleBindingAsAncestor(binding: ScopeBinding): AncestorClassif
     return 'unknown';
   }
 
+  // An ancestor Boost itself already rewrote (its own runtime host, or a Unistyles lean host in
+  // Unistyles mode) is a *known* host: a View establishes a normal context ('safe'), a Text an
+  // inline-text context ('text'). Without this, a descendant of an optimized element would read its
+  // rewritten ancestor as 'unknown' and bail — so only the outermost element of any subtree could ever
+  // optimize. Classifying by what the host renders lets optimization cascade down the tree.
+  const optimizedHost = classifyOptimizedHostAncestor(source, binding);
+  if (optimizedHost) return optimizedHost;
+
   if (source === 'react' && t.isImportSpecifier(binding.path.node)) {
     const importedName = getImportSpecifierImportedName(binding.path.node);
     if (importedName === 'Fragment') return 'safe';
   }
 
   return 'unknown';
+}
+
+/**
+ * Classifies an ancestor that is one of the optimized hosts Boost emits — its own runtime
+ * `NativeText`/`NativeView`, or (in Unistyles mode) Unistyles' lean `NativeText`/`NativeView`. Returns
+ * `'text'` for a Text host, `'safe'` for a View host, or `undefined` when the source is not a known
+ * optimized host. The Unistyles lean hosts are keyed purely by their (component-specific) import source;
+ * Boost's own runtime exports both hosts from one module, so its imported name is checked.
+ */
+function classifyOptimizedHostAncestor(source: string, binding: ScopeBinding): AncestorClassification | undefined {
+  if (source === UNISTYLES_NATIVE_TEXT_MODULE) return 'text';
+  if (source === UNISTYLES_NATIVE_VIEW_MODULE) return 'safe';
+
+  if (source === RUNTIME_MODULE_NAME && t.isImportSpecifier(binding.path.node)) {
+    const importedName = getImportSpecifierImportedName(binding.path.node);
+    if (importedName === 'NativeText') return 'text';
+    if (importedName === 'NativeView') return 'safe';
+  }
+
+  return undefined;
 }
 
 function classifyLocalBindingAsAncestor(
