@@ -14,8 +14,9 @@ import {
   replaceWithNativeComponent,
   ancestorBailoutChecks,
   createStyleOriginResolver,
+  UNISTYLES_VIEW_HOST,
 } from '../../utils/common';
-import { RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_VIEW_MODULE } from '../../utils/constants';
+import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 /**
  * Props the `View` wrapper destructures and transforms before handing off to its native host. The
@@ -124,15 +125,8 @@ export const viewOptimizer: Optimizer = (path, logger, options, _platform, unist
   // A Unistyles-styled View routes to Unistyles' lean host (a registering wrapper around `RCTView`) so
   // its shadow-tree registration survives; the `style` already passes through verbatim. Everything else
   // optimizes to Boost's own raw host as usual.
-  if (getStyleOrigin() === 'unistyles') {
-    replaceWithNativeComponent(path, parent, file, 'NativeView', {
-      moduleName: UNISTYLES_NATIVE_VIEW_MODULE,
-      importType: 'default',
-      nameHint: 'UnistylesNativeView',
-    });
-  } else {
-    replaceWithNativeComponent(path, parent, file, 'NativeView');
-  }
+  const viewHost = getStyleOrigin() === 'unistyles' ? UNISTYLES_VIEW_HOST : undefined;
+  replaceWithNativeComponent(path, parent, file, 'NativeView', viewHost);
 };
 
 /**
