@@ -1,5 +1,22 @@
 # Changelog
 
+# [1.4.0](https://github.com/kuatsu/react-native-boost/compare/v1.3.0...v1.4.0) (2026-06-24)
+
+
+### Bug Fixes
+
+* **text:** mirror selectionColor omission for invalid and bare values ([6a4ab42](https://github.com/kuatsu/react-native-boost/commit/6a4ab4286a848a831deef26d85ee6c671678aca7))
+
+
+### Features
+
+* **text:** translate aria-hidden to native a11y props instead of bailing ([419a883](https://github.com/kuatsu/react-native-boost/commit/419a8837dedc4a88fa628726abe9bdd76269c465))
+
+
+### Performance Improvements
+
+* **plugin:** emit object literal instead of Object.assign when no spread ([bb98cc7](https://github.com/kuatsu/react-native-boost/commit/bb98cc730e93129f1c446662a8802b2311faaa08))
+
 # [1.3.0](https://github.com/kuatsu/react-native-boost/compare/v1.2.0...v1.3.0) (2026-06-22)
 
 
