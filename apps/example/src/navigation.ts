@@ -4,6 +4,7 @@ export type RootStackParamList = {
   Launcher: undefined;
   Benchmark: undefined;
   TradingDemo: { coinId: string };
+  UnistylesDemo: undefined;
 };
 
 export type RootStackScreenProps<RouteName extends keyof RootStackParamList> = NativeStackScreenProps<

@@ -25,9 +25,11 @@
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
     "react-native-boost": "workspace:*",
+    "react-native-nitro-modules": "0.35.7",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.23.0",
     "react-native-time-to-render": "workspace:*",
+    "react-native-unistyles": "3.2.5",
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {

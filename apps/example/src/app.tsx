@@ -8,6 +8,7 @@ import TradingDemoScreen from './screens/trading-demo';
 import LauncherScreen from './screens/launcher';
 import BenchmarkScreen from './screens/benchmark';
 import BenchmarkRunner from './screens/benchmark-runner';
+import UnistylesDemoScreen from './screens/unistyles-demo';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -34,6 +35,7 @@ export default function App() {
             component={TradingDemoScreen}
             options={({ route }) => ({ title: coinsById[route.params.coinId]?.pair ?? 'Price Wall' })}
           />
+          <Stack.Screen name="UnistylesDemo" component={UnistylesDemoScreen} options={{ title: 'Unistyles' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
