@@ -1,5 +1,18 @@
 # Changelog
 
+# [1.5.0](https://github.com/kuatsu/react-native-boost/compare/v1.4.0...v1.5.0) (2026-06-24)
+
+
+### Bug Fixes
+
+* fix nested optimizations that were incorrectly bailing ([4f68bce](https://github.com/kuatsu/react-native-boost/commit/4f68bce436591bff3cc03c589517014b3b63ebf3))
+
+
+### Features
+
+* **example:** unistyles test screen ([654012d](https://github.com/kuatsu/react-native-boost/commit/654012df7d7089233298174d1cfebaeb5c8fabbe))
+* unistyles v3 support ([5adec92](https://github.com/kuatsu/react-native-boost/commit/5adec9220f0a49ab4a037e416ee9559928bd0f56))
+
 # [1.4.0](https://github.com/kuatsu/react-native-boost/compare/v1.3.0...v1.4.0) (2026-06-24)
 
 
