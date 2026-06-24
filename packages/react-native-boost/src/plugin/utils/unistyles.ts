@@ -29,14 +29,21 @@ export function isUnistylesInstalled(fromDirectory: string | undefined): boolean
 function readNearestPackageJson(fromDirectory: string): Record<string, unknown> | undefined {
   let directory = nodePath.resolve(fromDirectory);
 
-  // Walk up until the filesystem root, stopping at the first readable `package.json`.
+  // Walk up to the nearest directory that has a `package.json`. An absent manifest means "keep looking";
+  // a present-but-unreadable/malformed one stops the walk and declines to auto-enable, rather than
+  // misattributing a parent workspace's dependencies to this project.
   for (;;) {
-    try {
-      return JSON.parse(fs.readFileSync(nodePath.join(directory, 'package.json'), 'utf8'));
-    } catch {
-      const parent = nodePath.dirname(directory);
-      if (parent === directory) return undefined;
-      directory = parent;
+    const manifestPath = nodePath.join(directory, 'package.json');
+    if (fs.existsSync(manifestPath)) {
+      try {
+        return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch {
+        return undefined;
+      }
     }
+
+    const parent = nodePath.dirname(directory);
+    if (parent === directory) return undefined;
+    directory = parent;
   }
 }
