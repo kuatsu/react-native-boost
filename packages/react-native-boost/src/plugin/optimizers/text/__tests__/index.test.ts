@@ -41,3 +41,13 @@ pluginTester({
     outputFixture: path.resolve(import.meta.dirname, `fixtures/${name}/dangerous-output.js`),
   })),
 });
+
+pluginTester({
+  plugin: generateTestPlugin(textOptimizer, { unistyles: true }),
+  title: 'text unistyles',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+});

@@ -13,8 +13,11 @@ import {
   isReactNativeImport,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
+  extractStyleAttribute,
+  classifyStyleOrigin,
+  StyleOrigin,
 } from '../../utils/common';
-import { RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_VIEW_MODULE } from '../../utils/constants';
 
 /**
  * Props the `View` wrapper destructures and transforms before handing off to its native host. The
@@ -49,16 +52,31 @@ const VIEW_SPREAD_GUARD_KEYS = new Set([
 const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected']);
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
-export const viewOptimizer: Optimizer = (path, logger, options) => {
+export const viewOptimizer: Optimizer = (path, logger, options, _platform, unistylesEnabled) => {
   if (!isValidJSXComponent(path, 'View')) return;
   if (!isReactNativeImport(path, 'View')) return;
 
   const forced = isForcedLine(path);
 
+  // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a
+  // resolvable spread is guarded too (`style` is added to the spread keys below); an unresolvable spread
+  // already bails. See {@link classifyStyleOrigin}.
+  let styleOrigin: StyleOrigin | undefined;
+  const getStyleOrigin = (): StyleOrigin => {
+    if (!unistylesEnabled) return 'plain';
+    return (styleOrigin ??= classifyStyleOrigin(path, extractStyleAttribute(path.node.attributes).styleExpr));
+  };
+
+  const spreadGuardKeys = unistylesEnabled ? new Set([...VIEW_SPREAD_GUARD_KEYS, 'style']) : VIEW_SPREAD_GUARD_KEYS;
+
   const overridableChecks: BailoutCheck[] = [
     {
       reason: 'has a spread that may carry a translated prop',
-      shouldBail: () => hasBlacklistedPropertyInSpread(path, VIEW_SPREAD_GUARD_KEYS),
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, spreadGuardKeys),
+    },
+    {
+      reason: 'has an unresolved style source that may be a Unistyles style',
+      shouldBail: () => getStyleOrigin() === 'unknown',
     },
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
@@ -104,7 +122,18 @@ export const viewOptimizer: Optimizer = (path, logger, options) => {
 
   processViewProps(path, file);
 
-  replaceWithNativeComponent(path, parent, file, 'NativeView');
+  // A Unistyles-styled View routes to Unistyles' lean host (a registering wrapper around `RCTView`) so
+  // its shadow-tree registration survives; the `style` already passes through verbatim. Everything else
+  // optimizes to Boost's own raw host as usual.
+  if (getStyleOrigin() === 'unistyles') {
+    replaceWithNativeComponent(path, parent, file, 'NativeView', {
+      moduleName: UNISTYLES_NATIVE_VIEW_MODULE,
+      importType: 'default',
+      nameHint: 'UnistylesNativeView',
+    });
+  } else {
+    replaceWithNativeComponent(path, parent, file, 'NativeView');
+  }
 };
 
 /**

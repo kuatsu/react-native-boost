@@ -35,30 +35,45 @@ export function addFileImportHint({
 }
 
 /**
+ * Where to import an optimized element's replacement host from. Defaults to Boost's own runtime
+ * (`react-native-boost/runtime`, named import). Unistyles mode overrides this to point at Unistyles'
+ * lean host components, which are version-matched registering wrappers (e.g. `NativeView` is a default
+ * export). A distinct `nameHint` keeps the import cache from colliding when a file uses both a Boost
+ * host and a Unistyles host.
+ */
+export interface NativeComponentSource {
+  moduleName?: string;
+  importName?: string;
+  importType?: 'named' | 'default';
+  nameHint?: string;
+}
+
+/**
  * Replaces a component with its native counterpart.
  * This function handles both the opening and closing tags.
  *
  * @param path - The path to the JSXOpeningElement.
  * @param parent - The parent JSX element.
  * @param file - The Babel file object.
- * @param nativeComponentName - The name of the native component to import.
- * @param moduleName - The module to import the native component from.
+ * @param nativeComponentName - The local-name basis for the injected import (and the default import name).
+ * @param source - Optional override for where to import the host from (see {@link NativeComponentSource}).
  * @returns The identifier for the imported native component.
  */
 export const replaceWithNativeComponent = (
   path: NodePath<t.JSXOpeningElement>,
   parent: t.JSXElement,
   file: HubFile,
-  nativeComponentName: string
+  nativeComponentName: string,
+  source: NativeComponentSource = {}
 ): t.Identifier => {
   // Add native component import (cached on file) to prevent duplicate imports
   const nativeIdentifier = addFileImportHint({
     file,
-    nameHint: nativeComponentName,
+    nameHint: source.nameHint ?? nativeComponentName,
     path,
-    importName: nativeComponentName,
-    moduleName: RUNTIME_MODULE_NAME,
-    importType: 'named',
+    importName: source.importName ?? nativeComponentName,
+    moduleName: source.moduleName ?? RUNTIME_MODULE_NAME,
+    importType: source.importType ?? 'named',
   });
 
   // Get the current name of the component, which may be aliased (i.e. Text -> RNText)

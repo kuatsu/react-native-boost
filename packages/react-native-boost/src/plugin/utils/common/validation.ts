@@ -4,6 +4,7 @@ import { HubFile } from '../../types';
 import { minimatch } from 'minimatch';
 import nodePath from 'node:path';
 import PluginError from '../plugin-error';
+import { UNISTYLES_MODULE_NAME } from '../constants';
 
 /**
  * Checks if the file is in the list of ignored files.
@@ -711,4 +712,102 @@ function getStaticExpressionTruthiness(expression: t.Expression | t.JSXEmptyExpr
   }
 
   return undefined;
+}
+
+export type StyleOrigin = 'unistyles' | 'plain' | 'unknown';
+
+/**
+ * Classifies where a JSX element's direct `style` value comes from, used to route an element in
+ * "Unistyles mode". Resolution is **same-file only** — anything that would require following an import,
+ * or that cannot be proven, is `'unknown'`.
+ *
+ * - `'plain'` — no `style`, an object literal, or a `StyleSheet.create(...)` imported from `react-native`:
+ *   provably not a Unistyles style, so it is safe to optimize to Boost's own host as usual.
+ * - `'unistyles'` — a `StyleSheet.create(...)` imported from `react-native-unistyles`, used directly or as
+ *   any element of a style array: must be routed to Unistyles' lean host so its registration survives.
+ * - `'unknown'` — a prop/param/call/conditional, an imported stylesheet, or any unresolvable reference:
+ *   undecidable within one file, so it could be a Unistyles style arriving from elsewhere.
+ */
+export const classifyStyleOrigin = (
+  path: NodePath<t.JSXOpeningElement>,
+  styleExpr: t.Expression | undefined
+): StyleOrigin => {
+  if (!styleExpr) return 'plain';
+  return classifyStyleExpression(path, styleExpr);
+};
+
+function classifyStyleExpression(path: NodePath<t.JSXOpeningElement>, expr: t.Expression): StyleOrigin {
+  // An inline object literal could only carry Unistyles state by spreading one in — which strips that
+  // state anyway and is already broken under Unistyles — so a spread makes it unprovable; a plain
+  // literal is provably non-Unistyles.
+  if (t.isObjectExpression(expr)) {
+    return expr.properties.some((property) => t.isSpreadElement(property)) ? 'unknown' : 'plain';
+  }
+
+  if (t.isArrayExpression(expr)) {
+    let result: StyleOrigin = 'plain';
+    for (const element of expr.elements) {
+      if (element == null) continue; // hole → flattens away
+      if (t.isSpreadElement(element)) return 'unknown';
+      const elementOrigin = classifyStyleExpression(path, element);
+      // A single Unistyles element makes the whole array Unistyles-managed: routing the array by
+      // identity to the lean host preserves that element's registration regardless of its siblings.
+      if (elementOrigin === 'unistyles') return 'unistyles';
+      if (elementOrigin === 'unknown') result = 'unknown';
+    }
+    return result;
+  }
+
+  // `styles.foo` / `styles['foo']` — classify by the `styles` container's `StyleSheet.create` origin.
+  if (t.isMemberExpression(expr)) {
+    if (!t.isIdentifier(expr.object)) return 'unknown';
+    return classifyStyleContainerBinding(path.scope.getBinding(expr.object.name));
+  }
+
+  // A local `const x = <style expr>` alias — follow it once.
+  if (t.isIdentifier(expr)) {
+    const binding = path.scope.getBinding(expr.name);
+    if (!binding || !binding.constant || !binding.path.isVariableDeclarator()) return 'unknown';
+    const init = binding.path.node.init;
+    if (init && t.isExpression(init)) return classifyStyleExpression(path, init);
+    return 'unknown';
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Classifies the binding behind the `styles` in `styles.foo`: it must be a same-file, non-reassigned
+ * `const styles = <StyleSheet>.create(...)` whose `StyleSheet` import source identifies the engine.
+ */
+function classifyStyleContainerBinding(binding: ScopeBinding | undefined): StyleOrigin {
+  if (!binding || !binding.constant) return 'unknown';
+  if (binding.kind === 'module') return 'unknown'; // imported stylesheet → cross-file, out of scope
+  if (!binding.path.isVariableDeclarator()) return 'unknown';
+
+  const init = binding.path.node.init;
+  if (!init || !t.isCallExpression(init)) return 'unknown';
+
+  return classifyStyleSheetCreateCallee(binding.path.scope, init.callee);
+}
+
+/**
+ * Classifies a `StyleSheet.create` callee by the import source of its `StyleSheet` object:
+ * `react-native-unistyles` → `'unistyles'`, `react-native` → `'plain'`, anything else → `'unknown'`.
+ */
+function classifyStyleSheetCreateCallee(
+  scope: NodePath<t.Node>['scope'],
+  callee: t.Expression | t.V8IntrinsicIdentifier
+): StyleOrigin {
+  if (!t.isMemberExpression(callee) || callee.computed) return 'unknown';
+  if (!t.isIdentifier(callee.property, { name: 'create' })) return 'unknown';
+  if (!t.isIdentifier(callee.object)) return 'unknown';
+
+  const binding = scope.getBinding(callee.object.name);
+  if (!binding || binding.kind !== 'module' || !t.isImportDeclaration(binding.path.parent)) return 'unknown';
+
+  const source = binding.path.parent.source.value;
+  if (source === UNISTYLES_MODULE_NAME) return 'unistyles';
+  if (source === 'react-native') return 'plain';
+  return 'unknown';
 }
