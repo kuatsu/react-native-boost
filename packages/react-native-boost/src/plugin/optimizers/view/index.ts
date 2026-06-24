@@ -13,9 +13,7 @@ import {
   isReactNativeImport,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
-  extractStyleAttribute,
-  classifyStyleOrigin,
-  StyleOrigin,
+  createStyleOriginResolver,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_VIEW_MODULE } from '../../utils/constants';
 
@@ -46,6 +44,11 @@ const VIEW_SPREAD_GUARD_KEYS = new Set([
   'tabIndex',
 ]);
 
+// In Unistyles mode a `style` arriving through a resolvable spread must also bail (it could be a
+// Unistyles style), so the guard set additionally includes `style`. Precomputed to avoid rebuilding it
+// per element.
+const VIEW_SPREAD_GUARD_KEYS_UNISTYLES = new Set([...VIEW_SPREAD_GUARD_KEYS, 'style']);
+
 // ARIA siblings that trigger aggregation. Their presence routes the whole matching group (including a
 // passed `accessibilityState`/`accessibilityValue`) through the runtime helper, because the wrapper
 // merges them (`ariaX ?? source?.x`) and a partial literal translation could not reproduce that.
@@ -59,15 +62,11 @@ export const viewOptimizer: Optimizer = (path, logger, options, _platform, unist
   const forced = isForcedLine(path);
 
   // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a
-  // resolvable spread is guarded too (`style` is added to the spread keys below); an unresolvable spread
+  // resolvable spread is guarded too (`style` is in the Unistyles spread keys); an unresolvable spread
   // already bails. See {@link classifyStyleOrigin}.
-  let styleOrigin: StyleOrigin | undefined;
-  const getStyleOrigin = (): StyleOrigin => {
-    if (!unistylesEnabled) return 'plain';
-    return (styleOrigin ??= classifyStyleOrigin(path, extractStyleAttribute(path.node.attributes).styleExpr));
-  };
+  const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
 
-  const spreadGuardKeys = unistylesEnabled ? new Set([...VIEW_SPREAD_GUARD_KEYS, 'style']) : VIEW_SPREAD_GUARD_KEYS;
+  const spreadGuardKeys = unistylesEnabled ? VIEW_SPREAD_GUARD_KEYS_UNISTYLES : VIEW_SPREAD_GUARD_KEYS;
 
   const overridableChecks: BailoutCheck[] = [
     {
