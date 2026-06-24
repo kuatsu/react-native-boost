@@ -1,6 +1,22 @@
 export const RUNTIME_MODULE_NAME = 'react-native-boost/runtime';
 
 /**
+ * The npm package name of Unistyles, used both for the install probe (auto-detecting "Unistyles mode")
+ * and for classifying a `StyleSheet.create` call's origin.
+ */
+export const UNISTYLES_MODULE_NAME = 'react-native-unistyles';
+
+/**
+ * Unistyles' own "lean" host components — `createUnistylesElement(RCTText/RCTView)`. Routing a
+ * Unistyles-styled element to these keeps Unistyles' shadow-tree registration (so reactivity survives)
+ * while still skipping React Native's `Text`/`View` wrapper, which is the optimization Boost provides.
+ * `NativeText` is a named export; `NativeView` is the module's default export (it mirrors RN's default
+ * `View` export). These subpaths are part of Unistyles' `./components/native/*` exports map.
+ */
+export const UNISTYLES_NATIVE_TEXT_MODULE = `${UNISTYLES_MODULE_NAME}/components/native/NativeText`;
+export const UNISTYLES_NATIVE_VIEW_MODULE = `${UNISTYLES_MODULE_NAME}/components/native/NativeView`;
+
+/**
  * The set of accessibility properties that need to be normalized.
  */
 export const ACCESSIBILITY_PROPERTIES = new Set([

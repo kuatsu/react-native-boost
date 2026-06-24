@@ -4,6 +4,7 @@ import { PluginLogger, PluginOptions } from './types';
 import { createLogger } from './utils/logger';
 import { viewOptimizer } from './optimizers/view';
 import { isIgnoredFile } from './utils/common';
+import { isUnistylesInstalled } from './utils/unistyles';
 
 export type { PluginOptimizationOptions, PluginOptions } from './types';
 
@@ -12,24 +13,42 @@ type PluginState = {
   __reactNativeBoostLogger?: PluginLogger;
 };
 
-export default declare((api) => {
+export default declare((api, rawOptions, dirname?: string) => {
   api.assertVersion(7);
+
+  const options = (rawOptions ?? {}) as PluginOptions;
 
   // Target platform, resolved at build time. Metro sets this on the Babel caller per platform bundle,
   // letting optimizers inline platform-specific defaults instead of deferring them to the runtime.
   const platform = api.caller((caller) => (caller as { platform?: string } | undefined)?.platform);
+
+  // Resolve "Unistyles mode" once per plugin instance. An explicit `unistyles` flag always wins;
+  // otherwise auto-detect an installed `react-native-unistyles` and, when found, enable the mode but
+  // hint (once) to set the flag explicitly — a detected package does not prove its Babel plugin is active.
+  const autoDetectedUnistyles = options.unistyles === undefined && isUnistylesInstalled(dirname);
+  const unistylesEnabled = options.unistyles === true || autoDetectedUnistyles;
+  let unistylesHintLogged = false;
 
   return {
     name: 'react-native-boost',
     visitor: {
       JSXOpeningElement(path, state) {
         const pluginState = state as PluginState;
-        const options = (pluginState.opts ?? {}) as PluginOptions;
         const logger = getOrCreateLogger(pluginState, options);
 
+        if (autoDetectedUnistyles && !unistylesHintLogged) {
+          unistylesHintLogged = true;
+          logger.warning({
+            message:
+              'react-native-unistyles was detected, so Unistyles mode was enabled automatically. Set ' +
+              '`unistyles: true` in the react-native-boost plugin options to make this explicit, or ' +
+              '`unistyles: false` to opt out.',
+          });
+        }
+
         if (isIgnoredFile(path, options.ignores ?? [])) return;
-        if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform);
-        if (options.optimizations?.view !== false) viewOptimizer(path, logger, options);
+        if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform, unistylesEnabled);
+        if (options.optimizations?.view !== false) viewOptimizer(path, logger, options, platform, unistylesEnabled);
       },
     },
   };

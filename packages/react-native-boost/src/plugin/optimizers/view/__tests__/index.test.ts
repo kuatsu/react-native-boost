@@ -31,3 +31,13 @@ pluginTester({
     },
   ],
 });
+
+pluginTester({
+  plugin: generateTestPlugin(viewOptimizer, { unistyles: true }),
+  title: 'view unistyles',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+});

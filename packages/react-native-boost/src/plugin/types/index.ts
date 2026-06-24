@@ -44,6 +44,23 @@ export interface PluginOptions {
    */
   optimizations?: PluginOptimizationOptions;
   /**
+   * Enables "Unistyles mode": keep `react-native-unistyles` reactivity working on optimized elements.
+   *
+   * When enabled, a `Text`/`View` whose `style` resolves to a Unistyles `StyleSheet.create` style is
+   * rewritten to Unistyles' own lean host (so its shadow-tree registration survives and theme/breakpoint/
+   * variant updates keep working) instead of Boost's raw host; a `Text`/`View` with an unresolvable
+   * direct `style` (e.g. `style={props.style}`, a function call) is left untouched, because it could be a
+   * Unistyles style arriving from elsewhere; plain/RN styles still optimize to Boost's host as usual.
+   *
+   * Style origin is resolved within a single file only (cross-file stylesheets count as unresolvable).
+   *
+   * When omitted, the plugin auto-detects whether `react-native-unistyles` is installed and enables this
+   * if so (and logs a one-time hint to set the flag explicitly). Set to `false` to force it off even when
+   * Unistyles is installed.
+   * @default undefined (auto-detected)
+   */
+  unistyles?: boolean;
+  /**
    * Opt-in flag that allows View optimization when ancestor components cannot be statically resolved.
    *
    * This increases optimization coverage, but may introduce behavioral differences
@@ -93,7 +110,13 @@ export type Optimizer = (
   logger: PluginLogger,
   options?: PluginOptions,
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
-  platform?: string
+  platform?: string,
+  /**
+   * Whether "Unistyles mode" is active for this build (resolved once at plugin init from the `unistyles`
+   * option + install auto-detection). When `true`, optimizers classify each element's `style` origin and
+   * route Unistyles styles to Unistyles' lean host instead of Boost's raw host.
+   */
+  unistylesEnabled?: boolean
 ) => void;
 
 export type HubFile = t.File & {

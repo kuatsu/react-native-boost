@@ -23,8 +23,10 @@ import {
   extractSelectableAndUpdateStyle,
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
+  classifyStyleOrigin,
+  StyleOrigin,
 } from '../../utils/common';
-import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_TEXT_MODULE } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
   'onLongPress',
@@ -82,12 +84,20 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const textOptimizer: Optimizer = (path, logger, options, platform) => {
+export const textOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
   if (!isValidJSXComponent(path, 'Text')) return;
   if (!isReactNativeImport(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
+
+  // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a spread
+  // is already guarded (`style` ∈ TEXT_SPREAD_GUARD_KEYS), so only the direct attribute is classified.
+  let styleOrigin: StyleOrigin | undefined;
+  const getStyleOrigin = (): StyleOrigin => {
+    if (!unistylesEnabled) return 'plain';
+    return (styleOrigin ??= classifyStyleOrigin(path, extractStyleAttribute(path.node.attributes).styleExpr));
+  };
 
   const overridableChecks: BailoutCheck[] = [
     {
@@ -97,6 +107,10 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
     {
       reason: 'has a spread that may carry a translated, normalized, or clamped prop',
       shouldBail: () => hasBlacklistedPropertyInSpread(path, TEXT_SPREAD_GUARD_KEYS),
+    },
+    {
+      reason: 'has an unresolved style source that may be a Unistyles style',
+      shouldBail: () => getStyleOrigin() === 'unknown',
     },
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
@@ -148,15 +162,27 @@ export const textOptimizer: Optimizer = (path, logger, options, platform) => {
     path,
   });
 
+  const routeToUnistyles = getStyleOrigin() === 'unistyles';
+
   // Process props
   fixNegativeNumberOfLines({ path, logger, file });
   renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
-  processProps(path, file, platform);
+  processProps(path, file, platform, routeToUnistyles);
 
-  // Replace the Text component with NativeText
-  replaceWithNativeComponent(path, parent, file, 'NativeText');
+  // A Unistyles-styled Text routes to Unistyles' lean host (a registering wrapper around `RCTText`); its
+  // `style` is passed by identity (see `processProps`) so the Unistyles native-state — and therefore the
+  // shadow-tree registration — survives. Plain text optimizes to Boost's own raw host as usual.
+  if (routeToUnistyles) {
+    replaceWithNativeComponent(path, parent, file, 'NativeText', {
+      moduleName: UNISTYLES_NATIVE_TEXT_MODULE,
+      importName: 'NativeText',
+      nameHint: 'UnistylesNativeText',
+    });
+  } else {
+    replaceWithNativeComponent(path, parent, file, 'NativeText');
+  }
 };
 
 /**
@@ -252,8 +278,21 @@ function staticNumberOfLines(expression: t.Expression): number | undefined {
 
 /**
  * Processes style and accessibility attributes, replacing them with optimized versions.
+ *
+ * When `passStyleByIdentity` is set (Unistyles routing), the `style` attribute is left exactly as
+ * written instead of being flattened/normalized through `processTextStyle` — flattening would strip the
+ * Unistyles native-state the engine needs. Accessibility, `selectionColor`, and the `accessible` default
+ * are still applied (they do not touch `style`). The skipped text normalizations (numeric `fontWeight`,
+ * `verticalAlign`, `userSelect` → `selectable`) cannot be reproduced safely here: for a reactive style
+ * Unistyles' C++ engine re-commits the raw parsed values on every update, overwriting any JS-side
+ * normalization, so matching Unistyles' own lean-host semantics (raw pass-through) is the correct contract.
  */
-function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platform?: string) {
+function processProps(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  platform?: string,
+  passStyleByIdentity = false
+) {
   // Grab the up-to-date list of attributes
   const currentAttributes = [...path.node.attributes];
 
@@ -300,7 +339,9 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   let selectableAttribute: t.JSXAttribute | undefined;
   let staticStyleAttribute: t.JSXAttribute | undefined;
   let styleSpread: t.JSXSpreadAttribute | undefined;
-  if (styleExpr) {
+  // `passStyleByIdentity` (Unistyles routing) skips all style transforms — the original `style`
+  // attribute is left untouched in the collected attributes below so it reaches the native host intact.
+  if (styleExpr && !passStyleByIdentity) {
     const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
 
     if (selectableValue != null) {
@@ -357,8 +398,9 @@ function processProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platfo
   const remainingAttributes: (t.JSXAttribute | t.JSXSpreadAttribute)[] = [];
 
   for (const attribute of currentAttributes) {
-    // Skip the style attribute (we have replaced it with a `style` object or `processTextStyle` spread)
-    if (styleAttribute && attribute === styleAttribute) continue;
+    // Skip the style attribute (we have replaced it with a `style` object or `processTextStyle` spread).
+    // When passing the style by identity (Unistyles routing) it is retained here, untouched.
+    if (!passStyleByIdentity && styleAttribute && attribute === styleAttribute) continue;
 
     // Skip the props we routed through `processAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;

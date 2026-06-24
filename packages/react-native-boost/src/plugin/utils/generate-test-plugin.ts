@@ -15,7 +15,9 @@ export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions 
       name: 'react-native-boost',
       visitor: {
         JSXOpeningElement(path) {
-          optimizer(path, logger, options);
+          // Mirror the real plugin's explicit-flag resolution for Unistyles mode (auto-detection is not
+          // exercised in fixtures); a fixture opts in with `{ unistyles: true }`.
+          optimizer(path, logger, options, undefined, options.unistyles === true);
         },
       },
     };
