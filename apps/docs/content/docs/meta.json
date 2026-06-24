@@ -14,8 +14,8 @@
     "configuration/configure",
     "configuration/boost-decorator",
     "---Compatibility---",
-    "compatibility/nativewind",
     "compatibility/unistyles",
+    "compatibility/nativewind",
     "compatibility/uniwind",
     "---Runtime Library---",
     "runtime-library/index"
