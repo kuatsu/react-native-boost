@@ -13,8 +13,9 @@ export default function UnistylesDemoScreen(_props: RootStackScreenProps<'Unisty
     <View style={styles.screen}>
       <Text style={styles.title}>Unistyles × Boost</Text>
       <Text style={styles.subtitle}>
-        These cards are Boost-optimized and Unistyles-reactive. Toggle the theme or rotate the device: if the colors and
-        layout update, the native registration survived optimization.
+        Every card below is a Boost-optimized host wired to a Unistyles stylesheet. Tap to toggle the theme — they
+        restyle instantly without re-rendering, which is only possible if their native registration survived
+        optimization. The breakpoint styles (column layout, accent color) resolve from the current screen width.
       </Text>
 
       <ThemeToggle />
@@ -102,7 +103,8 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(1.5),
   },
   card: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 'auto',
     borderRadius: 16,
     padding: theme.gap(2),
     backgroundColor: theme.colors.card,

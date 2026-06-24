@@ -61,6 +61,8 @@ If you're using Expo and don't see the `babel.config.js` file, run the following
 npx expo customize babel.config.js
 ```
 
+If you're using Unistyles or Nativewind, refer to additional required setup instructions in [the documentation](https://react-native-boost.oss.kuatsu.de/docs).
+
 Finally, restart your React Native development server and clear the bundler cache:
 
 ```sh
