@@ -24,10 +24,18 @@ export default declare((api, rawOptions, dirname?: string) => {
 
   // Resolve "Unistyles mode" once per plugin instance. An explicit `unistyles` flag always wins;
   // otherwise auto-detect an installed `react-native-unistyles` and, when found, enable the mode but
-  // hint (once) to set the flag explicitly — a detected package does not prove its Babel plugin is active.
+  // hint to set the flag explicitly — a detected package does not prove its Babel plugin is active.
   const autoDetectedUnistyles = options.unistyles === undefined && isUnistylesInstalled(dirname);
   const unistylesEnabled = options.unistyles === true || autoDetectedUnistyles;
-  let unistylesHintLogged = false;
+
+  if (autoDetectedUnistyles) {
+    createLogger({ verbose: options.verbose === true, silent: options.silent === true }).warning({
+      message:
+        'react-native-unistyles was detected, so Unistyles mode was enabled automatically. Set ' +
+        '`unistyles: true` in the react-native-boost plugin options to make this explicit, or ' +
+        '`unistyles: false` to opt out.',
+    });
+  }
 
   return {
     name: 'react-native-boost',
@@ -35,16 +43,6 @@ export default declare((api, rawOptions, dirname?: string) => {
       JSXOpeningElement(path, state) {
         const pluginState = state as PluginState;
         const logger = getOrCreateLogger(pluginState, options);
-
-        if (autoDetectedUnistyles && !unistylesHintLogged) {
-          unistylesHintLogged = true;
-          logger.warning({
-            message:
-              'react-native-unistyles was detected, so Unistyles mode was enabled automatically. Set ' +
-              '`unistyles: true` in the react-native-boost plugin options to make this explicit, or ' +
-              '`unistyles: false` to opt out.',
-          });
-        }
 
         if (isIgnoredFile(path, options.ignores ?? [])) return;
         if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform, unistylesEnabled);

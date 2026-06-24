@@ -47,7 +47,7 @@ export const createLogger = ({ verbose, silent }: { verbose: boolean; silent: bo
 };
 
 function formatWarningContext(payload: WarningLogPayload): string {
-  const location = formatPathLocation(payload.path);
+  const location = payload.path ? formatPathLocation(payload.path) : '';
 
   if (payload.component && location.length > 0) {
     return `${payload.component} in ${location}`;
