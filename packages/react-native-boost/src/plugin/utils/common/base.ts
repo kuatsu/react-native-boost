@@ -1,8 +1,8 @@
 import { NodePath, types as t } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import { FileImportOptions, HubFile } from '../../types';
-import { RUNTIME_MODULE_NAME } from '../constants';
-import { markOptimizedHost } from './optimized-host';
+import { RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_TEXT_MODULE, UNISTYLES_NATIVE_VIEW_MODULE } from '../constants';
+import { markOptimizedHost, OptimizedHostKind } from './optimized-host';
 
 /**
  * Adds a hint to the file object to ensure that a specific import is added only once and cached on the file object.
@@ -49,6 +49,31 @@ export interface NativeComponentSource {
   nameHint?: string;
 }
 
+/** The native hosts Boost rewrites elements into; the local-name basis for each injected import. */
+type NativeComponentName = 'NativeText' | 'NativeView';
+
+/** Which context each optimized host establishes for the ancestor walk. Total over every host name. */
+const HOST_KIND_BY_NAME: Record<NativeComponentName, OptimizedHostKind> = {
+  NativeText: 'text',
+  NativeView: 'view',
+};
+
+/**
+ * Import sources for Unistyles' own lean hosts, passed as the `source` override when an element's `style`
+ * resolves to a Unistyles style.
+ */
+export const UNISTYLES_TEXT_HOST: NativeComponentSource = {
+  moduleName: UNISTYLES_NATIVE_TEXT_MODULE,
+  importName: 'NativeText',
+  nameHint: 'UnistylesNativeText',
+};
+
+export const UNISTYLES_VIEW_HOST: NativeComponentSource = {
+  moduleName: UNISTYLES_NATIVE_VIEW_MODULE,
+  importType: 'default',
+  nameHint: 'UnistylesNativeView',
+};
+
 /**
  * Replaces a component with its native counterpart.
  * This function handles both the opening and closing tags.
@@ -64,7 +89,7 @@ export const replaceWithNativeComponent = (
   path: NodePath<t.JSXOpeningElement>,
   parent: t.JSXElement,
   file: HubFile,
-  nativeComponentName: string,
+  nativeComponentName: NativeComponentName,
   source: NativeComponentSource = {}
 ): t.Identifier => {
   // Add native component import (cached on file) to prevent duplicate imports
@@ -82,7 +107,7 @@ export const replaceWithNativeComponent = (
 
   // Record what this element was optimized into so the ancestor walk can classify it once it becomes a
   // descendant's ancestor (the injected import is not yet resolvable via scope this traversal).
-  markOptimizedHost(path.node, nativeComponentName === 'NativeText' ? 'text' : 'view');
+  markOptimizedHost(path.node, HOST_KIND_BY_NAME[nativeComponentName]);
 
   // Replace the component with its native counterpart
   const jsxName = path.node.name as t.JSXIdentifier;

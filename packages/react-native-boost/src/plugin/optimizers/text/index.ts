@@ -24,8 +24,9 @@ import {
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
   createStyleOriginResolver,
+  UNISTYLES_TEXT_HOST,
 } from '../../utils/common';
-import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_TEXT_MODULE } from '../../utils/constants';
+import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 export const textBlacklistedProperties = new Set([
   'onLongPress',
@@ -169,15 +170,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform, unisty
   // A Unistyles-styled Text routes to Unistyles' lean host (a registering wrapper around `RCTText`); its
   // `style` is passed by identity (see `processProps`) so the Unistyles native-state — and therefore the
   // shadow-tree registration — survives. Plain text optimizes to Boost's own raw host as usual.
-  if (routeToUnistyles) {
-    replaceWithNativeComponent(path, parent, file, 'NativeText', {
-      moduleName: UNISTYLES_NATIVE_TEXT_MODULE,
-      importName: 'NativeText',
-      nameHint: 'UnistylesNativeText',
-    });
-  } else {
-    replaceWithNativeComponent(path, parent, file, 'NativeText');
-  }
+  replaceWithNativeComponent(path, parent, file, 'NativeText', routeToUnistyles ? UNISTYLES_TEXT_HOST : undefined);
 };
 
 /**
