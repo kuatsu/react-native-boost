@@ -123,6 +123,9 @@ importers:
       react-native-boost:
         specifier: workspace:*
         version: link:../../packages/react-native-boost
+      react-native-nitro-modules:
+        specifier: 0.35.7
+        version: 0.35.7(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       react-native-safe-area-context:
         specifier: ~5.6.0
         version: 5.6.2(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -132,6 +135,9 @@ importers:
       react-native-time-to-render:
         specifier: workspace:*
         version: link:../../packages/react-native-time-to-render
+      react-native-unistyles:
+        specifier: 3.2.5
+        version: 3.2.5(@react-native/normalize-colors@0.83.2)(react-native-nitro-modules@0.35.7(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       react-native-web:
         specifier: ^0.21.2
         version: 0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -808,6 +814,10 @@ packages:
 
   '@babel/traverse@7.29.7':
     resolution: {integrity: sha512-EhlfNQtZ+NK22w5BM61ciuiq1m58ed33Wr1Xan//ZRTy6hgjnwyCffRYwzsGXdASJSUJ1guZILsErh1eQcl+zw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/types@7.29.0':
+    resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
 
   '@babel/types@7.29.7':
@@ -5888,6 +5898,12 @@ packages:
       react: '*'
       react-native: '*'
 
+  react-native-nitro-modules@0.35.7:
+    resolution: {integrity: sha512-3EiU27EmnxTlD3pAXR2OBWeDg7+9tdjKrNQOPX08rFX5hJPNIT/h1i2PjvTUieOypCGTEi9nW/SNBtK3F+4HYg==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
   react-native-safe-area-context@5.6.2:
     resolution: {integrity: sha512-4XGqMNj5qjUTYywJqpdWZ9IG8jgkS3h06sfVjfw5yZQZfWnRFXczi0GnYyFyCc2EBps/qFmoCH8fez//WumdVg==}
     peerDependencies:
@@ -5899,6 +5915,22 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-unistyles@3.2.5:
+    resolution: {integrity: sha512-IiNhQfv98Rhis+fu1CIlTqp1wqAcADkpUmNVSW2stxHkMOU1EkLIyBC50mT/mVTgZugyBJdP9ytUiNJVJkHiWg==}
+    engines: {node: '>= 20.18.0'}
+    peerDependencies:
+      '@react-native/normalize-colors': '*'
+      react: '*'
+      react-native: '>=0.76.0'
+      react-native-edge-to-edge: '*'
+      react-native-nitro-modules: '*'
+      react-native-reanimated: '*'
+    peerDependenciesMeta:
+      react-native-edge-to-edge:
+        optional: true
+      react-native-reanimated:
+        optional: true
 
   react-native-web@0.21.2:
     resolution: {integrity: sha512-SO2t9/17zM4iEnFvlu2DA9jqNbzNhoUP+AItkoCOyFmDMOhUnBBznBDCYN92fGdfAkfQlWzPoez6+zLxFNsZEg==}
@@ -7620,6 +7652,11 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
+
+  '@babel/types@7.29.0':
+    dependencies:
+      '@babel/helper-string-parser': 7.29.7
+      '@babel/helper-validator-identifier': 7.29.7
 
   '@babel/types@7.29.7':
     dependencies:
@@ -13237,6 +13274,11 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0)
 
+  react-native-nitro-modules@0.35.7(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+      react-native: 0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0)
+
   react-native-safe-area-context@5.6.2(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
     dependencies:
       react: 19.2.0
@@ -13248,6 +13290,14 @@ snapshots:
       react-freeze: 1.0.4(react@19.2.0)
       react-native: 0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0)
       warn-once: 0.1.1
+
+  react-native-unistyles@3.2.5(@react-native/normalize-colors@0.83.2)(react-native-nitro-modules@0.35.7(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@babel/types': 7.29.0
+      '@react-native/normalize-colors': 0.83.2
+      react: 19.2.0
+      react-native: 0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0)
+      react-native-nitro-modules: 0.35.7(react-native@0.83.2(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
 
   react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:

@@ -3,7 +3,19 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['react-native-boost/plugin', { ignores: ['node_modules/**', '../../node_modules/**', '**/*.unoptimized.tsx'] }],
+      [
+        'react-native-boost/plugin',
+        {
+          unistyles: true,
+          ignores: ['node_modules/**', '../../node_modules/**', '**/*.unoptimized.tsx'],
+        },
+      ],
+      [
+        'react-native-unistyles/plugin',
+        {
+          root: 'src',
+        },
+      ],
     ],
   };
 };

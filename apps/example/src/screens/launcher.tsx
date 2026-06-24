@@ -23,6 +23,16 @@ export default function LauncherScreen({ navigation }: RootStackScreenProps<'Lau
         <Text style={styles.cardTitle}>Mount Benchmark</Text>
         <Text style={styles.cardBody}>Mount thousands of Text and View nodes and measure raw render time.</Text>
       </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        onPress={() => navigation.navigate('UnistylesDemo')}>
+        <Text style={styles.cardTitle}>Unistyles Demo</Text>
+        <Text style={styles.cardBody}>
+          Boost-optimized Text and View driven by Unistyles serving as a test screen for Boost's Unistyles support
+          layer.
+        </Text>
+      </Pressable>
     </View>
   );
 }
