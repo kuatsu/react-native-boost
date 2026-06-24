@@ -11,6 +11,7 @@ import {
   RUNTIME_MODULE_NAME,
 } from '../constants';
 import { getOptimizedHostKind } from './optimized-host';
+import { extractStyleAttribute } from './attributes';
 
 /**
  * Checks if the file is in the list of ignored files.
@@ -756,6 +757,27 @@ function getStaticExpressionTruthiness(expression: t.Expression | t.JSXEmptyExpr
 
 export type StyleOrigin = 'unistyles' | 'plain' | 'unknown';
 
+// Bounds the alias/array/wrapper recursion in `classifyStyleExpression`, which would otherwise loop
+// forever on a pathological const cycle (`const a = b; const b = a`). Past this depth the source is
+// undecidable, so it classifies as `'unknown'` (a safe bail).
+const MAX_STYLE_RESOLUTION_DEPTH = 64;
+
+/**
+ * Builds a lazily-memoized resolver for an element's direct `style` origin, shared by the `Text` and
+ * `View` optimizers. Outside Unistyles mode it is a constant `'plain'` (no work). Inside, it classifies
+ * on first call and caches — kept lazy so an element that bails on a cheaper check never pays the
+ * classification cost.
+ */
+export const createStyleOriginResolver = (
+  path: NodePath<t.JSXOpeningElement>,
+  unistylesEnabled: boolean | undefined
+): (() => StyleOrigin) => {
+  if (!unistylesEnabled) return () => 'plain';
+
+  let styleOrigin: StyleOrigin | undefined;
+  return () => (styleOrigin ??= classifyStyleOrigin(path, extractStyleAttribute(path.node.attributes).styleExpr));
+};
+
 /**
  * Classifies where a JSX element's direct `style` value comes from, used to route an element in
  * "Unistyles mode". Resolution is **same-file only** — anything that would require following an import,
@@ -776,7 +798,20 @@ export const classifyStyleOrigin = (
   return classifyStyleExpression(path, styleExpr);
 };
 
-function classifyStyleExpression(path: NodePath<t.JSXOpeningElement>, expr: t.Expression): StyleOrigin {
+function classifyStyleExpression(path: NodePath<t.JSXOpeningElement>, expr: t.Expression, depth = 0): StyleOrigin {
+  if (depth > MAX_STYLE_RESOLUTION_DEPTH) return 'unknown';
+
+  // TS-only and parenthesized wrappers do not change the runtime style value, so `styles.foo as TextStyle`,
+  // `styles.foo!`, `styles.foo satisfies …`, and `(styles.foo)` classify exactly like `styles.foo`.
+  if (
+    t.isTSAsExpression(expr) ||
+    t.isTSSatisfiesExpression(expr) ||
+    t.isTSNonNullExpression(expr) ||
+    t.isParenthesizedExpression(expr)
+  ) {
+    return classifyStyleExpression(path, expr.expression, depth + 1);
+  }
+
   // An inline object literal could only carry Unistyles state by spreading one in — which strips that
   // state anyway and is already broken under Unistyles — so a spread makes it unprovable; a plain
   // literal is provably non-Unistyles.
@@ -789,7 +824,7 @@ function classifyStyleExpression(path: NodePath<t.JSXOpeningElement>, expr: t.Ex
     for (const element of expr.elements) {
       if (element == null) continue; // hole → flattens away
       if (t.isSpreadElement(element)) return 'unknown';
-      const elementOrigin = classifyStyleExpression(path, element);
+      const elementOrigin = classifyStyleExpression(path, element, depth + 1);
       // A single Unistyles element makes the whole array Unistyles-managed: routing the array by
       // identity to the lean host preserves that element's registration regardless of its siblings.
       if (elementOrigin === 'unistyles') return 'unistyles';
@@ -798,18 +833,18 @@ function classifyStyleExpression(path: NodePath<t.JSXOpeningElement>, expr: t.Ex
     return result;
   }
 
-  // `styles.foo` / `styles['foo']` — classify by the `styles` container's `StyleSheet.create` origin.
-  if (t.isMemberExpression(expr)) {
+  // `styles.foo` / `styles['foo']` / `styles?.foo` — classify by the `styles` container's origin.
+  if (t.isMemberExpression(expr) || t.isOptionalMemberExpression(expr)) {
     if (!t.isIdentifier(expr.object)) return 'unknown';
     return classifyStyleContainerBinding(path.scope.getBinding(expr.object.name));
   }
 
-  // A local `const x = <style expr>` alias — follow it once.
+  // A local `const x = <style expr>` alias — follow it.
   if (t.isIdentifier(expr)) {
     const binding = path.scope.getBinding(expr.name);
     if (!binding || !binding.constant || !binding.path.isVariableDeclarator()) return 'unknown';
     const init = binding.path.node.init;
-    if (init && t.isExpression(init)) return classifyStyleExpression(path, init);
+    if (init && t.isExpression(init)) return classifyStyleExpression(path, init, depth + 1);
     return 'unknown';
   }
 

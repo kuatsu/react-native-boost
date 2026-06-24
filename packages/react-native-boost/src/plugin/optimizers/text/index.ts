@@ -23,8 +23,7 @@ import {
   extractSelectableAndUpdateStyle,
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
-  classifyStyleOrigin,
-  StyleOrigin,
+  createStyleOriginResolver,
 } from '../../utils/common';
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_TEXT_MODULE } from '../../utils/constants';
 
@@ -93,11 +92,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform, unisty
 
   // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a spread
   // is already guarded (`style` ∈ TEXT_SPREAD_GUARD_KEYS), so only the direct attribute is classified.
-  let styleOrigin: StyleOrigin | undefined;
-  const getStyleOrigin = (): StyleOrigin => {
-    if (!unistylesEnabled) return 'plain';
-    return (styleOrigin ??= classifyStyleOrigin(path, extractStyleAttribute(path.node.attributes).styleExpr));
-  };
+  const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
 
   const overridableChecks: BailoutCheck[] = [
     {

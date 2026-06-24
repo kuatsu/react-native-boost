@@ -51,3 +51,13 @@ pluginTester({
   },
   formatResult: formatTestResult,
 });
+
+pluginTester({
+  plugin: generateTestPlugin(textOptimizer, { unistyles: true }),
+  title: 'text unistyles typescript',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles-ts'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx', ['@babel/plugin-syntax-typescript', { isTSX: true }]],
+  },
+  formatResult: formatTestResult,
+});
