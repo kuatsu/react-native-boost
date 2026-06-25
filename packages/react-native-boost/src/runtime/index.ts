@@ -306,3 +306,4 @@ export * from './types';
 export * from './utils/constants';
 export * from './components/native-text';
 export * from './components/native-view';
+export * from './components/native-image';

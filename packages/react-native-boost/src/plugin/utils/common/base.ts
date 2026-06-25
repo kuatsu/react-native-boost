@@ -50,12 +50,13 @@ export interface NativeComponentSource {
 }
 
 /** The native hosts Boost rewrites elements into; the local-name basis for each injected import. */
-type NativeComponentName = 'NativeText' | 'NativeView';
+type NativeComponentName = 'NativeText' | 'NativeView' | 'NativeImage';
 
 /** Which context each optimized host establishes for the ancestor walk. Total over every host name. */
 const HOST_KIND_BY_NAME: Record<NativeComponentName, OptimizedHostKind> = {
   NativeText: 'text',
   NativeView: 'view',
+  NativeImage: 'view',
 };
 
 /**

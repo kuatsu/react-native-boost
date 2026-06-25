@@ -3,6 +3,7 @@ import { Optimizer, PluginOptions } from '../types';
 import { createLogger } from './logger';
 import { textOptimizer } from '../optimizers/text';
 import { viewOptimizer } from '../optimizers/view';
+import { imageOptimizer } from '../optimizers/image';
 
 export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions = {}) => {
   const logger = createLogger({
@@ -48,6 +49,7 @@ export const generateCombinedTestPlugin = (options: PluginOptions = {}) => {
         JSXOpeningElement(path) {
           textOptimizer(path, logger, options, undefined, unistylesEnabled);
           viewOptimizer(path, logger, options, undefined, unistylesEnabled);
+          imageOptimizer(path, logger, options, undefined, unistylesEnabled);
         },
       },
     };

@@ -5,3 +5,7 @@ declare module 'react-native/Libraries/Text/TextNativeComponent' {
 declare module 'react-native/Libraries/Components/View/ViewNativeComponent' {
   export default React.ComponentType<ViewProps>;
 }
+
+declare module 'react-native/Libraries/Image/ImageViewNativeComponent' {
+  export default React.ComponentType<ImageProps>;
+}

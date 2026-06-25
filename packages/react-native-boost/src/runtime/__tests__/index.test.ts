@@ -19,6 +19,10 @@ vi.mock('../components/native-view', () => ({
   NativeView: () => 'MockedNativeView',
 }));
 
+vi.mock('../components/native-image', () => ({
+  NativeImage: () => 'MockedNativeImage',
+}));
+
 // Switchable Platform mock so platform-specific defaults can be asserted for both OSes. `select`
 // reads the live `OS`, mirroring react-native's own implementation; tests flip `Platform.OS` and the
 // shared `afterEach` resets it.

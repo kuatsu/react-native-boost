@@ -11,6 +11,11 @@ export interface PluginOptimizationOptions {
    * @default true
    */
   view?: boolean;
+  /**
+   * Whether to optimize the `Image` component.
+   * @default true
+   */
+  image?: boolean;
 }
 
 export interface PluginOptions {
@@ -81,7 +86,7 @@ export interface PluginOptions {
   dangerouslyOptimizeTextWithUnknownAncestors?: boolean;
 }
 
-export type OptimizableComponent = 'Text' | 'View';
+export type OptimizableComponent = 'Text' | 'View' | 'Image';
 
 export interface OptimizationLogPayload {
   component: OptimizableComponent;

@@ -10,6 +10,9 @@ vi.mock('../../../runtime/components/native-text', async () => ({
 vi.mock('../../../runtime/components/native-view', async () => ({
   NativeView: (await import('./capture')).NativeViewCapturer,
 }));
+vi.mock('../../../runtime/components/native-image', async () => ({
+  NativeImage: (await import('./capture')).NativeViewCapturer,
+}));
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, boostOptimizes } from './boost';

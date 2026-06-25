@@ -8,6 +8,7 @@ import { NativeTextCapturer, NativeViewCapturer } from '../capture';
  */
 export const NativeText = NativeTextCapturer;
 export const NativeView = NativeViewCapturer;
+export const NativeImage = NativeViewCapturer;
 
 export const processTextStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
 export const processViewStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
