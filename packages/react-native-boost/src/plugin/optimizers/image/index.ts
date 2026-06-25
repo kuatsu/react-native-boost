@@ -21,10 +21,16 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'aria-hidden',
   'aria-label',
   'aria-labelledby',
+  'aria-live',
   'aria-selected',
+  'aria-valuemax',
+  'aria-valuemin',
+  'aria-valuenow',
+  'aria-valuetext',
   'children',
   'crossOrigin',
   'defaultSource',
+  'id',
   'internal_analyticTag',
   'loadingIndicatorSource',
   'onError',
@@ -36,6 +42,7 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'ref',
   'referrerPolicy',
   'srcSet',
+  'tabIndex',
 ]);
 
 const IMAGE_BASE_STYLE = t.objectExpression([t.objectProperty(t.identifier('overflow'), t.stringLiteral('hidden'))]);

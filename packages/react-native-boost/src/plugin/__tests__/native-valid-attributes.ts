@@ -27,6 +27,7 @@ const VIEW_CONFIG_SOURCES = {
   viewIos: 'Libraries/NativeComponent/BaseViewConfig.ios.js',
   viewAndroid: 'Libraries/NativeComponent/BaseViewConfig.android.js',
   text: 'Libraries/Text/TextNativeComponent.js',
+  image: 'Libraries/Image/ImageViewNativeComponent.js',
 } as const;
 
 /**
@@ -131,10 +132,16 @@ function extractValidAttributeKeys(subpath: string): Set<string> {
 const viewAttributesIos = extractValidAttributeKeys(VIEW_CONFIG_SOURCES.viewIos);
 const viewAttributesAndroid = extractValidAttributeKeys(VIEW_CONFIG_SOURCES.viewAndroid);
 const textComponentAttributes = extractValidAttributeKeys(VIEW_CONFIG_SOURCES.text);
+const imageComponentAttributes = extractValidAttributeKeys(VIEW_CONFIG_SOURCES.image);
 
 export const NATIVE_VIEW_ATTRIBUTES: ReadonlySet<string> = new Set([...viewAttributesIos, ...viewAttributesAndroid]);
 
 export const NATIVE_TEXT_ATTRIBUTES: ReadonlySet<string> = new Set([
   ...NATIVE_VIEW_ATTRIBUTES,
   ...textComponentAttributes,
+]);
+
+export const NATIVE_IMAGE_ATTRIBUTES: ReadonlySet<string> = new Set([
+  ...NATIVE_VIEW_ATTRIBUTES,
+  ...imageComponentAttributes,
 ]);

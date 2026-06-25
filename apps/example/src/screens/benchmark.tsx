@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { startMarker } from 'react-native-time-to-render';
@@ -20,6 +20,31 @@ const benchmarks = [
     // @boost-ignore
     unoptimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
     optimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
+  },
+  {
+    title: 'Image',
+    count: 2000,
+    // @boost-ignore
+    unoptimizedComponent: (
+      <Image
+        source={{
+          uri: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+          width: 16,
+          height: 16,
+        }}
+        style={{ width: 16, height: 16 }}
+      />
+    ),
+    optimizedComponent: (
+      <Image
+        source={{
+          uri: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+          width: 16,
+          height: 16,
+        }}
+        style={{ width: 16, height: 16 }}
+      />
+    ),
   },
 ] satisfies Benchmark[];
 
