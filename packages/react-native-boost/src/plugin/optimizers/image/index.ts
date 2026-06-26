@@ -123,6 +123,7 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
 type NativeSource = {
   sourceAttribute: t.JSXAttribute;
   sourceArray: t.ArrayExpression;
+  consumesSizeProps: boolean;
   width?: t.Expression;
   height?: t.Expression;
 };
@@ -142,7 +143,8 @@ function processImageProps(path: NodePath<t.JSXOpeningElement>, nativeSource: Na
     if (!t.isJSXAttribute(attribute)) return true;
     if (consumed.has(attribute)) return false;
     const name = attribute.name.name;
-    return name !== 'width' && name !== 'height' && name !== 'resizeMode' && name !== 'tintColor';
+    if (nativeSource.consumesSizeProps && (name === 'width' || name === 'height')) return false;
+    return name !== 'resizeMode' && name !== 'tintColor';
   });
 
   const explicitResizeMode = getAttributeExpression(path.node.attributes, 'resizeMode');
@@ -175,18 +177,27 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
           ...(height ? [t.objectProperty(t.identifier('height'), height)] : []),
         ]),
       ]),
+      consumesSizeProps: true,
       width,
       height,
     };
   }
 
   const source = findAttribute(attributes, 'source');
-  if (!source || !t.isJSXExpressionContainer(source.value) || !t.isObjectExpression(source.value.expression)) {
-    return undefined;
-  }
-  if (!isStaticLiteralTree(source.value.expression)) return undefined;
+  if (!source || !t.isJSXExpressionContainer(source.value)) return undefined;
+  const sourceExpression = source.value.expression;
+  if (!t.isObjectExpression(sourceExpression) && !t.isArrayExpression(sourceExpression)) return undefined;
+  if (!isStaticLiteralTree(sourceExpression)) return undefined;
 
-  const sourceObject = source.value.expression;
+  if (t.isArrayExpression(sourceExpression)) {
+    return {
+      sourceAttribute: source,
+      sourceArray: t.cloneNode(sourceExpression, true),
+      consumesSizeProps: false,
+    };
+  }
+
+  const sourceObject = sourceExpression;
   const sourceWidth = getObjectPropertyExpression(sourceObject, 'width');
   const sourceHeight = getObjectPropertyExpression(sourceObject, 'height');
   const width = sourceWidth ?? getAttributeExpression(attributes, 'width');
@@ -195,6 +206,7 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
   return {
     sourceAttribute: source,
     sourceArray: t.arrayExpression([t.cloneNode(sourceObject, true)]),
+    consumesSizeProps: true,
     width,
     height,
   };

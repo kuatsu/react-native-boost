@@ -116,9 +116,11 @@ const IMAGE_WRAPPER_ONLY_PROPS = [
 const IMAGE_PASSTHROUGH_PROPS = [
   IMAGE_BASE_SOURCE,
   'source={{ uri: "x" }} width={16} height={16}',
+  'source={[{ uri: "x", width: 16, height: 16 }, { uri: "y", width: 32, height: 32, scale: 2 }]} style={{ width: 16, height: 16 }}',
   'src="https://example.com/a.png" width={16} height={16}',
   `${IMAGE_BASE_SOURCE} resizeMode="contain" tintColor="red"`,
   `${IMAGE_BASE_SOURCE} style={{ objectFit: "fill", tintColor: "red" }}`,
+  `${IMAGE_BASE_SOURCE} blurRadius={2} resizeMethod="resize" resizeMultiplier={2} progressiveRenderingEnabled={true} fadeDuration={0} capInsets={{ top: 1, left: 2, bottom: 3, right: 4 }}`,
 ];
 
 describe('native attribute conformance', () => {
