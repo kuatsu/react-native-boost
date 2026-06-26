@@ -121,6 +121,7 @@ const IMAGE_PASSTHROUGH_PROPS = [
   `${IMAGE_BASE_SOURCE} resizeMode="contain" tintColor="red"`,
   `${IMAGE_BASE_SOURCE} style={{ objectFit: "fill", tintColor: "red" }}`,
   `${IMAGE_BASE_SOURCE} blurRadius={2} resizeMethod="resize" resizeMultiplier={2} progressiveRenderingEnabled={true} fadeDuration={0} capInsets={{ top: 1, left: 2, bottom: 3, right: 4 }}`,
+  `${IMAGE_BASE_SOURCE} accessible={true} accessibilityLabel="logo" accessibilityRole="image" accessibilityHint="opens logo" accessibilityValue={{ text: "loaded" }} accessibilityState={{ selected: true }} nativeID="logo" pointerEvents="none" collapsable={false}`,
 ];
 
 describe('native attribute conformance', () => {
