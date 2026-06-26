@@ -14,6 +14,12 @@ import { Image } from 'react-native';
   nativeID="logo"
   pointerEvents="none"
   collapsable={false}
+  onLayout={() => {}}
+  borderRadius={4}
+  borderTopLeftRadius={1}
+  borderTopRightRadius={2}
+  borderBottomLeftRadius={3}
+  borderBottomRightRadius={4}
   style={[
     {
       width: 16,

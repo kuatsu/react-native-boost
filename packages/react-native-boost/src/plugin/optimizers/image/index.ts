@@ -4,6 +4,7 @@ import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
   hasBlacklistedProperty,
+  hasBlacklistedPropertyInSpread,
   isIgnoredLine,
   isForcedLine,
   isReactNativeImport,
@@ -28,7 +29,6 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'aria-valuenow',
   'aria-valuetext',
   'children',
-  'crossOrigin',
   'defaultSource',
   'id',
   'internal_analyticTag',
@@ -40,10 +40,11 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'onPartialLoad',
   'onProgress',
   'ref',
-  'referrerPolicy',
   'srcSet',
   'tabIndex',
 ]);
+
+const IMAGE_REQUEST_HEADER_PROPS = new Set(['crossOrigin', 'referrerPolicy']);
 
 const IMAGE_BASE_STYLE = t.objectExpression([t.objectProperty(t.identifier('overflow'), t.stringLiteral('hidden'))]);
 
@@ -67,6 +68,10 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
     {
       reason: 'contains unsupported Image props',
       shouldBail: () => hasBlacklistedProperty(path, IMAGE_BAILOUT_PROPS),
+    },
+    {
+      reason: 'has a spread that may carry translated Image request headers',
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, IMAGE_REQUEST_HEADER_PROPS),
     },
     {
       reason: 'contains non-empty children',
@@ -122,6 +127,7 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
 
 type NativeSource = {
   sourceAttribute: t.JSXAttribute;
+  requestHeaderAttributes: t.JSXAttribute[];
   sourceArray: t.ArrayExpression;
   consumesSizeProps: boolean;
   width?: t.Expression;
@@ -136,7 +142,7 @@ type StyleInfo = {
 } | null;
 
 function processImageProps(path: NodePath<t.JSXOpeningElement>, nativeSource: NativeSource, styleInfo: StyleInfo) {
-  const consumed = new Set<t.JSXAttribute>([nativeSource.sourceAttribute]);
+  const consumed = new Set<t.JSXAttribute>([nativeSource.sourceAttribute, ...nativeSource.requestHeaderAttributes]);
   if (styleInfo?.styleAttribute) consumed.add(styleInfo.styleAttribute);
 
   const remaining = path.node.attributes.filter((attribute) => {
@@ -162,6 +168,9 @@ function processImageProps(path: NodePath<t.JSXOpeningElement>, nativeSource: Na
 }
 
 function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
+  const requestHeaders = buildRequestHeaders(attributes);
+  if (!requestHeaders) return undefined;
+
   const src = findAttribute(attributes, 'src');
   if (src) {
     const uri = getAttributeValueExpression(src);
@@ -169,10 +178,11 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
     const height = getAttributeExpression(attributes, 'height');
     return {
       sourceAttribute: src,
+      requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.arrayExpression([
         t.objectExpression([
           t.objectProperty(t.identifier('uri'), uri),
-          t.objectProperty(t.identifier('headers'), t.objectExpression([])),
+          t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)),
           ...(width ? [t.objectProperty(t.identifier('width'), width)] : []),
           ...(height ? [t.objectProperty(t.identifier('height'), height)] : []),
         ]),
@@ -190,8 +200,10 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
   if (!isStaticLiteralTree(sourceExpression)) return undefined;
 
   if (t.isArrayExpression(sourceExpression)) {
+    if (requestHeaders.attributes.length > 0) return undefined;
     return {
       sourceAttribute: source,
+      requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.cloneNode(sourceExpression, true),
       consumesSizeProps: false,
     };
@@ -205,11 +217,59 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
 
   return {
     sourceAttribute: source,
-    sourceArray: t.arrayExpression([t.cloneNode(sourceObject, true)]),
+    requestHeaderAttributes: requestHeaders.attributes,
+    sourceArray: t.arrayExpression([buildSourceObject(sourceObject, requestHeaders)]),
     consumesSizeProps: true,
     width,
     height,
   };
+}
+
+type RequestHeaders = {
+  attributes: t.JSXAttribute[];
+  headers: t.ObjectExpression;
+};
+
+function buildRequestHeaders(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): RequestHeaders | undefined {
+  const crossOrigin = findAttribute(attributes, 'crossOrigin');
+  const referrerPolicy = findAttribute(attributes, 'referrerPolicy');
+  const headerAttributes = [crossOrigin, referrerPolicy].filter(
+    (attribute): attribute is t.JSXAttribute => attribute !== undefined
+  );
+
+  const headerProperties: t.ObjectProperty[] = [];
+
+  if (crossOrigin) {
+    const value = getAttributeValueExpression(crossOrigin);
+    if (!t.isStringLiteral(value)) return undefined;
+    if (value.value === 'use-credentials') {
+      headerProperties.push(
+        t.objectProperty(t.stringLiteral('Access-Control-Allow-Credentials'), t.stringLiteral('true'))
+      );
+    }
+  }
+
+  if (referrerPolicy) {
+    const value = getAttributeValueExpression(referrerPolicy);
+    if (!t.isStringLiteral(value)) return undefined;
+    headerProperties.push(t.objectProperty(t.stringLiteral('Referrer-Policy'), t.cloneNode(value, true)));
+  }
+
+  return {
+    attributes: headerAttributes,
+    headers: t.objectExpression(headerProperties),
+  };
+}
+
+function buildSourceObject(sourceObject: t.ObjectExpression, requestHeaders: RequestHeaders): t.ObjectExpression {
+  if (requestHeaders.headers.properties.length === 0) return t.cloneNode(sourceObject, true);
+
+  const uri = getObjectPropertyExpression(sourceObject, 'uri');
+  if (!uri || (t.isStringLiteral(uri) && uri.value === '')) return t.cloneNode(sourceObject, true);
+
+  const nativeSource = t.cloneNode(sourceObject, true);
+  nativeSource.properties.push(t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)));
+  return nativeSource;
 }
 
 function buildStyle(nativeSource: NativeSource, styleInfo: StyleInfo): t.ArrayExpression {
