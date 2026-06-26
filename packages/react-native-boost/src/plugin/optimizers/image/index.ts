@@ -3,6 +3,8 @@ import { HubFile, Optimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
+  addFileImportHint,
+  buildPropertiesFromAttributes,
   hasBlacklistedProperty,
   hasBlacklistedPropertyInSpread,
   isIgnoredLine,
@@ -12,18 +14,10 @@ import {
   isValidJSXComponent,
   replaceWithNativeComponent,
 } from '../../utils/common';
+import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
 const IMAGE_BAILOUT_PROPS = new Set([
-  'alt',
-  'aria-busy',
-  'aria-checked',
-  'aria-disabled',
-  'aria-expanded',
-  'aria-hidden',
-  'aria-label',
-  'aria-labelledby',
   'aria-live',
-  'aria-selected',
   'aria-valuemax',
   'aria-valuemin',
   'aria-valuenow',
@@ -42,6 +36,14 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'ref',
   'srcSet',
   'tabIndex',
+]);
+
+const IMAGE_ARIA_STATE_PROPS = new Set([
+  'aria-busy',
+  'aria-checked',
+  'aria-disabled',
+  'aria-expanded',
+  'aria-selected',
 ]);
 
 const IMAGE_REQUEST_HEADER_PROPS = new Set(['crossOrigin', 'referrerPolicy']);
@@ -72,6 +74,10 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
     {
       reason: 'has a spread that may carry translated Image request headers',
       shouldBail: () => hasBlacklistedPropertyInSpread(path, IMAGE_REQUEST_HEADER_PROPS),
+    },
+    {
+      reason: 'has a spread that may carry translated Image accessibility props',
+      shouldBail: () => hasImageAccessibilitySpreadConflict(path),
     },
     {
       reason: 'contains non-empty children',
@@ -121,7 +127,7 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
 
   logger.optimized({ component: 'Image', path });
 
-  processImageProps(path, nativeSource, styleInfo);
+  processImageProps(path, file, nativeSource, styleInfo);
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
 
@@ -141,8 +147,23 @@ type StyleInfo = {
   tintColor?: t.Expression;
 } | null;
 
-function processImageProps(path: NodePath<t.JSXOpeningElement>, nativeSource: NativeSource, styleInfo: StyleInfo) {
-  const consumed = new Set<t.JSXAttribute>([nativeSource.sourceAttribute, ...nativeSource.requestHeaderAttributes]);
+type ImageAccessibilityInfo = {
+  attributes: t.JSXAttribute[];
+  spreadAttribute: t.JSXSpreadAttribute;
+};
+
+function processImageProps(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  nativeSource: NativeSource,
+  styleInfo: StyleInfo
+) {
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file);
+  const consumed = new Set<t.JSXAttribute>([
+    nativeSource.sourceAttribute,
+    ...nativeSource.requestHeaderAttributes,
+    ...(accessibilityInfo?.attributes ?? []),
+  ]);
   if (styleInfo?.styleAttribute) consumed.add(styleInfo.styleAttribute);
 
   const remaining = path.node.attributes.filter((attribute) => {
@@ -158,13 +179,93 @@ function processImageProps(path: NodePath<t.JSXOpeningElement>, nativeSource: Na
 
   path.node.attributes = [
     ...remaining,
+    accessibilityInfo?.spreadAttribute,
     makeAttribute('style', buildStyle(nativeSource, styleInfo)),
     makeAttribute('source', nativeSource.sourceArray),
     makeAttribute('resizeMode', explicitResizeMode ?? styleInfo?.resizeMode ?? t.stringLiteral('cover')),
     explicitTintColor || styleInfo?.tintColor
       ? makeAttribute('tintColor', explicitTintColor ?? styleInfo!.tintColor!)
       : undefined,
-  ].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined);
+  ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
+}
+
+function hasImageAccessibilitySpreadConflict(path: NodePath<t.JSXOpeningElement>): boolean {
+  const directNames = getDirectAttributeNames(path.node.attributes);
+  const guarded = new Set(['alt', 'aria-hidden', 'aria-label', 'aria-labelledby', ...IMAGE_ARIA_STATE_PROPS]);
+
+  if (directNames.has('alt') || directNames.has('aria-label')) {
+    guarded.add('accessibilityLabel');
+  }
+  if (directNames.has('alt') || directNames.has('aria-hidden')) {
+    guarded.add('accessible');
+  }
+  if (directNames.has('aria-hidden')) guarded.add('importantForAccessibility');
+  if (directNames.has('aria-labelledby')) guarded.add('accessibilityLabelledBy');
+  if ([...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name))) {
+    guarded.add('accessibilityState');
+  }
+
+  return hasBlacklistedPropertyInSpread(path, guarded);
+}
+
+function buildImageAccessibilityInfo(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile
+): ImageAccessibilityInfo | undefined {
+  const directNames = getDirectAttributeNames(path.node.attributes);
+  const hasAlt = directNames.has('alt');
+  const hasLabelTrigger = hasAlt || directNames.has('aria-label');
+  const hasHiddenTrigger = directNames.has('aria-hidden');
+  const hasLabelledByTrigger = directNames.has('aria-labelledby');
+  const hasStateTrigger = [...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name));
+
+  if (!hasLabelTrigger && !hasHiddenTrigger && !hasLabelledByTrigger && !hasStateTrigger) return undefined;
+
+  const helperNames = new Set<string>();
+  if (hasLabelTrigger) {
+    helperNames.add('alt');
+    helperNames.add('aria-label');
+    helperNames.add('accessibilityLabel');
+  }
+  if (hasAlt) {
+    helperNames.add('accessible');
+  }
+  if (hasHiddenTrigger) {
+    helperNames.add('aria-hidden');
+    helperNames.add('accessible');
+    helperNames.add('alt');
+    helperNames.add('importantForAccessibility');
+  }
+  if (hasLabelledByTrigger) {
+    helperNames.add('aria-labelledby');
+    helperNames.add('accessibilityLabelledBy');
+  }
+  if (hasStateTrigger) {
+    helperNames.add('accessibilityState');
+    for (const name of IMAGE_ARIA_STATE_PROPS) helperNames.add(name);
+  }
+
+  const attributes = path.node.attributes.filter(
+    (attribute): attribute is t.JSXAttribute =>
+      t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && helperNames.has(attribute.name.name)
+  );
+
+  if (attributes.length === 0) return undefined;
+
+  const helperIdentifier = addFileImportHint({
+    file,
+    nameHint: 'processImageAccessibilityProps',
+    path,
+    importName: 'processImageAccessibilityProps',
+    moduleName: RUNTIME_MODULE_NAME,
+  });
+
+  return {
+    attributes,
+    spreadAttribute: t.jsxSpreadAttribute(
+      t.callExpression(t.identifier(helperIdentifier.name), [buildPropertiesFromAttributes(attributes)])
+    ),
+  };
 }
 
 function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
@@ -359,6 +460,16 @@ function getAttributeExpression(
 ): t.Expression | undefined {
   const attribute = findAttribute(attributes, name);
   return attribute ? getAttributeValueExpression(attribute) : undefined;
+}
+
+function getDirectAttributeNames(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): Set<string> {
+  const names = new Set<string>();
+  for (const attribute of attributes) {
+    if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name)) {
+      names.add(attribute.name.name);
+    }
+  }
+  return names;
 }
 
 function findAttribute(

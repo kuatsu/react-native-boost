@@ -104,7 +104,10 @@ const IMAGE_BASE_SOURCE = 'source={{ uri: "x", width: 16, height: 16 }}';
 
 const IMAGE_WRAPPER_ONLY_PROPS = [
   `${IMAGE_BASE_SOURCE} alt="label"`,
+  `${IMAGE_BASE_SOURCE} aria-label="label"`,
   `${IMAGE_BASE_SOURCE} aria-hidden={true}`,
+  `${IMAGE_BASE_SOURCE} aria-labelledby="label-id"`,
+  `${IMAGE_BASE_SOURCE} aria-busy={true} aria-disabled={false} accessibilityState={{ checked: true }}`,
   `${IMAGE_BASE_SOURCE} aria-live="polite"`,
   `${IMAGE_BASE_SOURCE} aria-valuenow={5}`,
   `${IMAGE_BASE_SOURCE} id="image-id"`,

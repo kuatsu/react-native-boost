@@ -4,6 +4,7 @@ import {
   processSelectionColor,
   processAccessibilityProps,
   processViewAccessibilityProps,
+  processImageAccessibilityProps,
   getDefaultTextAccessible,
   clampNumberOfLines,
   userSelectToSelectableMap,
@@ -371,6 +372,90 @@ describe('processViewAccessibilityProps', () => {
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toBeUndefined();
     expect('accessible' in normalized).toBe(false);
+  });
+});
+
+describe('processImageAccessibilityProps', () => {
+  it('uses alt as the fallback accessibilityLabel and forces accessible on', () => {
+    expect(processImageAccessibilityProps({ alt: 'Logo', accessible: false })).toEqual({
+      accessibilityLabel: 'Logo',
+      accessible: true,
+    });
+  });
+
+  it('keeps accessibilityLabel ahead of alt while still forcing accessible on', () => {
+    expect(processImageAccessibilityProps({ alt: 'Logo', accessibilityLabel: 'Fallback' })).toEqual({
+      accessibilityLabel: 'Fallback',
+      accessible: true,
+    });
+  });
+
+  it('lets aria-label win over accessibilityLabel and alt', () => {
+    expect(
+      processImageAccessibilityProps({
+        'aria-label': 'ARIA',
+        'accessibilityLabel': 'Fallback',
+        'alt': 'Alt',
+      }).accessibilityLabel
+    ).toBe('ARIA');
+  });
+
+  it('falls back to explicit accessible when a dynamic alt is undefined', () => {
+    expect(processImageAccessibilityProps({ alt: undefined, accessible: false }).accessible).toBe(false);
+  });
+
+  it('uses aria-hidden to force accessible off on iOS while preserving importantForAccessibility', () => {
+    Platform.OS = 'ios';
+    expect(
+      processImageAccessibilityProps({
+        'aria-hidden': true,
+        'accessible': true,
+        'importantForAccessibility': 'yes',
+      })
+    ).toEqual({
+      accessible: false,
+      importantForAccessibility: 'yes',
+    });
+  });
+
+  it('uses aria-hidden to force importantForAccessibility on Android', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageAccessibilityProps({
+        'aria-hidden': true,
+        'accessible': true,
+        'importantForAccessibility': 'yes',
+      })
+    ).toEqual({
+      accessible: true,
+      importantForAccessibility: 'no-hide-descendants',
+    });
+  });
+
+  it('maps aria-labelledby to accessibilityLabelledBy on Android without splitting', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageAccessibilityProps({
+        'aria-labelledby': 'a, b',
+        'accessibilityLabelledBy': 'fallback',
+      }).accessibilityLabelledBy
+    ).toBe('a, b');
+  });
+
+  it('aggregates aria state fields over a passed accessibilityState', () => {
+    expect(
+      processImageAccessibilityProps({
+        'accessibilityState': { busy: false, checked: true },
+        'aria-busy': true,
+        'aria-disabled': false,
+      }).accessibilityState
+    ).toEqual({
+      busy: true,
+      checked: true,
+      disabled: false,
+      expanded: undefined,
+      selected: undefined,
+    });
   });
 });
 

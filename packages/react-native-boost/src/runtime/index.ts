@@ -302,6 +302,79 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
   return result;
 }
 
+/**
+ * Normalizes the Image wrapper's accessibility aliases before props reach `NativeImage`.
+ *
+ * @remarks
+ * Image's rules are close to View's ARIA merge, but not identical: `alt` is an accessibilityLabel
+ * fallback and also forces `accessible` on. Keep this separate from `processViewAccessibilityProps`
+ * so those Image-only precedence rules stay explicit.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageAccessibilityProps(props: Record<string, any>): Record<string, any> {
+  const {
+    alt,
+    accessible,
+    accessibilityLabel,
+    accessibilityLabelledBy,
+    accessibilityState,
+    importantForAccessibility,
+    ['aria-label']: ariaLabel,
+    ['aria-labelledby']: ariaLabelledBy,
+    ['aria-busy']: ariaBusy,
+    ['aria-checked']: ariaChecked,
+    ['aria-disabled']: ariaDisabled,
+    ['aria-expanded']: ariaExpanded,
+    ['aria-hidden']: ariaHidden,
+    ['aria-selected']: ariaSelected,
+    ...restProperties
+  } = props;
+
+  const result = restProperties;
+  const normalizedLabel = ariaLabel ?? accessibilityLabel ?? alt;
+  if (normalizedLabel !== undefined) result.accessibilityLabel = normalizedLabel;
+
+  if (Platform.OS === 'android') {
+    const normalizedLabelledBy = ariaLabelledBy ?? accessibilityLabelledBy;
+    if (normalizedLabelledBy !== undefined) result.accessibilityLabelledBy = normalizedLabelledBy;
+  } else if (accessibilityLabelledBy !== undefined) {
+    result.accessibilityLabelledBy = accessibilityLabelledBy;
+  }
+
+  if (ariaHidden === true && Platform.OS === 'ios') {
+    result.accessible = false;
+  } else if (alt !== undefined) {
+    result.accessible = true;
+  } else if (accessible !== undefined) {
+    result.accessible = accessible;
+  }
+
+  if (ariaHidden === true && Platform.OS !== 'ios') {
+    result.importantForAccessibility = 'no-hide-descendants';
+  } else if (importantForAccessibility !== undefined) {
+    result.importantForAccessibility = importantForAccessibility;
+  }
+
+  if (
+    accessibilityState != null ||
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    result.accessibilityState = {
+      busy: ariaBusy ?? accessibilityState?.busy,
+      checked: ariaChecked ?? accessibilityState?.checked,
+      disabled: ariaDisabled ?? accessibilityState?.disabled,
+      expanded: ariaExpanded ?? accessibilityState?.expanded,
+      selected: ariaSelected ?? accessibilityState?.selected,
+    };
+  }
+
+  return result;
+}
+
 export * from './types';
 export * from './utils/constants';
 export * from './components/native-text';
