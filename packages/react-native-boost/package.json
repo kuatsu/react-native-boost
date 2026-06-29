@@ -105,7 +105,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
-    "release-it": "^20.2.0",
+    "release-it": "^20.2.1",
     "rollup": "^4.62.2",
     "rollup-plugin-dts": "^6.4.1",
     "rollup-plugin-esbuild": "^6.2.0",
