@@ -24,7 +24,7 @@ interface BoostOptimized {
 function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): string {
   setPlatformOS(os);
   const source =
-    `import { Text, View } from 'react-native';\n${preamble}\n` +
+    `import { Image, Text, View } from 'react-native';\n${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,

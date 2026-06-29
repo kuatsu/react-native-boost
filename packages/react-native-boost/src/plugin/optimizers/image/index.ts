@@ -13,6 +13,7 @@ import {
   isStaticLiteralTree,
   isValidJSXComponent,
   replaceWithNativeComponent,
+  ancestorBailoutChecks,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
@@ -48,6 +49,28 @@ const IMAGE_ARIA_STATE_PROPS = new Set([
 
 const IMAGE_REQUEST_HEADER_PROPS = new Set(['crossOrigin', 'referrerPolicy']);
 
+const IMAGE_SPREAD_GUARD_PROPS = new Set([
+  ...IMAGE_BAILOUT_PROPS,
+  ...IMAGE_REQUEST_HEADER_PROPS,
+  ...IMAGE_ARIA_STATE_PROPS,
+  'accessible',
+  'accessibilityLabel',
+  'accessibilityLabelledBy',
+  'accessibilityState',
+  'alt',
+  'aria-hidden',
+  'aria-label',
+  'aria-labelledby',
+  'height',
+  'importantForAccessibility',
+  'resizeMode',
+  'source',
+  'src',
+  'style',
+  'tintColor',
+  'width',
+]);
+
 const IMAGE_BASE_STYLE = t.objectExpression([t.objectProperty(t.identifier('overflow'), t.stringLiteral('hidden'))]);
 
 const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
@@ -58,7 +81,7 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
+export const imageOptimizer: Optimizer = (path, logger, options, platform) => {
   if (platform === 'web') return;
   if (!isValidJSXComponent(path, 'Image')) return;
   if (!isReactNativeImport(path, 'Image')) return;
@@ -66,18 +89,18 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
 
-  const overridableChecks: BailoutCheck[] = [
+  const hardChecks: BailoutCheck[] = [
+    {
+      reason: 'target platform is unknown',
+      shouldBail: () => platform !== 'ios' && platform !== 'android',
+    },
     {
       reason: 'contains unsupported Image props',
       shouldBail: () => hasBlacklistedProperty(path, IMAGE_BAILOUT_PROPS),
     },
     {
-      reason: 'has a spread that may carry translated Image request headers',
-      shouldBail: () => hasBlacklistedPropertyInSpread(path, IMAGE_REQUEST_HEADER_PROPS),
-    },
-    {
-      reason: 'has a spread that may carry translated Image accessibility props',
-      shouldBail: () => hasImageAccessibilitySpreadConflict(path),
+      reason: 'has a spread that may carry Image wrapper props',
+      shouldBail: () => hasBlacklistedPropertyInSpread(path, IMAGE_SPREAD_GUARD_PROPS),
     },
     {
       reason: 'contains non-empty children',
@@ -93,6 +116,16 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
         getStyleExpression(path.node.attributes) != null && buildStaticStyleInfo(path.node.attributes) == null,
     },
   ];
+
+  const overridableChecks: BailoutCheck[] = [
+    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeImageWithUnknownAncestors === true),
+  ];
+
+  const hardSkipReason = getFirstBailoutReason(hardChecks);
+  if (hardSkipReason) {
+    logger.skipped({ component: 'Image', path, reason: hardSkipReason });
+    return;
+  }
 
   if (forced) {
     const overriddenReason = getFirstBailoutReason(overridableChecks);
@@ -127,15 +160,16 @@ export const imageOptimizer: Optimizer = (path, logger, _options, platform) => {
 
   logger.optimized({ component: 'Image', path });
 
-  processImageProps(path, file, nativeSource, styleInfo);
+  processImageProps(path, file, nativeSource, styleInfo, platform);
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
 
 type NativeSource = {
-  sourceAttribute: t.JSXAttribute;
+  sourceAttributes: t.JSXAttribute[];
   requestHeaderAttributes: t.JSXAttribute[];
   sourceArray: t.ArrayExpression;
   consumesSizeProps: boolean;
+  androidHeaders?: t.Expression;
   width?: t.Expression;
   height?: t.Expression;
 };
@@ -143,7 +177,8 @@ type NativeSource = {
 type StyleInfo = {
   styleAttribute?: t.JSXAttribute;
   styleExpression?: t.Expression;
-  resizeMode?: t.Expression;
+  objectFitResizeMode?: t.Expression;
+  styleResizeMode?: t.Expression;
   tintColor?: t.Expression;
 } | null;
 
@@ -156,11 +191,12 @@ function processImageProps(
   path: NodePath<t.JSXOpeningElement>,
   file: HubFile,
   nativeSource: NativeSource,
-  styleInfo: StyleInfo
+  styleInfo: StyleInfo,
+  platform?: string
 ) {
   const accessibilityInfo = buildImageAccessibilityInfo(path, file);
   const consumed = new Set<t.JSXAttribute>([
-    nativeSource.sourceAttribute,
+    ...nativeSource.sourceAttributes,
     ...nativeSource.requestHeaderAttributes,
     ...(accessibilityInfo?.attributes ?? []),
   ]);
@@ -176,36 +212,21 @@ function processImageProps(
 
   const explicitResizeMode = getAttributeExpression(path.node.attributes, 'resizeMode');
   const explicitTintColor = getAttributeExpression(path.node.attributes, 'tintColor');
+  const tintColor = buildTintColor(explicitTintColor, styleInfo?.tintColor, platform);
+  const emitsAndroidProps = platform === 'android';
 
   path.node.attributes = [
     ...remaining,
     accessibilityInfo?.spreadAttribute,
     makeAttribute('style', buildStyle(nativeSource, styleInfo)),
+    emitsAndroidProps ? makeAttribute('src', t.cloneNode(nativeSource.sourceArray, true)) : undefined,
     makeAttribute('source', nativeSource.sourceArray),
-    makeAttribute('resizeMode', explicitResizeMode ?? styleInfo?.resizeMode ?? t.stringLiteral('cover')),
-    explicitTintColor || styleInfo?.tintColor
-      ? makeAttribute('tintColor', explicitTintColor ?? styleInfo!.tintColor!)
+    emitsAndroidProps && nativeSource.androidHeaders
+      ? makeAttribute('headers', t.cloneNode(nativeSource.androidHeaders, true))
       : undefined,
+    makeAttribute('resizeMode', buildResizeMode(explicitResizeMode, styleInfo)),
+    tintColor ? makeAttribute('tintColor', tintColor) : undefined,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
-}
-
-function hasImageAccessibilitySpreadConflict(path: NodePath<t.JSXOpeningElement>): boolean {
-  const directNames = getDirectAttributeNames(path.node.attributes);
-  const guarded = new Set(['alt', 'aria-hidden', 'aria-label', 'aria-labelledby', ...IMAGE_ARIA_STATE_PROPS]);
-
-  if (directNames.has('alt') || directNames.has('aria-label')) {
-    guarded.add('accessibilityLabel');
-  }
-  if (directNames.has('alt') || directNames.has('aria-hidden')) {
-    guarded.add('accessible');
-  }
-  if (directNames.has('aria-hidden')) guarded.add('importantForAccessibility');
-  if (directNames.has('aria-labelledby')) guarded.add('accessibilityLabelledBy');
-  if ([...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name))) {
-    guarded.add('accessibilityState');
-  }
-
-  return hasBlacklistedPropertyInSpread(path, guarded);
 }
 
 function buildImageAccessibilityInfo(
@@ -275,22 +296,26 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
   const src = findAttribute(attributes, 'src');
   if (src) {
     const uri = getAttributeValueExpression(src);
+    if (!t.isStringLiteral(uri)) return undefined;
+    const source = findAttribute(attributes, 'source');
     const width = getAttributeExpression(attributes, 'width');
     const height = getAttributeExpression(attributes, 'height');
+    const headers = t.cloneNode(requestHeaders.headers, true);
+    // `src` resolves to an array source in RN's wrapper, and array sources do not synthesize
+    // width/height into style. Keep the dimensions in the source entry only.
     return {
-      sourceAttribute: src,
+      sourceAttributes: [src, source].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined),
       requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.arrayExpression([
         t.objectExpression([
           t.objectProperty(t.identifier('uri'), uri),
-          t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)),
+          t.objectProperty(t.identifier('headers'), headers),
           ...(width ? [t.objectProperty(t.identifier('width'), width)] : []),
           ...(height ? [t.objectProperty(t.identifier('height'), height)] : []),
         ]),
       ]),
       consumesSizeProps: true,
-      width,
-      height,
+      androidHeaders: t.cloneNode(requestHeaders.headers, true),
     };
   }
 
@@ -303,26 +328,36 @@ function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribu
   if (t.isArrayExpression(sourceExpression)) {
     if (requestHeaders.attributes.length > 0) return undefined;
     return {
-      sourceAttribute: source,
+      sourceAttributes: [source],
       requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.cloneNode(sourceExpression, true),
       consumesSizeProps: false,
+      androidHeaders: getFirstSourceHeaders(sourceExpression),
     };
   }
 
   const sourceObject = sourceExpression;
   const sourceWidth = getObjectPropertyExpression(sourceObject, 'width');
   const sourceHeight = getObjectPropertyExpression(sourceObject, 'height');
-  const width = sourceWidth ?? getAttributeExpression(attributes, 'width');
-  const height = sourceHeight ?? getAttributeExpression(attributes, 'height');
+  const width = getNullishFallback(sourceWidth, getAttributeExpression(attributes, 'width'));
+  const height = getNullishFallback(sourceHeight, getAttributeExpression(attributes, 'height'));
+  const sourceArrayObject = buildSourceObject(sourceObject, requestHeaders);
+  // RN's wrapper only synthesizes style dimensions when it receives an object source. `src` and
+  // source+request-header props with a truthy `uri` go through ImageSourceUtils as array sources, so
+  // their width/height stay in the source payload and do not become layout style.
+  const usesGeneratedHeaders =
+    requestHeaders.headers.properties.length > 0 && hasObjectProperty(sourceArrayObject, 'headers');
 
   return {
-    sourceAttribute: source,
+    sourceAttributes: [source],
     requestHeaderAttributes: requestHeaders.attributes,
-    sourceArray: t.arrayExpression([buildSourceObject(sourceObject, requestHeaders)]),
+    sourceArray: t.arrayExpression([sourceArrayObject]),
     consumesSizeProps: true,
-    width,
-    height,
+    androidHeaders: usesGeneratedHeaders
+      ? t.cloneNode(requestHeaders.headers, true)
+      : getObjectPropertyExpression(sourceArrayObject, 'headers'),
+    width: usesGeneratedHeaders ? undefined : width,
+    height: usesGeneratedHeaders ? undefined : height,
   };
 }
 
@@ -366,7 +401,7 @@ function buildSourceObject(sourceObject: t.ObjectExpression, requestHeaders: Req
   if (requestHeaders.headers.properties.length === 0) return t.cloneNode(sourceObject, true);
 
   const uri = getObjectPropertyExpression(sourceObject, 'uri');
-  if (!uri || (t.isStringLiteral(uri) && uri.value === '')) return t.cloneNode(sourceObject, true);
+  if (!uri || !isStaticTruthyForLogicalOr(uri)) return t.cloneNode(sourceObject, true);
 
   const nativeSource = t.cloneNode(sourceObject, true);
   nativeSource.properties.push(t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)));
@@ -398,14 +433,12 @@ function buildStaticStyleInfo(attributes: Array<t.JSXAttribute | t.JSXSpreadAttr
   const objectFit = flattened.get('objectFit');
   const resizeModeFromObjectFit =
     objectFit && t.isStringLiteral(objectFit) ? OBJECT_FIT_TO_RESIZE_MODE[objectFit.value] : undefined;
-  const resizeMode = resizeModeFromObjectFit
-    ? t.stringLiteral(resizeModeFromObjectFit)
-    : cloneMapValue(flattened, 'resizeMode');
 
   return {
     styleAttribute,
     styleExpression,
-    resizeMode,
+    objectFitResizeMode: resizeModeFromObjectFit ? t.stringLiteral(resizeModeFromObjectFit) : undefined,
+    styleResizeMode: cloneMapValue(flattened, 'resizeMode'),
     tintColor: cloneMapValue(flattened, 'tintColor'),
   };
 }
@@ -490,6 +523,80 @@ function getObjectPropertyExpression(object: t.ObjectExpression, name: string): 
     }
   }
   return undefined;
+}
+
+function hasObjectProperty(object: t.ObjectExpression, name: string): boolean {
+  return object.properties.some(
+    (property) =>
+      t.isObjectProperty(property) &&
+      (t.isIdentifier(property.key, { name }) || (t.isStringLiteral(property.key) && property.key.value === name))
+  );
+}
+
+function getFirstSourceHeaders(sourceArray: t.ArrayExpression): t.Expression | undefined {
+  const first = sourceArray.elements[0];
+  return first && t.isObjectExpression(first) ? getObjectPropertyExpression(first, 'headers') : undefined;
+}
+
+function getNullishFallback(
+  primary: t.Expression | undefined,
+  fallback: t.Expression | undefined
+): t.Expression | undefined {
+  return primary && !isNullishExpression(primary) ? primary : fallback;
+}
+
+function buildResizeMode(explicit: t.Expression | undefined, styleInfo: StyleInfo): t.Expression {
+  if (styleInfo?.objectFitResizeMode) return t.cloneNode(styleInfo.objectFitResizeMode, true);
+
+  const fallback =
+    styleInfo?.styleResizeMode && !isFalsyForLogicalOr(styleInfo.styleResizeMode)
+      ? t.cloneNode(styleInfo.styleResizeMode, true)
+      : t.stringLiteral('cover');
+  if (!explicit) return fallback;
+  if (isFalsyForLogicalOr(explicit)) return fallback;
+  if (isStaticTruthyForLogicalOr(explicit)) return t.cloneNode(explicit, true);
+  return t.logicalExpression('||', t.cloneNode(explicit, true), fallback);
+}
+
+function buildTintColor(
+  explicit: t.Expression | undefined,
+  styleTintColor: t.Expression | undefined,
+  platform?: string
+): t.Expression | undefined {
+  if (platform === 'android' && explicit) return t.cloneNode(explicit, true);
+  if (!explicit) return styleTintColor ? t.cloneNode(styleTintColor, true) : undefined;
+  if (isNullishExpression(explicit)) return styleTintColor ? t.cloneNode(styleTintColor, true) : undefined;
+  if (isStaticNonNullishExpression(explicit)) return t.cloneNode(explicit, true);
+  return t.logicalExpression(
+    '??',
+    t.cloneNode(explicit, true),
+    styleTintColor ? t.cloneNode(styleTintColor, true) : t.identifier('undefined')
+  );
+}
+
+function isNullishExpression(expression: t.Expression): boolean {
+  return t.isNullLiteral(expression) || t.isIdentifier(expression, { name: 'undefined' });
+}
+
+function isFalsyForLogicalOr(expression: t.Expression): boolean {
+  return (
+    isNullishExpression(expression) ||
+    (t.isStringLiteral(expression) && expression.value === '') ||
+    (t.isBooleanLiteral(expression) && !expression.value) ||
+    (t.isNumericLiteral(expression) && expression.value === 0)
+  );
+}
+
+function isStaticTruthyForLogicalOr(expression: t.Expression): boolean {
+  return (
+    (t.isStringLiteral(expression) && expression.value !== '') ||
+    (t.isBooleanLiteral(expression) && expression.value) ||
+    (t.isNumericLiteral(expression) && expression.value !== 0)
+  );
+}
+
+function isStaticNonNullishExpression(expression: t.Expression): boolean {
+  return t.isStringLiteral(expression) || t.isNumericLiteral(expression) || t.isBooleanLiteral(expression);
 }
 
 function cloneMapValue(map: Map<string, t.Expression>, name: string): t.Expression | undefined {

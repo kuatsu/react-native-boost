@@ -9,10 +9,9 @@ import { Image } from 'react-native';
   ]}
   source={[
     {
-      uri: 'https://example.com/a.png',
+      uri: 'https://example.com/src.png',
       headers: {},
-      width: 10,
-      height: 20,
+      width: 20,
     },
   ]}
   resizeMode="cover"

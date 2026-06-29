@@ -102,6 +102,43 @@ const styleValue = fc.oneof(
   { weight: 1, arbitrary: fc.constantFrom('null', 'undefined', '[]', '{}') }
 );
 
+const imageStyleKeyValue = fc.constantFrom(
+  'width: 16',
+  'height: 16',
+  'objectFit: "contain"',
+  'objectFit: "cover"',
+  'objectFit: "fill"',
+  'resizeMode: "contain"',
+  'resizeMode: "cover"',
+  'resizeMode: ""',
+  'tintColor: "red"',
+  'borderRadius: 4'
+);
+
+const imageStyleObject = fc
+  .uniqueArray(imageStyleKeyValue, { selector: (kv) => kv.slice(0, kv.indexOf(':')), maxLength: 3 })
+  .map((kvs) => `{ ${kvs.join(', ')} }`);
+
+const imageStyleValue = fc.oneof(
+  { weight: 4, arbitrary: imageStyleObject },
+  {
+    weight: 2,
+    arbitrary: fc
+      .array(
+        fc.oneof(
+          { weight: 3, arbitrary: imageStyleObject },
+          { weight: 1, arbitrary: fc.constantFrom('null', 'false', '0') }
+        ),
+        {
+          minLength: 1,
+          maxLength: 3,
+        }
+      )
+      .map((elements) => `[${elements.join(', ')}]`),
+  },
+  { weight: 1, arbitrary: fc.constantFrom('{}', 'null') }
+);
+
 // ── Text ────────────────────────────────────────────────────────────────────────────────────────
 export const TEXT_VOCAB: PropSpec[] = [
   // Accessibility / normalized → always routed through `processAccessibilityProps` at runtime.
@@ -269,4 +306,64 @@ export const VIEW_VOCAB: PropSpec[] = [
   { name: 'needsOffscreenAlphaCompositing', arb: bool, disposition: 'probe pass-through' },
   { name: 'renderToHardwareTextureAndroid', arb: bool, disposition: 'probe pass-through' },
   { name: 'shouldRasterizeIOS', arb: bool, disposition: 'probe pass-through' },
+];
+
+// ── Image ─────────────────────────────────────────────────────────────────────────────────────────
+export const IMAGE_SOURCE_VOCAB: PropSpec[] = [
+  {
+    name: 'source',
+    arb: fc.constantFrom(
+      '{ uri: "logo.png", width: 16, height: 16 }',
+      '{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer object" } }',
+      '{ uri: "", width: 16, height: 16 }',
+      '{ uri: "logo.png", width: null, height: 16 }',
+      '{ uri: "logo.png" }',
+      '[{ uri: "logo.png", width: 16, height: 16 }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2 }]',
+      '[{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer first" } }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2, headers: { Authorization: "Bearer second" } }]'
+    ),
+    disposition: 'required static source',
+  },
+  {
+    name: 'src',
+    arb: fc.constantFrom('"https://example.com/logo.png"'),
+    disposition: 'required static src',
+  },
+];
+
+export const IMAGE_VOCAB: PropSpec[] = [
+  { name: 'width', arb: withNullish(fc.constantFrom('16', '20')), disposition: 'source/style size fallback' },
+  { name: 'height', arb: withNullish(fc.constantFrom('16', '20')), disposition: 'source/style size fallback' },
+  { name: 'style', arb: imageStyleValue, disposition: 'static image style synthesis' },
+  {
+    name: 'resizeMode',
+    arb: withNullish(fc.constantFrom('"contain"', '"cover"', '"stretch"', '""')),
+    disposition: 'resize mode fallback',
+  },
+  { name: 'tintColor', arb: withNullish(fc.constantFrom('"red"', '"blue"')), disposition: 'tintColor fallback' },
+  { name: 'crossOrigin', arb: fc.constantFrom('"anonymous"', '"use-credentials"'), disposition: 'request headers' },
+  {
+    name: 'referrerPolicy',
+    arb: fc.constantFrom('"origin"', '"no-referrer"', '"same-origin"'),
+    disposition: 'request headers',
+  },
+  { name: 'alt', arb: withNullish(str), disposition: 'translate → accessibilityLabel + accessible' },
+  { name: 'aria-label', arb: withNullish(str), disposition: 'translate → accessibilityLabel' },
+  { name: 'aria-hidden', arb: withNullish(bool), disposition: 'platform accessibility hiding' },
+  { name: 'aria-labelledby', arb: withNullish(labelledBy), disposition: 'android labelledBy translation' },
+  { name: 'aria-busy', arb: withNullish(bool), disposition: 'aggregate → accessibilityState' },
+  { name: 'aria-checked', arb: withNullish(checked), disposition: 'aggregate → accessibilityState' },
+  { name: 'aria-disabled', arb: withNullish(bool), disposition: 'aggregate → accessibilityState' },
+  { name: 'aria-expanded', arb: withNullish(bool), disposition: 'aggregate → accessibilityState' },
+  { name: 'aria-selected', arb: withNullish(bool), disposition: 'aggregate → accessibilityState' },
+  { name: 'accessibilityLabel', arb: withNullish(str), disposition: 'a11y label fallback' },
+  { name: 'accessibilityState', arb: a11yStateObject, disposition: 'a11y state merge target' },
+  { name: 'accessible', arb: withNullish(bool), disposition: 'a11y pass-through / alt override' },
+  {
+    name: 'importantForAccessibility',
+    arb: fc.constantFrom('"auto"', '"yes"', '"no"', '"no-hide-descendants"'),
+    disposition: 'a11y pass-through / aria-hidden override',
+  },
+  { name: 'testID', arb: withNullish(str), disposition: 'pass-through' },
+  { name: 'blurRadius', arb: fc.constantFrom('0', '2'), disposition: 'native pass-through' },
+  { name: 'borderRadius', arb: fc.constantFrom('0', '4'), disposition: 'native pass-through' },
 ];

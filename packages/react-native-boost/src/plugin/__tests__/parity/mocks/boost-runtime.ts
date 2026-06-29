@@ -1,4 +1,4 @@
-import { NativeTextCapturer, NativeViewCapturer } from '../capture';
+import { NativeImageCapturer, NativeTextCapturer, NativeViewCapturer } from '../capture';
 
 /**
  * Stand-in for `react-native-boost/runtime`, used only by the fibers collector (redirected while
@@ -8,7 +8,7 @@ import { NativeTextCapturer, NativeViewCapturer } from '../capture';
  */
 export const NativeText = NativeTextCapturer;
 export const NativeView = NativeViewCapturer;
-export const NativeImage = NativeViewCapturer;
+export const NativeImage = NativeImageCapturer;
 
 export const processTextStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
 export const processViewStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});

@@ -1,11 +1,18 @@
 import fc from 'fast-check';
-import { TEXT_VOCAB, VIEW_VOCAB, TEXT_BLACKLIST_SAMPLE, type PropSpec } from './vocabulary';
+import {
+  IMAGE_SOURCE_VOCAB,
+  IMAGE_VOCAB,
+  TEXT_VOCAB,
+  VIEW_VOCAB,
+  TEXT_BLACKLIST_SAMPLE,
+  type PropSpec,
+} from './vocabulary';
 
 // The unit of generation is an abstract spec, not a raw string — fast-check shrinks the spec (drop an
 // attr, simplify a value, collapse dynamic→static) and the renderer turns it into valid JSX by
 // construction, so shrinking never explores malformed snippets.
 
-export type Tag = 'Text' | 'View';
+export type Tag = 'Image' | 'Text' | 'View';
 
 /** One attribute: the value's source code, and whether it is inlined or hoisted to a preamble const. */
 export interface GenAttr {
@@ -31,7 +38,7 @@ export interface ChildSpec {
 export interface ElementSpec {
   tag: Tag;
   attrs: GenAttr[];
-  blacklisted: GenAttr | null; // Text only: a deliberate, low-probability bail trigger
+  blacklisted: GenAttr | null; // deliberate, low-probability bail trigger
   spreads: GenSpread[];
   child: ChildSpec | null; // Text only
 }
@@ -128,7 +135,19 @@ const viewSpecArb: fc.Arbitrary<ElementSpec> = fc.record({
   child: fc.constant<ChildSpec | null>(null),
 });
 
-export const elementSpecArb: fc.Arbitrary<ElementSpec> = fc.oneof(textSpecArb, viewSpecArb);
+const imageSourceArb: fc.Arbitrary<GenAttr> = fc
+  .constantFrom(...IMAGE_SOURCE_VOCAB)
+  .chain((spec) => spec.arb.map((code): GenAttr => ({ name: spec.name, code, dynamic: false })));
+
+const imageSpecArb: fc.Arbitrary<ElementSpec> = fc.record({
+  tag: fc.constant<Tag>('Image'),
+  attrs: fc.tuple(imageSourceArb, attrsArb(IMAGE_VOCAB)).map(([source, attrs]) => [source, ...attrs]),
+  blacklisted: fc.constant<GenAttr | null>(null),
+  spreads: spreadsArb(IMAGE_VOCAB),
+  child: fc.constant<ChildSpec | null>(null),
+});
+
+export const elementSpecArb: fc.Arbitrary<ElementSpec> = fc.oneof(textSpecArb, viewSpecArb, imageSpecArb);
 
 export const platformArb = fc.constantFrom('ios' as const, 'android' as const);
 
@@ -170,6 +189,10 @@ export function render(spec: ElementSpec): RenderedCase {
 
   if (spec.tag === 'View') {
     return { preamble: declarations.join('\n'), jsxBody: `<View${attrs} />` };
+  }
+
+  if (spec.tag === 'Image') {
+    return { preamble: declarations.join('\n'), jsxBody: `<Image${attrs} />` };
   }
 
   const child = spec.child!;

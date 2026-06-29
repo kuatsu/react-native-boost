@@ -12,9 +12,17 @@ import { setPlatformOS, type PlatformOS } from './mocks/Platform';
  */
 async function compileWrapperCase(os: PlatformOS, jsxBody: string, preamble = ''): Promise<React.ComponentType> {
   setPlatformOS(os); // Text.js reads Platform.select at render time
+  const usesImage = jsxBody.includes('<Image');
+  const imageImport = usesImage
+    ? `import Image from '${
+        os === 'ios' ? 'react-native/Libraries/Image/Image.ios' : 'react-native/Libraries/Image/Image.android'
+      }';\n`
+    : '';
   const source =
     `import Text from 'react-native/Libraries/Text/Text';\n` +
-    `import View from 'react-native/Libraries/Components/View/View';\n${preamble}\n` +
+    `import View from 'react-native/Libraries/Components/View/View';\n` +
+    imageImport +
+    `${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,

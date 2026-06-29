@@ -27,3 +27,43 @@ export const flattenStyle = (style: unknown): unknown => {
  */
 export const normalize = (props: Record<string, unknown>) =>
   JSON.parse(JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props));
+
+export const normalizeImage = (props: Record<string, unknown>) => {
+  const normalized = normalize(props);
+
+  for (const key of [
+    'alt',
+    'aria-busy',
+    'aria-checked',
+    'aria-disabled',
+    'aria-expanded',
+    'aria-hidden',
+    'aria-label',
+    'aria-labelledby',
+    'aria-selected',
+    'crossOrigin',
+    'referrerPolicy',
+    'width',
+    'height',
+  ]) {
+    delete normalized[key];
+  }
+
+  for (const key of ['defaultSource', 'internal_analyticTag', 'loadingIndicatorSrc']) {
+    if (normalized[key] === null) delete normalized[key];
+  }
+
+  if (normalized.shouldNotifyLoadEvents === false) delete normalized.shouldNotifyLoadEvents;
+  if (normalized.headers && typeof normalized.headers === 'object' && Object.keys(normalized.headers).length === 0) {
+    delete normalized.headers;
+  }
+  if (
+    normalized.accessibilityState &&
+    typeof normalized.accessibilityState === 'object' &&
+    Object.keys(normalized.accessibilityState).length === 0
+  ) {
+    delete normalized.accessibilityState;
+  }
+
+  return normalized;
+};

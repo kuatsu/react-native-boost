@@ -11,12 +11,12 @@ vi.mock('../../../runtime/components/native-view', async () => ({
   NativeView: (await import('./capture')).NativeViewCapturer,
 }));
 vi.mock('../../../runtime/components/native-image', async () => ({
-  NativeImage: (await import('./capture')).NativeViewCapturer,
+  NativeImage: (await import('./capture')).NativeImageCapturer,
 }));
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, boostOptimizes } from './boost';
-import { normalize } from './normalize';
+import { normalize, normalizeImage } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
 
@@ -107,6 +107,36 @@ const VIEW_CASES = [
 // a silent loss of optimization — from masquerading as a passing parity test.
 const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
 
+const IMAGE_CASES = [
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer object" } }} />',
+  '<Image source={{ uri: "", width: 16, height: 16 }} referrerPolicy="origin" />',
+  '<Image source={{ uri: "logo.png" }} width={16} height={16} />',
+  '<Image src="https://example.com/logo.png" width={16} height={16} />',
+  '<Image src="https://example.com/src.png" source={{ uri: "source.png", width: 16, height: 16 }} width={20} />',
+  '<Image source={[{ uri: "logo.png", width: 16, height: 16 }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2 }]} style={{ width: 16, height: 16 }} />',
+  '<Image source={[{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer first" } }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2, headers: { Authorization: "Bearer second" } }]} style={{ width: 16, height: 16 }} />',
+  '<Image source={{ uri: "logo.png", width: null, height: 16 }} width={20} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode={null} style={{ resizeMode: "contain" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode="" style={{ resizeMode: "contain" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode="contain" style={{ objectFit: "fill" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} tintColor={null} style={{ tintColor: "red" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
+  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
+];
+
+const BAILED_IMAGE_CASES = new Set([
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
+  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
+]);
+
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
@@ -116,6 +146,15 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it.each(IMAGE_CASES)('Image: %s', async (jsx) => {
+      const boost = await captureBoost(os, jsx);
+      expect(boost.optimized).toBe(!BAILED_IMAGE_CASES.has(jsx));
+      if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
+      const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
     });
 
     it.each(VIEW_CASES)('View: %s', async (jsx) => {

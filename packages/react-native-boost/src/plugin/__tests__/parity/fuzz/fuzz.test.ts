@@ -11,14 +11,14 @@ vi.mock('../../../../runtime/components/native-view', async () => ({
   NativeView: (await import('../capture')).NativeViewCapturer,
 }));
 vi.mock('../../../../runtime/components/native-image', async () => ({
-  NativeImage: (await import('../capture')).NativeViewCapturer,
+  NativeImage: (await import('../capture')).NativeImageCapturer,
 }));
 
 import { captureBoost } from '../boost';
 import { captureWrapper } from '../wrapper';
-import { normalize } from '../normalize';
+import { normalize, normalizeImage } from '../normalize';
 import { type PlatformOS } from '../mocks/Platform';
-import { elementSpecArb, platformArb, render } from './generator';
+import { elementSpecArb, platformArb, render, type Tag } from './generator';
 import { divergingKeys } from './diff';
 
 const SEED = Number(process.env.FUZZ_SEED ?? 0xb0051);
@@ -53,8 +53,9 @@ async function runCase(os: PlatformOS, jsxBody: string, preamble: string): Promi
   if (!boost.optimized) return { status: 'skipped' };
 
   const wrapper = await captureWrapper(os, jsxBody, preamble);
-  const boostNorm = normalize(boost.props);
-  const wrapperNorm = normalize(wrapper.props);
+  const normalizer = boost.which === 'NativeImage' || wrapper.which === 'NativeImage' ? normalizeImage : normalize;
+  const boostNorm = normalizer(boost.props);
+  const wrapperNorm = normalizer(wrapper.props);
   const keys = divergingKeys(boostNorm, wrapperNorm);
 
   if (boost.which === wrapper.which && keys.length === 0) return { status: 'match' };
@@ -88,15 +89,22 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
     async () => {
       let optimized = 0;
       let skipped = 0;
+      const byTag: Record<Tag, { optimized: number; skipped: number }> = {
+        Image: { optimized: 0, skipped: 0 },
+        Text: { optimized: 0, skipped: 0 },
+        View: { optimized: 0, skipped: 0 },
+      };
 
       const property = fc.asyncProperty(platformArb, elementSpecArb, async (os, spec) => {
         const { preamble, jsxBody } = render(spec);
         const result = await runCase(os, jsxBody, preamble);
         if (result.status === 'skipped') {
           skipped++;
+          byTag[spec.tag].skipped++;
           return;
         }
         optimized++;
+        byTag[spec.tag].optimized++;
         if (result.status === 'divergence') throw new Error(formatDivergence(os, jsxBody, preamble, result));
       });
 
@@ -109,11 +117,18 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
       console.log(
         `[fuzz] cases=${total} optimized=${optimized} skipped=${skipped} ` +
           `optimize-rate=${(rate * 100).toFixed(1)}% elapsed=${elapsed.toFixed(0)}ms ` +
-          `(${(total / (elapsed / 1000)).toFixed(1)} cases/s)`
+          `(${(total / (elapsed / 1000)).toFixed(1)} cases/s) ` +
+          `image=${byTag.Image.optimized}/${byTag.Image.optimized + byTag.Image.skipped} ` +
+          `text=${byTag.Text.optimized}/${byTag.Text.optimized + byTag.Text.skipped} ` +
+          `view=${byTag.View.optimized}/${byTag.View.optimized + byTag.View.skipped}`
       );
 
       // Anti-vacuous-green guard: a generator drifting into all-bail would pass trivially.
       expect(rate).toBeGreaterThan(0.5);
+      const imageTotal = byTag.Image.optimized + byTag.Image.skipped;
+      const imageRate = byTag.Image.optimized / imageTotal;
+      expect(imageTotal).toBeGreaterThan(0);
+      expect(imageRate).toBeGreaterThan(0.2);
     },
     Math.max(30_000, NUM_RUNS * 80)
   );

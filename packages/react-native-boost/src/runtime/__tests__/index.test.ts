@@ -442,7 +442,19 @@ describe('processImageAccessibilityProps', () => {
     ).toBe('a, b');
   });
 
-  it('aggregates aria state fields over a passed accessibilityState', () => {
+  it('preserves explicit accessibilityState over aria state fields on iOS', () => {
+    Platform.OS = 'ios';
+    expect(
+      processImageAccessibilityProps({
+        'accessibilityState': { busy: false, checked: true },
+        'aria-busy': true,
+        'aria-disabled': false,
+      }).accessibilityState
+    ).toEqual({ busy: false, checked: true });
+  });
+
+  it('aggregates aria state fields over a passed accessibilityState on Android', () => {
+    Platform.OS = 'android';
     expect(
       processImageAccessibilityProps({
         'accessibilityState': { busy: false, checked: true },

@@ -39,6 +39,11 @@ if (process.env.BENCH_FIBERS_OUT) {
 const basenameRedirects: Array<[RegExp, string]> = [
   [/(^|[./])ViewNativeComponent$/, u('./mocks/ViewNativeComponent.ts')],
   [/(^|[./])TextNativeComponent$/, u('./mocks/TextNativeComponent.ts')],
+  [/(^|[./])ImageViewNativeComponent$/, u('./mocks/ImageViewNativeComponent.ts')],
+  [/(^|[./])TextInlineImageNativeComponent$/, u('./mocks/TextInlineImageNativeComponent.ts')],
+  [/(^|[./])NativeImageLoader(Android|IOS)$/, u('./mocks/NativeImageLoader.ts')],
+  [/(^|[./])StyleSheet$/, u('./mocks/StyleSheet.ts')],
+  [/(^|[./])resolveAssetSource$/, u('./mocks/resolveAssetSource.ts')],
   [/(^|[./])Platform$/, u('./mocks/Platform.ts')],
   [/(^|[./])usePressability$/, u('./mocks/usePressability.ts')],
   [/(^|[./])PressabilityDebug$/, u('./mocks/PressabilityDebug.ts')],

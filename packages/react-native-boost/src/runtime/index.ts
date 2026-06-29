@@ -355,7 +355,9 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
     result.importantForAccessibility = importantForAccessibility;
   }
 
-  if (
+  if (Platform.OS === 'ios' && accessibilityState !== undefined) {
+    result.accessibilityState = accessibilityState;
+  } else if (
     accessibilityState != null ||
     ariaBusy != null ||
     ariaChecked != null ||
@@ -379,4 +381,4 @@ export * from './types';
 export * from './utils/constants';
 export * from './components/native-text';
 export * from './components/native-view';
-export * from './components/native-image';
+export { NativeImage } from './components/native-image';

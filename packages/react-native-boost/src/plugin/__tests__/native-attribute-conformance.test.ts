@@ -4,7 +4,7 @@ import { generateTestPlugin } from '../utils/generate-test-plugin';
 import { imageOptimizer } from '../optimizers/image';
 import { textOptimizer } from '../optimizers/text';
 import { viewOptimizer } from '../optimizers/view';
-import { Optimizer } from '../types';
+import { Optimizer, TargetPlatform } from '../types';
 import { NATIVE_IMAGE_ATTRIBUTES, NATIVE_TEXT_ATTRIBUTES, NATIVE_VIEW_ATTRIBUTES } from './native-valid-attributes';
 
 /**
@@ -33,7 +33,12 @@ interface OptimizedHost {
  * was optimized into its native counterpart and which direct attributes it carries. Returns
  * `null` if no JSX element was found.
  */
-function optimizeAndInspect(source: string, optimizer: Optimizer, originalName: string): OptimizedHost | null {
+function optimizeAndInspect(
+  source: string,
+  optimizer: Optimizer,
+  originalName: string,
+  platform?: TargetPlatform
+): OptimizedHost | null {
   let host: { name: string; attributes: string[] } | undefined;
 
   const capturePlugin = (): PluginObj => ({
@@ -57,7 +62,7 @@ function optimizeAndInspect(source: string, optimizer: Optimizer, originalName: 
   transformSync(source, {
     configFile: false,
     babelrc: false,
-    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(optimizer), capturePlugin],
+    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(optimizer, {}, platform), capturePlugin],
   });
 
   if (!host) return null;
@@ -166,7 +171,7 @@ describe('native attribute conformance', () => {
   it('exercises the optimized path (otherwise conformance would pass vacuously)', () => {
     expect(optimizeAndInspect(viewSource('testID="element"'), viewOptimizer, 'View')?.optimized).toBe(true);
     expect(optimizeAndInspect(textSource('numberOfLines={1}'), textOptimizer, 'Text')?.optimized).toBe(true);
-    expect(optimizeAndInspect(imageSource(IMAGE_BASE_SOURCE), imageOptimizer, 'Image')?.optimized).toBe(true);
+    expect(optimizeAndInspect(imageSource(IMAGE_BASE_SOURCE), imageOptimizer, 'Image', 'ios')?.optimized).toBe(true);
   });
 
   describe('View', () => {
@@ -201,7 +206,7 @@ describe('native attribute conformance', () => {
     it.each([...IMAGE_WRAPPER_ONLY_PROPS, ...IMAGE_PASSTHROUGH_PROPS])(
       'leaves only native attributes on the host for <Image %s />',
       (attributes) => {
-        const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image');
+        const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image', 'ios');
         if (!result?.optimized) return; // bailed out: nothing reaches the native component
         const leaked = result.attributes.filter((attribute) => !NATIVE_IMAGE_ATTRIBUTES.has(attribute));
         expect(leaked, `optimized <Image ${attributes} /> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(

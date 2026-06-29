@@ -2,10 +2,7 @@ import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
 import { Image } from 'react-native';
 <_NativeImage
   style={[
-    {
-      width: 16,
-      height: 16,
-    },
+    {},
     {
       overflow: 'hidden',
     },
@@ -25,10 +22,7 @@ import { Image } from 'react-native';
 />;
 <_NativeImage
   style={[
-    {
-      width: 16,
-      height: 16,
-    },
+    {},
     {
       overflow: 'hidden',
     },
@@ -42,6 +36,25 @@ import { Image } from 'react-native';
         'Access-Control-Allow-Credentials': 'true',
         'Referrer-Policy': 'origin',
       },
+    },
+  ]}
+  resizeMode="cover"
+/>;
+<_NativeImage
+  style={[
+    {
+      width: 16,
+      height: 16,
+    },
+    {
+      overflow: 'hidden',
+    },
+  ]}
+  source={[
+    {
+      uri: '',
+      width: 16,
+      height: 16,
     },
   ]}
   resizeMode="cover"
