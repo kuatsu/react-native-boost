@@ -15,7 +15,9 @@ export const unstable_NativeText = NativeTextCapturer;
 export const unstable_NativeView = NativeViewCapturer;
 export const Text = NativeTextCapturer;
 export const View = NativeViewCapturer;
-export const Image = NativeImageCapturer;
+export const Image = Object.assign(NativeImageCapturer, {
+  resolveAssetSource: <T>(source: T): T => source,
+});
 
 // `processTextStyle` (the runtime under test) calls `StyleSheet.flatten`, so it must faithfully
 // reproduce RN's flatten semantics — an identity stub would silently break every dynamic-`style` parity

@@ -108,12 +108,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform) => {
     },
     {
       reason: 'has an unsupported or dynamic source',
-      shouldBail: () => buildNativeSource(path.node.attributes) == null,
-    },
-    {
-      reason: 'has dynamic image style',
-      shouldBail: () =>
-        getStyleExpression(path.node.attributes) != null && buildStaticStyleInfo(path.node.attributes) == null,
+      shouldBail: () => !hasImageSourceInput(path.node.attributes),
     },
   ];
 
@@ -154,13 +149,16 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform) => {
     throw new PluginError('No file found in Babel hub');
   }
 
-  const nativeSource = buildNativeSource(path.node.attributes);
+  const nativeSource = buildStaticNativeSource(path.node.attributes);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
-  if (!nativeSource || styleInfo === null) return;
 
   logger.optimized({ component: 'Image', path });
 
-  processImageProps(path, file, nativeSource, styleInfo, platform);
+  if (nativeSource && styleInfo !== null) {
+    processImageProps(path, file, nativeSource, styleInfo, platform);
+  } else {
+    processRuntimeImageProps(path, file);
+  }
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
 
@@ -183,6 +181,11 @@ type StyleInfo = {
 } | null;
 
 type ImageAccessibilityInfo = {
+  attributes: t.JSXAttribute[];
+  spreadAttribute: t.JSXSpreadAttribute;
+};
+
+type RuntimeImageInfo = {
   attributes: t.JSXAttribute[];
   spreadAttribute: t.JSXSpreadAttribute;
 };
@@ -227,6 +230,22 @@ function processImageProps(
     makeAttribute('resizeMode', buildResizeMode(explicitResizeMode, styleInfo)),
     tintColor ? makeAttribute('tintColor', tintColor) : undefined,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
+}
+
+function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file);
+  const runtimeInfo = buildRuntimeImageInfo(path, file);
+  if (!runtimeInfo) return;
+
+  const consumed = new Set<t.JSXAttribute>([...runtimeInfo.attributes, ...(accessibilityInfo?.attributes ?? [])]);
+
+  const remaining = path.node.attributes.filter(
+    (attribute) => !t.isJSXAttribute(attribute) || !consumed.has(attribute)
+  );
+
+  path.node.attributes = [...remaining, accessibilityInfo?.spreadAttribute, runtimeInfo.spreadAttribute].filter(
+    (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
+  );
 }
 
 function buildImageAccessibilityInfo(
@@ -289,7 +308,38 @@ function buildImageAccessibilityInfo(
   };
 }
 
-function buildNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
+function buildRuntimeImageInfo(path: NodePath<t.JSXOpeningElement>, file: HubFile): RuntimeImageInfo | undefined {
+  const attributes = [
+    findAttribute(path.node.attributes, 'source'),
+    findAttribute(path.node.attributes, 'src'),
+    findAttribute(path.node.attributes, 'width'),
+    findAttribute(path.node.attributes, 'height'),
+    findAttribute(path.node.attributes, 'crossOrigin'),
+    findAttribute(path.node.attributes, 'referrerPolicy'),
+    findAttribute(path.node.attributes, 'style'),
+    findAttribute(path.node.attributes, 'resizeMode'),
+    findAttribute(path.node.attributes, 'tintColor'),
+  ].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined);
+
+  if (attributes.length === 0) return undefined;
+
+  const helperIdentifier = addFileImportHint({
+    file,
+    nameHint: 'processImageSourceProps',
+    path,
+    importName: 'processImageSourceProps',
+    moduleName: RUNTIME_MODULE_NAME,
+  });
+
+  return {
+    attributes,
+    spreadAttribute: t.jsxSpreadAttribute(
+      t.callExpression(t.identifier(helperIdentifier.name), [buildPropertiesFromAttributes(attributes)])
+    ),
+  };
+}
+
+function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
   const requestHeaders = buildRequestHeaders(attributes);
   if (!requestHeaders) return undefined;
 
@@ -482,9 +532,8 @@ function flattenStaticStyle(styleExpression: t.Expression): Map<string, t.Expres
   return flattened;
 }
 
-function getStyleExpression(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): t.Expression | undefined {
-  const style = findAttribute(attributes, 'style');
-  return style ? getAttributeValueExpression(style) : undefined;
+function hasImageSourceInput(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): boolean {
+  return findAttribute(attributes, 'source') !== undefined || findAttribute(attributes, 'src') !== undefined;
 }
 
 function getAttributeExpression(

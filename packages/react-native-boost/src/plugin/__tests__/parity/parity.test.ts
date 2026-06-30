@@ -137,6 +137,19 @@ const BAILED_IMAGE_CASES = new Set([
   '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
 ]);
 
+const DYNAMIC_IMAGE_CASES: Array<[string, string]> = [
+  ['<Image source={asset} />', 'const asset = { uri: "asset.png", width: 11, height: 12 };'],
+  ['<Image source={require("./asset.png")} />', 'const require = () => ({ uri: "asset.png", width: 11, height: 12 });'],
+  [
+    '<Image src={url} width={16} height={8} crossOrigin={crossOrigin} referrerPolicy={policy} />',
+    'const url = "https://example.com/logo.png"; const crossOrigin = "use-credentials"; const policy = "origin";',
+  ],
+  [
+    '<Image source={{ uri: "logo.png" }} style={imageStyle} resizeMode={mode} tintColor={tint} />',
+    'const imageStyle = [{ width: 16, height: 8 }, { objectFit: "fill", tintColor: "red" }]; const mode = ""; const tint = undefined;',
+  ],
+];
+
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
@@ -153,6 +166,15 @@ describe('differential parity', () => {
       expect(boost.optimized).toBe(!BAILED_IMAGE_CASES.has(jsx));
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+    });
+
+    it.each(DYNAMIC_IMAGE_CASES)('Image dynamic: %s', async (jsx, preamble) => {
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Image dynamic case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
       expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
     });

@@ -35,6 +35,11 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
   return props;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageSourceProps(props: Record<string, any>): Record<string, any> {
+  return props;
+}
+
 export * from './types';
 export * from './utils/constants';
 
