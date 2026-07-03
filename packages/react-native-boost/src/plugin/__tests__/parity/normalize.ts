@@ -31,6 +31,9 @@ export const normalize = (props: Record<string, unknown>) =>
 export const normalizeImage = (props: Record<string, unknown>) => {
   const normalized = normalize(props);
 
+  // These are wrapper-level Image inputs. The RN wrapper may still pass the authored prop through to
+  // the mock host while Boost translates it into native-facing props (`source`/`headers`/`style`/a11y).
+  // parity.test.ts asserts those translated outputs directly for the representative cases.
   for (const key of [
     'alt',
     'aria-busy',

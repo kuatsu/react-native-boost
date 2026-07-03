@@ -21,7 +21,7 @@ function loadImageViewNativeComponent(): NativeImageModule {
   return require('react-native/Libraries/Image/ImageViewNativeComponent');
 }
 
-function resolveNativeImageComponent(
+export function resolveNativeImageComponent(
   reactNativeModule: ReactNativeImageModule,
   loadNativeComponent: () => NativeImageModule = loadImageViewNativeComponent
 ): ComponentType<ImageProps> {

@@ -150,6 +150,70 @@ const DYNAMIC_IMAGE_CASES: Array<[string, string]> = [
   ],
 ];
 
+const getFirstImageSource = (props: Record<string, unknown>) => {
+  const source = props.source;
+  if (!Array.isArray(source)) throw new Error('expected Image source to be normalized to an array');
+  return source[0] as Record<string, unknown>;
+};
+
+const IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>, os: (typeof PLATFORMS)[number]) => void>(
+  [
+    [
+      '<Image source={{ uri: "logo.png" }} width={16} height={16} />',
+      (props) => expect(normalize(props).style).toMatchObject({ width: 16, height: 16 }),
+    ],
+    [
+      '<Image src="https://example.com/logo.png" width={16} height={16} />',
+      (props) => expect(getFirstImageSource(props)).toMatchObject({ width: 16, height: 16 }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
+      (props) =>
+        expect(getFirstImageSource(props).headers).toEqual({
+          'Access-Control-Allow-Credentials': 'true',
+          'Referrer-Policy': 'origin',
+        }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
+      (props) => expect(props).toMatchObject({ accessibilityLabel: 'Logo', accessible: true }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
+      (props) => expect(props.accessibilityLabel).toBe('Logo'),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
+      (props, os) => {
+        if (os === 'android') expect(props.importantForAccessibility).toBe('no-hide-descendants');
+      },
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
+      (props, os) => {
+        if (os === 'android') expect(props.accessibilityState).toEqual({ selected: true, busy: true });
+        else expect(props.accessibilityState).toEqual({ selected: true });
+      },
+    ],
+  ]
+);
+
+const DYNAMIC_IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>) => void>([
+  [
+    '<Image src={url} width={16} height={8} crossOrigin={crossOrigin} referrerPolicy={policy} />',
+    (props) => {
+      expect(getFirstImageSource(props)).toMatchObject({
+        width: 16,
+        height: 8,
+        headers: {
+          'Access-Control-Allow-Credentials': 'true',
+          'Referrer-Policy': 'origin',
+        },
+      });
+    },
+  ],
+]);
+
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
@@ -168,6 +232,7 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which);
       expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props, os);
     });
 
     it.each(DYNAMIC_IMAGE_CASES)('Image dynamic: %s', async (jsx, preamble) => {
@@ -177,6 +242,7 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
       expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      DYNAMIC_IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props);
     });
 
     it.each(VIEW_CASES)('View: %s', async (jsx) => {

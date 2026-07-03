@@ -9,7 +9,7 @@ type LoadNativeComponent = () => { default?: ComponentType<ImageProps> };
 
 async function importNativeImage({
   os,
-  loadNativeComponent = vi.fn(() => ({ default: nativeHost })),
+  loadNativeComponent,
 }: {
   os: string;
   loadNativeComponent?: LoadNativeComponent;
@@ -19,18 +19,35 @@ async function importNativeImage({
     Image: reactNativeImage,
     Platform: { OS: os },
   }));
-  vi.stubGlobal('require', loadNativeComponent);
+  vi.doMock('react-native/Libraries/Image/ImageViewNativeComponent', () => {
+    if (loadNativeComponent) return loadNativeComponent();
+    return { default: nativeHost };
+  });
 
   return import('./native-image');
 }
 
 afterEach(() => {
   vi.doUnmock('react-native');
+  vi.doUnmock('react-native/Libraries/Image/ImageViewNativeComponent');
   vi.unstubAllGlobals();
   vi.resetModules();
 });
 
 describe('NativeImage', () => {
+  it('resolves to the internal native host when loading succeeds on a non-web platform', async () => {
+    const { resolveNativeImageComponent } = await importNativeImage({ os: 'android' });
+    const NativeImage = resolveNativeImageComponent(
+      {
+        Image: reactNativeImage,
+        Platform: { OS: 'android' },
+      },
+      () => ({ default: nativeHost })
+    );
+
+    expect(NativeImage).toBe(nativeHost);
+  });
+
   it('falls back to React Native Image when the internal host cannot be loaded', async () => {
     const { NativeImage } = await importNativeImage({
       os: 'android',

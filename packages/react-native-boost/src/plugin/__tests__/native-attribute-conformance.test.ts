@@ -203,8 +203,8 @@ describe('native attribute conformance', () => {
   });
 
   describe('Image', () => {
-    it.each([...IMAGE_WRAPPER_ONLY_PROPS, ...IMAGE_PASSTHROUGH_PROPS])(
-      'leaves only native attributes on the host for <Image %s />',
+    it.each(IMAGE_WRAPPER_ONLY_PROPS)(
+      'leaves only native attributes on the host for <Image %s /> when optimized',
       (attributes) => {
         const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image', 'ios');
         if (!result?.optimized) return; // bailed out: nothing reaches the native component
@@ -212,6 +212,19 @@ describe('native attribute conformance', () => {
         expect(leaked, `optimized <Image ${attributes} /> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
           []
         );
+      }
+    );
+
+    it.each(IMAGE_PASSTHROUGH_PROPS)(
+      'optimizes and leaves only native attributes on the host for <Image %s />',
+      (attributes) => {
+        const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image', 'ios');
+        expect(result?.optimized).toBe(true);
+        const leaked = result?.attributes.filter((attribute) => !NATIVE_IMAGE_ATTRIBUTES.has(attribute));
+        expect(
+          leaked,
+          `optimized <Image ${attributes} /> leaks non-native attribute(s): ${leaked?.join(', ')}`
+        ).toEqual([]);
       }
     );
   });

@@ -340,10 +340,14 @@ export const IMAGE_VOCAB: PropSpec[] = [
     disposition: 'resize mode fallback',
   },
   { name: 'tintColor', arb: withNullish(fc.constantFrom('"red"', '"blue"')), disposition: 'tintColor fallback' },
-  { name: 'crossOrigin', arb: fc.constantFrom('"anonymous"', '"use-credentials"'), disposition: 'request headers' },
+  {
+    name: 'crossOrigin',
+    arb: withNullish(fc.constantFrom('"anonymous"', '"use-credentials"')),
+    disposition: 'request headers',
+  },
   {
     name: 'referrerPolicy',
-    arb: fc.constantFrom('"origin"', '"no-referrer"', '"same-origin"'),
+    arb: withNullish(fc.constantFrom('"origin"', '"no-referrer"', '"same-origin"')),
     disposition: 'request headers',
   },
   { name: 'alt', arb: withNullish(str), disposition: 'translate → accessibilityLabel + accessible' },
