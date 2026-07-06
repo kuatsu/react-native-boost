@@ -17,12 +17,12 @@
   },
   "packageManager": "pnpm@10.28.2",
   "devDependencies": {
-    "@commitlint/cli": "^21.1.0",
-    "@commitlint/config-conventional": "^21.1.0",
+    "@commitlint/cli": "^21.2.0",
+    "@commitlint/config-conventional": "^21.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "oxfmt": "^0.56.0",
-    "oxlint": "^1.71.0",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
     "typescript": "~5.9.3"
   }
 }
