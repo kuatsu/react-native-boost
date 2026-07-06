@@ -330,12 +330,16 @@ function processProps(
   // `passStyleByIdentity` (Unistyles routing) skips all style transforms — the original `style`
   // attribute is left untouched in the collected attributes below so it reaches the native host intact.
   if (styleExpr && !passStyleByIdentity) {
-    const selectableValue = extractSelectableAndUpdateStyle(styleExpr);
+    const selectable = extractSelectableAndUpdateStyle(styleExpr);
 
-    if (selectableValue != null) {
+    if (selectable) {
       selectableAttribute = t.jsxAttribute(
         t.jsxIdentifier('selectable'),
-        t.jsxExpressionContainer(t.booleanLiteral(selectableValue))
+        t.jsxExpressionContainer(
+          selectable.value === undefined
+            ? t.unaryExpression('void', t.numericLiteral(0))
+            : t.booleanLiteral(selectable.value)
+        )
       );
     }
 

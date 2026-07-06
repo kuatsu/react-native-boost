@@ -37,6 +37,7 @@ const TEXT_CASES = [
   '<Text aria-hidden={false}>hello</Text>',
   '<Text aria-hidden accessibilityElementsHidden={false}>hello</Text>',
   '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the build-time style
+  '<Text style={null} adjustsFontSizeToFit={false}>hello</Text>',
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
   // `selectionColor` runs through `processColor` (a non-identity mock packs "red" → an int), so both
   // sides must emit the packed value — proving Boost calls processColor, not a raw forward.
@@ -46,6 +47,7 @@ const TEXT_CASES = [
   '<Text style={{ fontWeight: 700 }}>hello</Text>', // numeric fontWeight → string
   '<Text style={{ verticalAlign: "middle" }}>hello</Text>', // verticalAlign → textAlignVertical
   '<Text style={{ userSelect: "none", color: "red" }}>hello</Text>', // userSelect → selectable
+  '<Text style={{ userSelect: "xyz", fontWeight: 400 }} selectable={true}>hello</Text>',
   '<Text style={[{ color: "red" }, { fontSize: 16 }]}>hello</Text>', // array merged (last wins)
   // `id` → `nativeID` build-time rename; `id` wins over an explicit `nativeID`.
   '<Text id="x">hello</Text>',
@@ -112,6 +114,28 @@ describe('differential parity', () => {
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it('Text: mixed dynamic style preserves userSelect flatten order', async () => {
+      const jsx = '<Text style={[dynamicStyle, { userSelect: "text" }]} selectable={true}>hello</Text>';
+      const preamble = 'const dynamicStyle = { userSelect: "none" };';
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Text mixed style case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it('Text: invalid userSelect clobbers selectable with shadowed undefined', async () => {
+      const jsx = '<Text style={{ userSelect: "xyz" }} selectable={true}>hello</Text>';
+      const preamble = 'const undefined = true;';
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Text shadowed undefined case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
