@@ -1,0 +1,42 @@
+name: Fuzz (nightly discovery)
+on:
+  schedule:
+    - cron: '43 3 * * *'
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Number of discovery samples
+        default: '50000'
+      seed:
+        description: fast-check seed (defaults to the run id)
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run parity fuzz discovery
+        working-directory: packages/react-native-boost
+        shell: bash
+        env:
+          FUZZ_DISCOVER: '1'
+          FUZZ_DISCOVER_SAMPLES: ${{ inputs.samples || '50000' }}
+          FUZZ_SEED: ${{ inputs.seed || github.run_id }}
+        run: pnpm vitest run --config src/plugin/__tests__/parity/vitest.config.parity.mts fuzz 2>&1 | tee fuzz-census.txt
+
+      - name: Upload census
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-census
+          path: packages/react-native-boost/fuzz-census.txt

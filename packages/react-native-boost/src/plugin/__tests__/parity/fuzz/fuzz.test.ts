@@ -140,8 +140,9 @@ describe.skipIf(DISCOVER).each(['ios', 'android'] as const)('disabled reconcilia
   });
 });
 
-// ── Discovery enumerator (local; FUZZ_DISCOVER=1). Catalogs every distinct divergence class over a
-// large sample instead of failing fast, so the Phase-2 backlog can be sized up front. ──────
+// ── Discovery enumerator (FUZZ_DISCOVER=1; run nightly by fuzz.yml with a fresh seed per run). Unlike
+// the fail-fast gating property, this catalogs every distinct divergence class over a large sample
+// before failing, so one long-lived divergence cannot shadow newer ones behind it. ──────
 describe.runIf(DISCOVER)('parity fuzzing — discovery', () => {
   it(
     `enumerate divergence classes (seed=${SEED}, samples=${DISCOVER_SAMPLES})`,
@@ -183,9 +184,13 @@ describe.runIf(DISCOVER)('parity fuzzing — discovery', () => {
       const ranked = [...classes.entries()].sort((a, b) => b[1].count - a[1].count);
       const lines = ranked.map(([key, { count, example }]) => `\n### ${count}× ${key}\n${example}`);
       console.log(
-        `\n[discovery] samples=${samples.length} optimized=${optimized} skipped=${skipped} ` +
+        `\n[discovery] seed=${SEED} samples=${samples.length} optimized=${optimized} skipped=${skipped} ` +
           `harnessErrors=${harnessErrors} divergenceClasses=${ranked.length}\n${lines.join('\n')}`
       );
+
+      // Fail on ANY class, including known-but-unfixed ones — a red nightly is the intended signal,
+      // not noise to allowlist. The full census above is always printed first.
+      expect(ranked.map(([key, { count }]) => `${count}× ${key}`)).toEqual([]);
     },
     Math.max(60_000, DISCOVER_SAMPLES * 80)
   );
