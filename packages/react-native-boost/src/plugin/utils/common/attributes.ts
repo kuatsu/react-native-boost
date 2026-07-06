@@ -428,23 +428,35 @@ const removeUserSelectProperties = (objectExpr: t.ObjectExpression) => {
  */
 export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): SelectableExtraction | undefined {
   const candidates: Array<{ object: t.ObjectExpression; value: t.Expression }> = [];
+  let hasUnresolvedStylePart = false;
+
   const collect = (objectExpr: t.ObjectExpression) => {
     for (const property of objectExpr.properties) {
-      if (t.isObjectProperty(property) && isUserSelectProperty(property) && t.isExpression(property.value)) {
+      if (!t.isObjectProperty(property) || property.computed) {
+        hasUnresolvedStylePart = true;
+        continue;
+      }
+      if (isUserSelectProperty(property) && t.isExpression(property.value)) {
         candidates.push({ object: objectExpr, value: property.value });
       }
     }
   };
 
-  if (t.isObjectExpression(styleExpr)) {
-    collect(styleExpr);
-  } else if (t.isArrayExpression(styleExpr)) {
-    for (const element of styleExpr.elements) {
-      if (element && t.isObjectExpression(element)) collect(element);
+  const visitStyle = (expr: t.Expression | t.SpreadElement | null) => {
+    if (expr == null) return;
+    if (t.isObjectExpression(expr)) {
+      collect(expr);
+      return;
     }
-  } else {
-    return undefined;
-  }
+    if (t.isArrayExpression(expr)) {
+      for (const element of expr.elements) visitStyle(element);
+      return;
+    }
+    if (!isSkippableFalsyElement(expr)) hasUnresolvedStylePart = true;
+  };
+
+  visitStyle(styleExpr);
+  if (hasUnresolvedStylePart) return undefined;
 
   const last = candidates.at(-1);
   if (!last || isNullishExpression(last.value) || !canResolveUserSelect(last.value)) return undefined;

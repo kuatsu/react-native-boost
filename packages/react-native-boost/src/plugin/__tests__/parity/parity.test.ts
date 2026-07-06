@@ -117,6 +117,28 @@ describe('differential parity', () => {
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
+    it('Text: mixed dynamic style preserves userSelect flatten order', async () => {
+      const jsx = '<Text style={[dynamicStyle, { userSelect: "text" }]} selectable={true}>hello</Text>';
+      const preamble = 'const dynamicStyle = { userSelect: "none" };';
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Text mixed style case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it('Text: invalid userSelect clobbers selectable with shadowed undefined', async () => {
+      const jsx = '<Text style={{ userSelect: "xyz" }} selectable={true}>hello</Text>';
+      const preamble = 'const undefined = true;';
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Text shadowed undefined case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
     it.each(VIEW_CASES)('View: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
       expect(boost.optimized).toBe(!BAILED_VIEW_CASES.has(jsx));

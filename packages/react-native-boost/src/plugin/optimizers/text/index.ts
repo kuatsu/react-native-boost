@@ -336,7 +336,9 @@ function processProps(
       selectableAttribute = t.jsxAttribute(
         t.jsxIdentifier('selectable'),
         t.jsxExpressionContainer(
-          selectable.value === undefined ? t.identifier('undefined') : t.booleanLiteral(selectable.value)
+          selectable.value === undefined
+            ? t.unaryExpression('void', t.numericLiteral(0))
+            : t.booleanLiteral(selectable.value)
         )
       );
     }
