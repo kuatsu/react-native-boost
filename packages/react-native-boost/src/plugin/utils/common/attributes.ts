@@ -401,59 +401,59 @@ export function extractSelectionColor(attributes: Array<t.JSXAttribute | t.JSXSp
   return {};
 }
 
+type SelectableExtraction = { value: boolean | undefined };
+
+const isUserSelectProperty = (property: t.ObjectProperty): boolean =>
+  t.isIdentifier(property.key, { name: 'userSelect' }) ||
+  (t.isStringLiteral(property.key) && property.key.value === 'userSelect');
+
+const isNullishExpression = (expression: t.Expression): boolean =>
+  t.isNullLiteral(expression) || t.isIdentifier(expression, { name: 'undefined' });
+
+const canResolveUserSelect = (expression: t.Expression): boolean =>
+  t.isStringLiteral(expression) || t.isNumericLiteral(expression) || t.isBooleanLiteral(expression);
+
+const removeUserSelectProperties = (objectExpr: t.ObjectExpression) => {
+  objectExpr.properties = objectExpr.properties.filter(
+    (property) => !t.isObjectProperty(property) || !isUserSelectProperty(property)
+  );
+};
+
 /**
- * Attempts to statically extract the `userSelect` style property from a style expression.
+ * Attempts to statically extract the final flattened `userSelect` style value from a style expression.
  *
- * If the `userSelect` value can be resolved at compile-time, the property is removed from the
- * object literal (or array element) and its mapped boolean value for the native `selectable`
- * prop is returned. When the value is unknown or the expression is not statically analysable,
- * `undefined` is returned and no modification is made.
+ * A non-null `userSelect` always overrides the direct `selectable` prop in RN, even when the value is
+ * unknown to RN's map and therefore resolves to `undefined`. Dynamic/nullish values are left for the
+ * runtime helper so it can preserve RN's `processedStyle.userSelect != null` check.
  */
-function extractSelectableFromObjectExpression(objectExpr: t.ObjectExpression): boolean | undefined {
-  let selectableValue: boolean | undefined;
-
-  objectExpr.properties = objectExpr.properties.filter((property) => {
-    if (
-      !t.isObjectProperty(property) ||
-      (!t.isIdentifier(property.key, { name: 'userSelect' }) &&
-        !(t.isStringLiteral(property.key) && property.key.value === 'userSelect'))
-    ) {
-      return true; // keep property
-    }
-
-    if (t.isStringLiteral(property.value)) {
-      const mapped = USER_SELECT_STYLE_TO_SELECTABLE_PROP[property.value.value];
-      if (mapped !== undefined) {
-        selectableValue = mapped;
+export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): SelectableExtraction | undefined {
+  const candidates: Array<{ object: t.ObjectExpression; value: t.Expression }> = [];
+  const collect = (objectExpr: t.ObjectExpression) => {
+    for (const property of objectExpr.properties) {
+      if (t.isObjectProperty(property) && isUserSelectProperty(property) && t.isExpression(property.value)) {
+        candidates.push({ object: objectExpr, value: property.value });
       }
     }
+  };
 
-    // Remove the `userSelect` property
-    return false;
-  });
-
-  return selectableValue;
-}
-
-export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): boolean | undefined {
   if (t.isObjectExpression(styleExpr)) {
-    return extractSelectableFromObjectExpression(styleExpr);
-  }
-
-  if (t.isArrayExpression(styleExpr)) {
-    let selectableValue: boolean | undefined;
+    collect(styleExpr);
+  } else if (t.isArrayExpression(styleExpr)) {
     for (const element of styleExpr.elements) {
-      if (element && t.isObjectExpression(element)) {
-        const value = extractSelectableFromObjectExpression(element);
-        if (value !== undefined) {
-          selectableValue = value; // prefer last defined value
-        }
-      }
+      if (element && t.isObjectExpression(element)) collect(element);
     }
-    return selectableValue;
+  } else {
+    return undefined;
   }
 
-  return undefined; // not statically analysable
+  const last = candidates.at(-1);
+  if (!last || isNullishExpression(last.value) || !canResolveUserSelect(last.value)) return undefined;
+
+  for (const { object } of candidates) removeUserSelectProperties(object);
+
+  return {
+    value: t.isStringLiteral(last.value) ? USER_SELECT_STYLE_TO_SELECTABLE_PROP[last.value.value] : undefined,
+  };
 }
 
 /**

@@ -25,5 +25,13 @@ export const flattenStyle = (style: unknown): unknown => {
  * before the clean matters: a trailing `{ key: undefined }` array entry must apply as a last-wins
  * override (then get dropped here) rather than being dropped inside its own element first.
  */
-export const normalize = (props: Record<string, unknown>) =>
-  JSON.parse(JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props));
+export const normalize = (props: Record<string, unknown>) => {
+  const normalized = JSON.parse(
+    JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props)
+  );
+
+  // benign: native flattening treats a null style like an absent style.
+  if (normalized.style === null) delete normalized.style;
+
+  return normalized;
+};
