@@ -122,7 +122,11 @@ export const textOptimizer: Optimizer = (path, logger, options, platform, unisty
       reason: 'contains non-primitive children',
       shouldBail: () => hasInvalidChildren(path, parent),
     },
-    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeTextWithUnknownAncestors === true),
+    ...ancestorBailoutChecks(
+      path,
+      options?.dangerouslyOptimizeTextWithUnknownAncestors === true,
+      options?.transparentWrappers
+    ),
   ];
 
   if (forced) {

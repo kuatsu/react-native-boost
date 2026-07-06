@@ -32,6 +32,32 @@ pluginTester({
   ],
 });
 
+// With HStack registered as a 'view' transparent wrapper, the View under it optimizes; the View under
+// Body (a 'text' wrapper) and the one under the unregistered Card keep bailing. The default fixtures
+// run above pins the negative: without the registry, all three bail as 'unknown'.
+pluginTester({
+  plugin: generateTestPlugin(viewOptimizer, {
+    transparentWrappers: [
+      {
+        module: '@beedeez/front-common-design-system',
+        components: { HStack: 'view', VStack: 'view', Body: 'text' },
+      },
+    ],
+  }),
+  title: 'view transparent wrappers',
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+  tests: [
+    {
+      title: 'optimizes View under a registered view wrapper only',
+      fixture: path.resolve(import.meta.dirname, 'fixtures/transparent-ds-ancestor/code.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/transparent-ds-ancestor/transparent-output.js'),
+    },
+  ],
+});
+
 pluginTester({
   plugin: generateTestPlugin(viewOptimizer, { unistyles: true }),
   title: 'view unistyles',

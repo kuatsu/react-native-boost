@@ -1,6 +1,6 @@
 import { NodePath, types as t } from '@babel/core';
 import { ensureArray, BailoutCheck } from '../helpers';
-import { HubFile } from '../../types';
+import { HubFile, TransparentWrapperEntry, TransparentWrapperHost } from '../../types';
 import { minimatch } from 'minimatch';
 import nodePath from 'node:path';
 import PluginError from '../plugin-error';
@@ -192,13 +192,18 @@ type AncestorAnalysisContext = {
   componentCache: WeakMap<t.Node, AncestorClassification>;
   componentInProgress: WeakSet<t.Node>;
   renderExpressionInProgress: WeakSet<t.Node>;
+  transparentWrappers: TransparentWrapperEntry[];
 };
 
-export const getAncestorClassification = (path: NodePath<t.JSXOpeningElement>): AncestorClassification => {
+export const getAncestorClassification = (
+  path: NodePath<t.JSXOpeningElement>,
+  transparentWrappers: TransparentWrapperEntry[] = []
+): AncestorClassification => {
   const context: AncestorAnalysisContext = {
     componentCache: new WeakMap<t.Node, AncestorClassification>(),
     componentInProgress: new WeakSet<t.Node>(),
     renderExpressionInProgress: new WeakSet<t.Node>(),
+    transparentWrappers,
   };
 
   let classification: AncestorClassification = 'safe';
@@ -229,10 +234,11 @@ export const getAncestorClassification = (path: NodePath<t.JSXOpeningElement>): 
  */
 export const ancestorBailoutChecks = (
   path: NodePath<t.JSXOpeningElement>,
-  dangerousOptimizationEnabled: boolean
+  dangerousOptimizationEnabled: boolean,
+  transparentWrappers: TransparentWrapperEntry[] = []
 ): BailoutCheck[] => {
   let classification: AncestorClassification | undefined;
-  const classify = () => (classification ??= getAncestorClassification(path));
+  const classify = () => (classification ??= getAncestorClassification(path, transparentWrappers));
 
   return [
     {
@@ -311,13 +317,16 @@ function classifyJSXMemberExpressionAsAncestor(
 
 function classifyBindingAsAncestor(binding: ScopeBinding, context: AncestorAnalysisContext): AncestorClassification {
   if (binding.kind === 'module') {
-    return classifyModuleBindingAsAncestor(binding);
+    return classifyModuleBindingAsAncestor(binding, context);
   }
 
   return classifyLocalBindingAsAncestor(binding, context);
 }
 
-function classifyModuleBindingAsAncestor(binding: ScopeBinding): AncestorClassification {
+function classifyModuleBindingAsAncestor(
+  binding: ScopeBinding,
+  context: AncestorAnalysisContext
+): AncestorClassification {
   const importDeclaration = binding.path.parent;
   if (!t.isImportDeclaration(importDeclaration)) return 'unknown';
 
@@ -349,7 +358,37 @@ function classifyModuleBindingAsAncestor(binding: ScopeBinding): AncestorClassif
     if (importedName === 'Fragment') return 'safe';
   }
 
+  // A component the user registered as a transparent passthrough wrapper classifies by the host it
+  // declares — 'view' establishes a normal context like a real View, 'text' an inline-text context
+  // like a real Text. Matched on the *imported* name (alias-proof), named imports only.
+  if (t.isImportSpecifier(binding.path.node)) {
+    const importedName = getImportSpecifierImportedName(binding.path.node);
+    if (importedName) {
+      const transparentHost = resolveTransparentWrapper(source, importedName, context.transparentWrappers);
+      if (transparentHost === 'view') return 'safe';
+      if (transparentHost === 'text') return 'text';
+    }
+  }
+
   return 'unknown';
+}
+
+/**
+ * Looks up an imported component in the user-registered transparent wrapper entries. Returns the host
+ * kind the wrapper renders to, or `undefined` when the (module, export) pair is not registered.
+ */
+function resolveTransparentWrapper(
+  source: string,
+  importedName: string,
+  entries: TransparentWrapperEntry[]
+): TransparentWrapperHost | undefined {
+  for (const entry of entries) {
+    if (entry.module !== source) continue;
+    const host = entry.components[importedName];
+    if (host) return host;
+  }
+
+  return undefined;
 }
 
 /**

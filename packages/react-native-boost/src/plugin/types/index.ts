@@ -13,6 +13,22 @@ export interface PluginOptimizationOptions {
   view?: boolean;
 }
 
+/**
+ * The host kind a transparent wrapper renders to: `'view'` classifies like a React Native `View`
+ * ancestor (normal context), `'text'` like a `Text` ancestor (inline-text context).
+ */
+export type TransparentWrapperHost = 'view' | 'text';
+
+/**
+ * Declares components from one module as transparent passthrough wrappers for ancestor classification.
+ */
+export interface TransparentWrapperEntry {
+  /** npm module specifier the components are imported from, e.g. `'@acme/design-system'`. */
+  module: string;
+  /** Exported name → host kind the wrapper renders to. */
+  components: Record<string, TransparentWrapperHost>;
+}
+
 export interface PluginOptions {
   /**
    * Paths to ignore from optimization.
@@ -79,6 +95,20 @@ export interface PluginOptions {
    * @default false
    */
   dangerouslyOptimizeTextWithUnknownAncestors?: boolean;
+  /**
+   * Treats the listed design-system components as transparent passthrough wrappers during ancestor
+   * classification, instead of bailing on them as `'unknown'` imports.
+   *
+   * A wrapper registered as `'view'` classifies like a React Native `View` ancestor (normal context,
+   * descendants may optimize); one registered as `'text'` classifies like a `Text` ancestor
+   * (inline-text context, descendants bail as they would under a real `Text`).
+   *
+   * Only register a component that renders its children directly into the declared host without
+   * introducing a React Native `Text` wrapper the classification cannot see — a wrong registration
+   * reintroduces exactly the wrong-host risk the ancestor analysis exists to prevent.
+   * @default []
+   */
+  transparentWrappers?: TransparentWrapperEntry[];
 }
 
 export type OptimizableComponent = 'Text' | 'View';
