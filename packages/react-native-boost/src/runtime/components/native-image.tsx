@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports,unicorn/prefer-module */
 
 import type { ComponentType } from 'react';
+import { createElement } from 'react';
 import type { ImageProps } from 'react-native';
 import * as reactNativeModule from 'react-native';
 
@@ -13,6 +14,11 @@ type ReactNativeImageModule = {
 
 type NativeImageModule = {
   default?: ComponentType<ImageProps>;
+};
+
+type FallbackImageProps = Omit<ImageProps, 'src'> & {
+  headers?: unknown;
+  src?: unknown;
 };
 
 const reactNative = reactNativeModule as ReactNativeImageModule;
@@ -28,10 +34,17 @@ export function resolveNativeImageComponent(
   if (reactNativeModule.Platform.OS === 'web') return reactNativeModule.Image;
 
   try {
-    return loadNativeComponent().default ?? reactNativeModule.Image;
+    return loadNativeComponent().default ?? createFallbackImageComponent(reactNativeModule.Image);
   } catch {
-    return reactNativeModule.Image;
+    return createFallbackImageComponent(reactNativeModule.Image);
   }
+}
+
+function createFallbackImageComponent(ImageComponent: ComponentType<ImageProps>): ComponentType<ImageProps> {
+  const FallbackImage = ({ headers: _headers, src: _src, ...props }: FallbackImageProps) =>
+    createElement(ImageComponent, props);
+
+  return FallbackImage as ComponentType<ImageProps>;
 }
 
 /**

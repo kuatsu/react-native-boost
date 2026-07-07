@@ -1,20 +1,31 @@
 import path from 'node:path';
-import { parseSync, transformSync, traverse, types as t, type PluginObj } from '@babel/core';
+import { parseSync, transformSync, traverse, types as t, type PluginObj, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
 import { describe, expect, it } from 'vitest';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
 import { createLogger } from '../../../utils/logger';
 import type { TargetPlatform } from '../../../types';
+import boostPlugin from '../../../index';
 import { imageOptimizer } from '..';
 
-const transformImage = async (source: string, platform: TargetPlatform): Promise<string> => {
+const transformImage = async (
+  source: string,
+  platform: TargetPlatform,
+  {
+    dangerouslyOptimizeImageWithUnknownAncestors = false,
+    unistylesEnabled = false,
+  }: {
+    dangerouslyOptimizeImageWithUnknownAncestors?: boolean;
+    unistylesEnabled?: boolean;
+  } = {}
+): Promise<string> => {
   const logger = createLogger({ silent: true, verbose: false });
   const plugin = (): PluginObj => ({
     name: `${platform}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
-        imageOptimizer(path, logger, {}, platform);
+        imageOptimizer(path, logger, { dangerouslyOptimizeImageWithUnknownAncestors }, platform, unistylesEnabled);
       },
     },
   });
@@ -90,6 +101,51 @@ pluginTester({
     plugins: ['@babel/plugin-syntax-jsx'],
   },
   formatResult: formatTestResult,
+});
+
+pluginTester({
+  plugin: generateTestPlugin(imageOptimizer, { dangerouslyOptimizeImageWithUnknownAncestors: true }, 'ios'),
+  title: 'image dangerous unknown ancestors',
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+  tests: [
+    {
+      title: 'optimizes Image inside unresolved ancestor when enabled',
+      fixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/code.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/dangerous-output.js'),
+    },
+  ],
+});
+
+describe('image plugin option', () => {
+  it('keeps Image optimization opt-in in the full plugin', async () => {
+    const source = `
+      import { Image } from 'react-native';
+      <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+    `;
+
+    const defaultOutput = await formatTestResult(
+      transformSync(source, {
+        configFile: false,
+        babelrc: false,
+        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
+        plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { silent: true }]],
+      })!.code!
+    );
+    const enabledOutput = await formatTestResult(
+      transformSync(source, {
+        configFile: false,
+        babelrc: false,
+        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
+        plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { silent: true, optimizations: { image: true } }]],
+      })!.code!
+    );
+
+    expect(defaultOutput).not.toContain('NativeImage');
+    expect(enabledOutput).toContain('NativeImage');
+  });
 });
 
 describe('image android output', () => {
@@ -180,6 +236,36 @@ describe('image android output', () => {
     expect(t.isObjectExpression(arraySourceHeaders)).toBe(true);
     expect(getStringPropertyValue(objectSourceHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer object');
     expect(getStringPropertyValue(arraySourceHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer first');
+  });
+
+  it('does not hoist style tintColor on Android', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          <Image source={{ uri: 'logo.png', width: 16, height: 16 }} style={{ tintColor: 'red' }} />;
+        `,
+      'android'
+    );
+
+    const images = getNativeImageAttributes(output);
+    expect(images).toHaveLength(1);
+    expect(getAttributeNames(images[0]!).has('tintColor')).toBe(false);
+  });
+});
+
+describe('image unistyles', () => {
+  it('bails in Unistyles mode because there is no lean Image host', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).not.toContain('NativeImage');
+    expect(output).toContain('<Image');
   });
 });
 

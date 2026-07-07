@@ -56,6 +56,9 @@ export const normalizeImage = (props: Record<string, unknown>) => {
     if (normalized[key] === null) delete normalized[key];
   }
 
+  // benign: native treats a null Image label like an absent label.
+  if (normalized.accessibilityLabel === null) delete normalized.accessibilityLabel;
+
   if (normalized.shouldNotifyLoadEvents === false) delete normalized.shouldNotifyLoadEvents;
   if (normalized.headers && typeof normalized.headers === 'object' && Object.keys(normalized.headers).length === 0) {
     delete normalized.headers;

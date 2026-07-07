@@ -32,7 +32,7 @@ function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): str
     filename: 'boost-case.jsx',
     caller: { name: 'metro', platform: os } as TransformCaller,
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
-    plugins: [[boostPlugin, { silent: true }]],
+    plugins: [[boostPlugin, { silent: true, optimizations: { image: true } }]],
   });
   return out!.code!;
 }

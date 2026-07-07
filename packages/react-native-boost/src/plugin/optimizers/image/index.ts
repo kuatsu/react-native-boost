@@ -12,6 +12,7 @@ import {
   isReactNativeImport,
   isStaticLiteralTree,
   isValidJSXComponent,
+  makeAttribute,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
 } from '../../utils/common';
@@ -81,7 +82,7 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-export const imageOptimizer: Optimizer = (path, logger, options, platform) => {
+export const imageOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
   if (platform === 'web') return;
   if (!isValidJSXComponent(path, 'Image')) return;
   if (!isReactNativeImport(path, 'Image')) return;
@@ -93,6 +94,10 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform) => {
     {
       reason: 'target platform is unknown',
       shouldBail: () => platform !== 'ios' && platform !== 'android',
+    },
+    {
+      reason: 'Image optimization is not supported in Unistyles mode',
+      shouldBail: () => unistylesEnabled === true,
     },
     {
       reason: 'contains unsupported Image props',
@@ -612,7 +617,9 @@ function buildTintColor(
   styleTintColor: t.Expression | undefined,
   platform?: string
 ): t.Expression | undefined {
-  if (platform === 'android' && explicit) return t.cloneNode(explicit, true);
+  if (platform === 'android') {
+    return explicit && !t.isIdentifier(explicit, { name: 'undefined' }) ? t.cloneNode(explicit, true) : undefined;
+  }
   if (!explicit) return styleTintColor ? t.cloneNode(styleTintColor, true) : undefined;
   if (isNullishExpression(explicit)) return styleTintColor ? t.cloneNode(styleTintColor, true) : undefined;
   if (isStaticNonNullishExpression(explicit)) return t.cloneNode(explicit, true);
@@ -660,8 +667,4 @@ function getAttributeValueExpression(attribute: t.JSXAttribute): t.Expression {
     return t.isJSXEmptyExpression(attribute.value.expression) ? t.booleanLiteral(true) : attribute.value.expression;
   }
   return t.nullLiteral();
-}
-
-function makeAttribute(name: string, value: t.Expression): t.JSXAttribute {
-  return t.jsxAttribute(t.jsxIdentifier(name), t.isStringLiteral(value) ? value : t.jsxExpressionContainer(value));
 }

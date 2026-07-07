@@ -13,7 +13,10 @@ export interface PluginOptimizationOptions {
   view?: boolean;
   /**
    * Whether to optimize the `Image` component.
-   * @default true
+   *
+   * Uses React Native's internal Image host path and may print React Native deep-import deprecation
+   * warnings, so it is opt-in for now.
+   * @default false
    */
   image?: boolean;
 }
@@ -45,7 +48,7 @@ export interface PluginOptions {
   /**
    * Toggle individual optimizers.
    *
-   * If omitted, all available optimizers are enabled.
+   * If omitted, `Text` and `View` are enabled and `Image` stays disabled.
    */
   optimizations?: PluginOptimizationOptions;
   /**

@@ -103,9 +103,10 @@ export function processSelectionColor(selectionColor?: ColorValue | number | nul
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ImageSourceHelperProps = Record<string, any>;
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getImageSourcesFromProps(props: ImageSourceHelperProps): any {
+type ImageSource = Record<string, any>;
+
+function getImageSourcesFromProps(props: ImageSourceHelperProps): ImageSource | ImageSource[] | undefined {
   const source = resolveImageAssetSource(props.source);
   const headers: Record<string, string> = {};
 
@@ -136,7 +137,7 @@ function getImageSourcesFromProps(props: ImageSourceHelperProps): any {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processImageSourceProps(props: ImageSourceHelperProps): Record<string, any> {
-  const source = getImageSourcesFromProps(props) || emptyImageSource;
+  const source = (getImageSourcesFromProps(props) || emptyImageSource) as ImageSource | ImageSource[];
   let style;
   let sources;
   let headers;

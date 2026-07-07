@@ -30,6 +30,12 @@ module.exports = {
 };
 ```
 
+`Image` optimization is currently opt-in because it depends on React Native's internal Image host export path. Enable it explicitly when you want to test it:
+
+```js
+['react-native-boost/plugin', { optimizations: { image: true } }];
+```
+
 ## Plugin Options
 
 <AutoOptionSections path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" idPrefix="plugin-options" />

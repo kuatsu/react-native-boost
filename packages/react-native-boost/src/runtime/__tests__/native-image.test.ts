@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 import type { ImageProps } from 'react-native';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,6 +6,10 @@ const reactNativeImage = (() => null) as ComponentType<ImageProps>;
 const nativeHost = (() => null) as ComponentType<ImageProps>;
 
 type LoadNativeComponent = () => { default?: ComponentType<ImageProps> };
+type OptimizedImageProps = Omit<ImageProps, 'src'> & {
+  headers?: unknown;
+  src?: unknown;
+};
 
 async function importNativeImage({
   os,
@@ -24,13 +28,12 @@ async function importNativeImage({
     return { default: nativeHost };
   });
 
-  return import('./native-image');
+  return import('../components/native-image');
 }
 
 afterEach(() => {
   vi.doUnmock('react-native');
   vi.doUnmock('react-native/Libraries/Image/ImageViewNativeComponent');
-  vi.unstubAllGlobals();
   vi.resetModules();
 });
 
@@ -48,7 +51,7 @@ describe('NativeImage', () => {
     expect(NativeImage).toBe(nativeHost);
   });
 
-  it('falls back to React Native Image when the internal host cannot be loaded', async () => {
+  it('falls back to React Native Image and strips Android-only synthesized props', async () => {
     const { NativeImage } = await importNativeImage({
       os: 'android',
       loadNativeComponent: vi.fn(() => {
@@ -56,7 +59,19 @@ describe('NativeImage', () => {
       }),
     });
 
-    expect(NativeImage).toBe(reactNativeImage);
+    const source = [{ uri: 'logo.png' }];
+    const element = (NativeImage as (props: OptimizedImageProps) => ReactElement<Record<string, unknown>>)({
+      headers: { Authorization: 'Bearer object' },
+      resizeMode: 'cover',
+      source,
+      src: source,
+    });
+
+    expect(element.type).toBe(reactNativeImage);
+    expect(element.props).toEqual({
+      resizeMode: 'cover',
+      source,
+    });
   });
 
   it('uses React Native Image on web without loading the internal host', async () => {

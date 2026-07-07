@@ -14,6 +14,7 @@ import {
   replaceWithNativeComponent,
   ancestorBailoutChecks,
   createStyleOriginResolver,
+  makeAttribute,
   UNISTYLES_VIEW_HOST,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
@@ -294,12 +295,4 @@ function getAttributeValueExpression(attribute: t.JSXAttribute): t.Expression {
     return t.isJSXEmptyExpression(attribute.value.expression) ? t.booleanLiteral(true) : attribute.value.expression;
   }
   return t.nullLiteral();
-}
-
-/**
- * Builds a JSX attribute, emitting a string literal directly as the value (`name="x"`) and wrapping
- * any other expression in a container (`name={expr}`).
- */
-function makeAttribute(name: string, value: t.Expression): t.JSXAttribute {
-  return t.jsxAttribute(t.jsxIdentifier(name), t.isStringLiteral(value) ? value : t.jsxExpressionContainer(value));
 }

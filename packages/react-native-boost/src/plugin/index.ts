@@ -50,7 +50,7 @@ export default declare((api, rawOptions, dirname?: string) => {
         if (isIgnoredFile(path, options.ignores ?? [])) return;
         if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform, unistylesEnabled);
         if (options.optimizations?.view !== false) viewOptimizer(path, logger, options, platform, unistylesEnabled);
-        if (options.optimizations?.image !== false) imageOptimizer(path, logger, options, platform, unistylesEnabled);
+        if (options.optimizations?.image === true) imageOptimizer(path, logger, options, platform, unistylesEnabled);
       },
     },
   };
