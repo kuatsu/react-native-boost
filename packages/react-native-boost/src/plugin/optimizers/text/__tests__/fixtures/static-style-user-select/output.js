@@ -4,11 +4,11 @@ import {
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  selectable={false}
   style={{
     color: 'red',
   }}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  selectable={false}
   accessible={_getDefaultTextAccessible()}
 />;
