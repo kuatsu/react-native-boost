@@ -11,7 +11,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 | --- | --- | --- |
 | `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
-| `Image` | Opted in with `optimizations.image: true`, imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `Image optimization is not supported in Unistyles mode`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+| `Image` | Opted in with `optimizations.image: true`, imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
 
@@ -137,5 +137,6 @@ Enable it with:
 ```
 
 The optimizer rewrites supported `Image` elements when the target platform is known (`ios` or `android`) and the
-source/style/accessibility props can be reproduced safely. It skips Image in Unistyles mode because Unistyles does not
-currently expose a lean Image host for shadow-tree registration.
+source/style/accessibility props can be reproduced safely.
+
+In Unistyles mode, an Image is only skipped when its `style` is (or may be) a Unistyles style.

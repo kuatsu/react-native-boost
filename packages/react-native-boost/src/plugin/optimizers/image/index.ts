@@ -15,6 +15,7 @@ import {
   makeAttribute,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
+  createStyleOriginResolver,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 
@@ -90,14 +91,21 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
 
+  // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a
+  // resolvable spread already bails (`style` is in {@link IMAGE_SPREAD_GUARD_PROPS}), as does an
+  // unresolvable spread. See {@link classifyStyleOrigin}.
+  const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
+
   const hardChecks: BailoutCheck[] = [
     {
       reason: 'target platform is unknown',
       shouldBail: () => platform !== 'ios' && platform !== 'android',
     },
     {
-      reason: 'Image optimization is not supported in Unistyles mode',
-      shouldBail: () => unistylesEnabled === true,
+      // Unlike Text/View, a provably Unistyles-styled Image cannot be routed: Unistyles ships no lean
+      // Image host, so optimizing it would drop the shadow-tree registration and freeze theme updates.
+      reason: 'has a Unistyles style and there is no lean Image host to route to',
+      shouldBail: () => getStyleOrigin() === 'unistyles',
     },
     {
       reason: 'contains unsupported Image props',
@@ -118,6 +126,10 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
   ];
 
   const overridableChecks: BailoutCheck[] = [
+    {
+      reason: 'has an unresolved style source that may be a Unistyles style',
+      shouldBail: () => getStyleOrigin() === 'unknown',
+    },
     ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeImageWithUnknownAncestors === true),
   ];
 

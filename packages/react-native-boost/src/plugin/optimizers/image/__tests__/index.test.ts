@@ -254,7 +254,72 @@ describe('image android output', () => {
 });
 
 describe('image unistyles', () => {
-  it('bails in Unistyles mode because there is no lean Image host', async () => {
+  it('bails on a Unistyles style because there is no lean Image host', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          import { StyleSheet } from 'react-native-unistyles';
+          const styles = StyleSheet.create({ image: { width: 16 } });
+          <Image source={{ uri: 'logo.png' }} style={styles.image} />;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).not.toContain('NativeImage');
+    expect(output).toContain('<Image');
+  });
+
+  it('does not lift the Unistyles style bail with @boost-force', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          import { StyleSheet } from 'react-native-unistyles';
+          const styles = StyleSheet.create({ image: { width: 16 } });
+          <>
+            {/* @boost-force */}
+            <Image source={{ uri: 'logo.png' }} style={styles.image} />
+          </>;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).not.toContain('NativeImage');
+    expect(output).toContain('<Image');
+  });
+
+  it('bails on an unresolved style source that may be a Unistyles style', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          <Image source={{ uri: 'logo.png' }} style={props.style} />;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).not.toContain('NativeImage');
+    expect(output).toContain('<Image');
+  });
+
+  it('lifts the unresolved style bail with @boost-force', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          <>
+            {/* @boost-force */}
+            <Image source={{ uri: 'logo.png' }} style={props.style} />
+          </>;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).toContain('NativeImage');
+  });
+
+  it('optimizes an Image without a style in Unistyles mode', async () => {
     const output = await transformImage(
       `
           import { Image } from 'react-native';
@@ -264,8 +329,34 @@ describe('image unistyles', () => {
       { unistylesEnabled: true }
     );
 
-    expect(output).not.toContain('NativeImage');
-    expect(output).toContain('<Image');
+    expect(output).toContain('NativeImage');
+  });
+
+  it('optimizes an Image with a plain literal style in Unistyles mode', async () => {
+    const output = await transformImage(
+      `
+          import { Image } from 'react-native';
+          <Image source={{ uri: 'logo.png' }} style={{ width: 16, height: 16 }} />;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).toContain('NativeImage');
+  });
+
+  it('optimizes an Image with a React Native StyleSheet style in Unistyles mode', async () => {
+    const output = await transformImage(
+      `
+          import { Image, StyleSheet } from 'react-native';
+          const styles = StyleSheet.create({ image: { width: 16 } });
+          <Image source={{ uri: 'logo.png' }} style={styles.image} />;
+        `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+
+    expect(output).toContain('NativeImage');
   });
 });
 
