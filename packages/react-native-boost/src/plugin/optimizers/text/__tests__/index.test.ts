@@ -42,6 +42,33 @@ pluginTester({
   })),
 });
 
+// With HStack registered as a 'view' transparent wrapper, the Text under it optimizes; the Text under
+// Body (a 'text' wrapper) bails exactly like under a real Text (it renders as inline virtual text), and
+// the one under the unregistered Card keeps bailing as 'unknown'. The default fixtures run above pins
+// the negative: without the registry, all three bail.
+pluginTester({
+  plugin: generateTestPlugin(textOptimizer, {
+    transparentWrappers: [
+      {
+        module: '@beedeez/front-common-design-system',
+        components: { HStack: 'view', VStack: 'view', Body: 'text' },
+      },
+    ],
+  }),
+  title: 'text transparent wrappers',
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+  tests: [
+    {
+      title: 'optimizes Text under a registered view wrapper only',
+      fixture: path.resolve(import.meta.dirname, 'fixtures/transparent-ds-ancestor/code.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/transparent-ds-ancestor/transparent-output.js'),
+    },
+  ],
+});
+
 pluginTester({
   plugin: generateTestPlugin(textOptimizer, { unistyles: true }),
   title: 'text unistyles',
