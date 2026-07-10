@@ -35,3 +35,49 @@ export const normalize = (props: Record<string, unknown>) => {
 
   return normalized;
 };
+
+export const normalizeImage = (props: Record<string, unknown>) => {
+  const normalized = normalize(props);
+
+  // These are wrapper-level Image inputs. The RN wrapper may still pass the authored prop through to
+  // the mock host while Boost translates it into native-facing props (`source`/`headers`/`style`/a11y).
+  // parity.test.ts asserts those translated outputs directly for the representative cases.
+  for (const key of [
+    'alt',
+    'aria-busy',
+    'aria-checked',
+    'aria-disabled',
+    'aria-expanded',
+    'aria-hidden',
+    'aria-label',
+    'aria-labelledby',
+    'aria-selected',
+    'crossOrigin',
+    'referrerPolicy',
+    'width',
+    'height',
+  ]) {
+    delete normalized[key];
+  }
+
+  for (const key of ['defaultSource', 'internal_analyticTag', 'loadingIndicatorSrc']) {
+    if (normalized[key] === null) delete normalized[key];
+  }
+
+  // benign: native treats a null Image label like an absent label.
+  if (normalized.accessibilityLabel === null) delete normalized.accessibilityLabel;
+
+  if (normalized.shouldNotifyLoadEvents === false) delete normalized.shouldNotifyLoadEvents;
+  if (normalized.headers && typeof normalized.headers === 'object' && Object.keys(normalized.headers).length === 0) {
+    delete normalized.headers;
+  }
+  if (
+    normalized.accessibilityState &&
+    typeof normalized.accessibilityState === 'object' &&
+    Object.keys(normalized.accessibilityState).length === 0
+  ) {
+    delete normalized.accessibilityState;
+  }
+
+  return normalized;
+};

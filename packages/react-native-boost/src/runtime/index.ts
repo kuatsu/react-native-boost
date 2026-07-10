@@ -1,15 +1,36 @@
-import { TextProps, TextStyle, StyleSheet, Platform, processColor as rnProcessColor } from 'react-native';
+import {
+  TextProps,
+  TextStyle,
+  StyleSheet,
+  Platform,
+  Image as RNImage,
+  processColor as rnProcessColor,
+} from 'react-native';
 import type { ColorValue, ProcessedColorValue } from 'react-native';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
 const propsCache = new WeakMap();
+const imageBaseStyle = { overflow: 'hidden' } as const;
+const emptyImageSource = { uri: undefined, width: undefined, height: undefined };
 
 // Resolve RN's `processColor` once. The `typeof` guard degrades to a passthrough on
 // a non-RN host that lacks it (see {@link processSelectionColor}); the web build never reaches this — it
 // uses the separate `index.web.ts` shim.
 const processColor: ((color?: ColorValue | number) => ProcessedColorValue | null | undefined) | undefined =
   typeof rnProcessColor === 'function' ? rnProcessColor : undefined;
+const resolveImageAssetSource =
+  typeof RNImage.resolveAssetSource === 'function'
+    ? RNImage.resolveAssetSource.bind(RNImage)
+    : <T>(source: T): T => source;
+
+const objectFitToResizeMode: Record<string, string> = {
+  'contain': 'contain',
+  'cover': 'cover',
+  'fill': 'stretch',
+  'none': 'none',
+  'scale-down': 'contain',
+};
 
 /**
  * Normalizes `Text` style values for `NativeText`.
@@ -78,6 +99,82 @@ export function processSelectionColor(selectionColor?: ColorValue | number | nul
   if (processColor === undefined) return { selectionColor };
   const processed = processColor(selectionColor);
   return processed === undefined ? {} : { selectionColor: processed };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ImageSourceHelperProps = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ImageSource = Record<string, any>;
+
+function getImageSourcesFromProps(props: ImageSourceHelperProps): ImageSource | ImageSource[] | undefined {
+  const source = resolveImageAssetSource(props.source);
+  const headers: Record<string, string> = {};
+
+  if (props.crossOrigin === 'use-credentials') {
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  }
+  if (props.referrerPolicy != null) {
+    headers['Referrer-Policy'] = props.referrerPolicy;
+  }
+
+  if (props.src != null) {
+    return [{ uri: props.src, headers, width: props.width, height: props.height }];
+  }
+  if (source != null && source.uri && Object.keys(headers).length > 0) {
+    return [{ ...source, headers }];
+  }
+  return source;
+}
+
+/**
+ * Normalizes dynamic `Image` source/style props for `NativeImage`.
+ *
+ * @remarks
+ * Static Image cases are still rewritten at build time. This helper is only emitted when the source
+ * or style cannot be safely flattened by Babel, so it mirrors the RN wrapper's runtime work:
+ * `resolveAssetSource`, `src`/request-header synthesis, object-vs-array source style construction,
+ * `objectFit`/`resizeMode`, and iOS tint fallback.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageSourceProps(props: ImageSourceHelperProps): Record<string, any> {
+  const source = (getImageSourcesFromProps(props) || emptyImageSource) as ImageSource | ImageSource[];
+  let style;
+  let sources;
+  let headers;
+
+  if (Array.isArray(source)) {
+    style = [imageBaseStyle, props.style];
+    sources = source;
+    headers = source[0]?.headers;
+  } else {
+    const width = source.width ?? props.width;
+    const height = source.height ?? props.height;
+    style = [{ width, height }, imageBaseStyle, props.style];
+    sources = [source];
+    headers = source.headers;
+  }
+
+  const flattenedStyle = StyleSheet.flatten(style);
+  const objectFit = flattenedStyle?.objectFit;
+  const resizeMode =
+    (typeof objectFit === 'string' ? objectFitToResizeMode[objectFit] : undefined) ||
+    props.resizeMode ||
+    flattenedStyle?.resizeMode ||
+    'cover';
+  const tintColor = Platform.OS === 'android' ? props.tintColor : (props.tintColor ?? flattenedStyle?.tintColor);
+  const result: Record<string, unknown> = {
+    style,
+    source: sources,
+    resizeMode,
+  };
+  Object.assign(result, tintColor === undefined ? {} : { tintColor });
+
+  if (Platform.OS === 'android') {
+    result.src = sources;
+    Object.assign(result, headers === null || headers === undefined ? {} : { headers });
+  }
+
+  return result;
 }
 
 /**
@@ -302,7 +399,83 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
   return result;
 }
 
+/**
+ * Normalizes the Image wrapper's accessibility aliases before props reach `NativeImage`.
+ *
+ * @remarks
+ * Image's rules are close to View's ARIA merge, but not identical: `alt` is an accessibilityLabel
+ * fallback and also forces `accessible` on. Keep this separate from `processViewAccessibilityProps`
+ * so those Image-only precedence rules stay explicit.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageAccessibilityProps(props: Record<string, any>): Record<string, any> {
+  const {
+    alt,
+    accessible,
+    accessibilityLabel,
+    accessibilityLabelledBy,
+    accessibilityState,
+    importantForAccessibility,
+    ['aria-label']: ariaLabel,
+    ['aria-labelledby']: ariaLabelledBy,
+    ['aria-busy']: ariaBusy,
+    ['aria-checked']: ariaChecked,
+    ['aria-disabled']: ariaDisabled,
+    ['aria-expanded']: ariaExpanded,
+    ['aria-hidden']: ariaHidden,
+    ['aria-selected']: ariaSelected,
+    ...restProperties
+  } = props;
+
+  const result = restProperties;
+  const normalizedLabel = ariaLabel ?? accessibilityLabel ?? alt;
+  if (normalizedLabel !== undefined) result.accessibilityLabel = normalizedLabel;
+
+  if (Platform.OS === 'android') {
+    const normalizedLabelledBy = ariaLabelledBy ?? accessibilityLabelledBy;
+    if (normalizedLabelledBy !== undefined) result.accessibilityLabelledBy = normalizedLabelledBy;
+  } else if (accessibilityLabelledBy !== undefined) {
+    result.accessibilityLabelledBy = accessibilityLabelledBy;
+  }
+
+  if (ariaHidden === true && Platform.OS === 'ios') {
+    result.accessible = false;
+  } else if (alt !== undefined) {
+    result.accessible = true;
+  } else if (accessible !== undefined) {
+    result.accessible = accessible;
+  }
+
+  if (ariaHidden === true && Platform.OS !== 'ios') {
+    result.importantForAccessibility = 'no-hide-descendants';
+  } else if (importantForAccessibility !== undefined) {
+    result.importantForAccessibility = importantForAccessibility;
+  }
+
+  if (Platform.OS === 'ios' && accessibilityState !== undefined) {
+    result.accessibilityState = accessibilityState;
+  } else if (
+    accessibilityState != null ||
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
+    result.accessibilityState = {
+      busy: ariaBusy ?? accessibilityState?.busy,
+      checked: ariaChecked ?? accessibilityState?.checked,
+      disabled: ariaDisabled ?? accessibilityState?.disabled,
+      expanded: ariaExpanded ?? accessibilityState?.expanded,
+      selected: ariaSelected ?? accessibilityState?.selected,
+    };
+  }
+
+  return result;
+}
+
 export * from './types';
 export * from './utils/constants';
 export * from './components/native-text';
 export * from './components/native-view';
+export { NativeImage } from './components/native-image';

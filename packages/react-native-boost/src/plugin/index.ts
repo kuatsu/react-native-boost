@@ -1,6 +1,7 @@
 import { declare } from '@babel/helper-plugin-utils';
 import { textOptimizer } from './optimizers/text';
-import { PluginLogger, PluginOptions } from './types';
+import { imageOptimizer } from './optimizers/image';
+import { PluginLogger, PluginOptions, TargetPlatform } from './types';
 import { createLogger } from './utils/logger';
 import { viewOptimizer } from './optimizers/view';
 import { isIgnoredFile } from './utils/common';
@@ -20,7 +21,9 @@ export default declare((api, rawOptions, dirname?: string) => {
 
   // Target platform, resolved at build time. Metro sets this on the Babel caller per platform bundle,
   // letting optimizers inline platform-specific defaults instead of deferring them to the runtime.
-  const platform = api.caller((caller) => (caller as { platform?: string } | undefined)?.platform);
+  const platform = api.caller((caller) =>
+    normalizeTargetPlatform((caller as { platform?: string } | undefined)?.platform)
+  );
 
   // Resolve "Unistyles mode" once per plugin instance. An explicit `unistyles` flag always wins;
   // otherwise auto-detect an installed `react-native-unistyles` and, when found, enable the mode but
@@ -47,6 +50,7 @@ export default declare((api, rawOptions, dirname?: string) => {
         if (isIgnoredFile(path, options.ignores ?? [])) return;
         if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform, unistylesEnabled);
         if (options.optimizations?.view !== false) viewOptimizer(path, logger, options, platform, unistylesEnabled);
+        if (options.optimizations?.image === true) imageOptimizer(path, logger, options, platform, unistylesEnabled);
       },
     },
   };
@@ -63,4 +67,8 @@ function getOrCreateLogger(state: PluginState, options: PluginOptions): PluginLo
   });
 
   return state.__reactNativeBoostLogger;
+}
+
+function normalizeTargetPlatform(platform?: string): TargetPlatform | undefined {
+  return platform === 'ios' || platform === 'android' || platform === 'web' ? platform : undefined;
 }

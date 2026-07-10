@@ -11,6 +11,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 | --- | --- | --- |
 | `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+| `Image` | Opted in with `optimizations.image: true`, imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
 
@@ -109,6 +110,15 @@ Set `dangerouslyOptimizeViewWithUnknownAncestors: true` to optimize `unknown` an
   Enabling dangerous mode can increase optimization coverage, but it can also introduce regressions if unresolved
   ancestors render Text wrappers.
 </Callout>
+
+## Image Coverage
+
+`Image` optimization is opt-in for now because it uses deprecated React Native deep imports, which may print deprecation warnings. See [Configure the Babel Plugin](/docs/configuration/configure).
+
+The optimizer rewrites supported `Image` elements when the target platform is known (`ios` or `android`) and the
+source/style/accessibility props can be reproduced safely.
+
+In Unistyles mode, an Image is skipped when its `style` is (or may be) a Unistyles style.
 
 ## Spread Props: Resolvable vs Unresolvable
 

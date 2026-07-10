@@ -4,6 +4,8 @@ import {
   processSelectionColor,
   processAccessibilityProps,
   processViewAccessibilityProps,
+  processImageAccessibilityProps,
+  processImageSourceProps,
   getDefaultTextAccessible,
   clampNumberOfLines,
   userSelectToSelectableMap,
@@ -19,10 +21,23 @@ vi.mock('../components/native-view', () => ({
   NativeView: () => 'MockedNativeView',
 }));
 
+vi.mock('../components/native-image', () => ({
+  NativeImage: () => 'MockedNativeImage',
+}));
+
 // Switchable Platform mock so platform-specific defaults can be asserted for both OSes. `select`
 // reads the live `OS`, mirroring react-native's own implementation; tests flip `Platform.OS` and the
 // shared `afterEach` resets it.
 vi.mock('react-native', () => {
+  const flattenStyle = (style: unknown): unknown => {
+    if (!Array.isArray(style)) return style;
+    const result: Record<string, unknown> = {};
+    for (const entry of style) {
+      const flat = flattenStyle(entry);
+      if (flat && typeof flat === 'object') Object.assign(result, flat);
+    }
+    return result;
+  };
   const Platform = {
     OS: 'ios' as 'ios' | 'android',
     select<T>(spec: Record<string, T>): T | undefined {
@@ -32,9 +47,12 @@ vi.mock('react-native', () => {
   return {
     View: () => 'View',
     Text: () => 'Text',
+    Image: Object.assign(() => 'Image', {
+      resolveAssetSource: <T>(source: T): T => source,
+    }),
     Platform,
     StyleSheet: {
-      flatten: (style: any) => style,
+      flatten: flattenStyle,
     },
     // Distinguishable stand-in for RN's `processColor` so `processSelectionColor` can be asserted to
     // actually call it (a named color → packed int) rather than passing the value through unchanged.
@@ -367,6 +385,185 @@ describe('processViewAccessibilityProps', () => {
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toBeUndefined();
     expect('accessible' in normalized).toBe(false);
+  });
+});
+
+describe('processImageAccessibilityProps', () => {
+  it('uses alt as the fallback accessibilityLabel and forces accessible on', () => {
+    expect(processImageAccessibilityProps({ alt: 'Logo', accessible: false })).toEqual({
+      accessibilityLabel: 'Logo',
+      accessible: true,
+    });
+  });
+
+  it('keeps accessibilityLabel ahead of alt while still forcing accessible on', () => {
+    expect(processImageAccessibilityProps({ alt: 'Logo', accessibilityLabel: 'Fallback' })).toEqual({
+      accessibilityLabel: 'Fallback',
+      accessible: true,
+    });
+  });
+
+  it('lets aria-label win over accessibilityLabel and alt', () => {
+    expect(
+      processImageAccessibilityProps({
+        'aria-label': 'ARIA',
+        'accessibilityLabel': 'Fallback',
+        'alt': 'Alt',
+      }).accessibilityLabel
+    ).toBe('ARIA');
+  });
+
+  it('falls back to explicit accessible when a dynamic alt is undefined', () => {
+    expect(processImageAccessibilityProps({ alt: undefined, accessible: false }).accessible).toBe(false);
+  });
+
+  it('uses aria-hidden to force accessible off on iOS while preserving importantForAccessibility', () => {
+    Platform.OS = 'ios';
+    expect(
+      processImageAccessibilityProps({
+        'aria-hidden': true,
+        'accessible': true,
+        'importantForAccessibility': 'yes',
+      })
+    ).toEqual({
+      accessible: false,
+      importantForAccessibility: 'yes',
+    });
+  });
+
+  it('uses aria-hidden to force importantForAccessibility on Android', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageAccessibilityProps({
+        'aria-hidden': true,
+        'accessible': true,
+        'importantForAccessibility': 'yes',
+      })
+    ).toEqual({
+      accessible: true,
+      importantForAccessibility: 'no-hide-descendants',
+    });
+  });
+
+  it('maps aria-labelledby to accessibilityLabelledBy on Android without splitting', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageAccessibilityProps({
+        'aria-labelledby': 'a, b',
+        'accessibilityLabelledBy': 'fallback',
+      }).accessibilityLabelledBy
+    ).toBe('a, b');
+  });
+
+  it('preserves explicit accessibilityState over aria state fields on iOS', () => {
+    Platform.OS = 'ios';
+    expect(
+      processImageAccessibilityProps({
+        'accessibilityState': { busy: false, checked: true },
+        'aria-busy': true,
+        'aria-disabled': false,
+      }).accessibilityState
+    ).toEqual({ busy: false, checked: true });
+  });
+
+  it('aggregates aria state fields over a passed accessibilityState on Android', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageAccessibilityProps({
+        'accessibilityState': { busy: false, checked: true },
+        'aria-busy': true,
+        'aria-disabled': false,
+      }).accessibilityState
+    ).toEqual({
+      busy: true,
+      checked: true,
+      disabled: false,
+      expanded: undefined,
+      selected: undefined,
+    });
+  });
+});
+
+describe('processImageSourceProps', () => {
+  it('resolves object sources into native source/style/resize props', () => {
+    expect(processImageSourceProps({ source: { uri: 'logo.png', width: 16, height: 8 } })).toEqual({
+      style: [{ width: 16, height: 8 }, { overflow: 'hidden' }, undefined],
+      source: [{ uri: 'logo.png', width: 16, height: 8 }],
+      resizeMode: 'cover',
+    });
+  });
+
+  it('keeps array sources as arrays and ignores width/height style synthesis', () => {
+    expect(
+      processImageSourceProps({
+        source: [{ uri: 'logo.png', width: 16, height: 8 }],
+        width: 20,
+        height: 10,
+      }).style
+    ).toEqual([{ overflow: 'hidden' }, undefined]);
+  });
+
+  it('synthesizes src and request headers on Android', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageSourceProps({
+        src: 'https://example.com/logo.png',
+        width: 16,
+        height: 8,
+        crossOrigin: 'use-credentials',
+        referrerPolicy: 'origin',
+      })
+    ).toMatchObject({
+      source: [
+        {
+          uri: 'https://example.com/logo.png',
+          headers: {
+            'Access-Control-Allow-Credentials': 'true',
+            'Referrer-Policy': 'origin',
+          },
+          width: 16,
+          height: 8,
+        },
+      ],
+      src: [
+        {
+          uri: 'https://example.com/logo.png',
+          headers: {
+            'Access-Control-Allow-Credentials': 'true',
+            'Referrer-Policy': 'origin',
+          },
+          width: 16,
+          height: 8,
+        },
+      ],
+      headers: {
+        'Access-Control-Allow-Credentials': 'true',
+        'Referrer-Policy': 'origin',
+      },
+    });
+  });
+
+  it('derives resizeMode and iOS tintColor from dynamic style', () => {
+    expect(
+      processImageSourceProps({
+        source: { uri: 'logo.png' },
+        style: [{ objectFit: 'fill' }, { tintColor: 'red' }],
+      })
+    ).toMatchObject({
+      resizeMode: 'stretch',
+      tintColor: 'red',
+    });
+  });
+
+  it('preserves Android tintColor wrapper semantics', () => {
+    Platform.OS = 'android';
+    expect(
+      processImageSourceProps({
+        source: { uri: 'logo.png' },
+        style: { tintColor: 'red' },
+      }).tintColor
+    ).toBeUndefined();
+    expect(processImageSourceProps({ source: { uri: 'logo.png' }, tintColor: null }).tintColor).toBeNull();
   });
 });
 

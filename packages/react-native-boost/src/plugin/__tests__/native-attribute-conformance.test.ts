@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { transformSync, types as t, type PluginObj } from '@babel/core';
 import { generateTestPlugin } from '../utils/generate-test-plugin';
+import { imageOptimizer } from '../optimizers/image';
 import { textOptimizer } from '../optimizers/text';
 import { viewOptimizer } from '../optimizers/view';
-import { Optimizer } from '../types';
-import { NATIVE_TEXT_ATTRIBUTES, NATIVE_VIEW_ATTRIBUTES } from './native-valid-attributes';
+import { Optimizer, TargetPlatform } from '../types';
+import { NATIVE_IMAGE_ATTRIBUTES, NATIVE_TEXT_ATTRIBUTES, NATIVE_VIEW_ATTRIBUTES } from './native-valid-attributes';
 
 /**
  * Attribute-conformance check: every prop the plugin leaves on an optimized host element must
@@ -20,7 +21,7 @@ import { NATIVE_TEXT_ATTRIBUTES, NATIVE_VIEW_ATTRIBUTES } from './native-valid-a
  * optimized output (e.g. the Android `accessible` default) require a differential render test.
  */
 
-const SOURCE_HEADER = `import { Text, View } from 'react-native';\n`;
+const SOURCE_HEADER = `import { Image, Text, View } from 'react-native';\n`;
 
 interface OptimizedHost {
   optimized: boolean;
@@ -32,7 +33,12 @@ interface OptimizedHost {
  * was optimized into its native counterpart and which direct attributes it carries. Returns
  * `null` if no JSX element was found.
  */
-function optimizeAndInspect(source: string, optimizer: Optimizer, originalName: string): OptimizedHost | null {
+function optimizeAndInspect(
+  source: string,
+  optimizer: Optimizer,
+  originalName: string,
+  platform?: TargetPlatform
+): OptimizedHost | null {
   let host: { name: string; attributes: string[] } | undefined;
 
   const capturePlugin = (): PluginObj => ({
@@ -56,7 +62,7 @@ function optimizeAndInspect(source: string, optimizer: Optimizer, originalName: 
   transformSync(source, {
     configFile: false,
     babelrc: false,
-    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(optimizer), capturePlugin],
+    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(optimizer, {}, platform), capturePlugin],
   });
 
   if (!host) return null;
@@ -65,6 +71,7 @@ function optimizeAndInspect(source: string, optimizer: Optimizer, originalName: 
 
 const viewSource = (attributes: string) => `${SOURCE_HEADER}const element = <View ${attributes} />;`;
 const textSource = (attributes: string) => `${SOURCE_HEADER}const element = <Text ${attributes}>hello</Text>;`;
+const imageSource = (attributes: string) => `${SOURCE_HEADER}const element = <Image ${attributes} />;`;
 
 /**
  * Props the wrapper translates to a different native prop. Passing them through verbatim drops
@@ -98,6 +105,35 @@ const TEXT_PASSTHROUGH_PROPS = [
   'maxFontSizeMultiplier={1.5}',
 ];
 
+const IMAGE_BASE_SOURCE = 'source={{ uri: "x", width: 16, height: 16 }}';
+
+const IMAGE_WRAPPER_ONLY_PROPS = [
+  `${IMAGE_BASE_SOURCE} alt="label"`,
+  `${IMAGE_BASE_SOURCE} aria-label="label"`,
+  `${IMAGE_BASE_SOURCE} aria-hidden={true}`,
+  `${IMAGE_BASE_SOURCE} aria-labelledby="label-id"`,
+  `${IMAGE_BASE_SOURCE} aria-busy={true} aria-disabled={false} accessibilityState={{ checked: true }}`,
+  `${IMAGE_BASE_SOURCE} aria-live="polite"`,
+  `${IMAGE_BASE_SOURCE} aria-valuenow={5}`,
+  `${IMAGE_BASE_SOURCE} id="image-id"`,
+  `${IMAGE_BASE_SOURCE} tabIndex={0}`,
+  `${IMAGE_BASE_SOURCE} defaultSource={{ uri: "fallback" }}`,
+  `${IMAGE_BASE_SOURCE} onLoad={() => {}}`,
+];
+
+const IMAGE_PASSTHROUGH_PROPS = [
+  IMAGE_BASE_SOURCE,
+  'source={{ uri: "x" }} width={16} height={16}',
+  'source={[{ uri: "x", width: 16, height: 16 }, { uri: "y", width: 32, height: 32, scale: 2 }]} style={{ width: 16, height: 16 }}',
+  'src="https://example.com/a.png" width={16} height={16}',
+  `${IMAGE_BASE_SOURCE} resizeMode="contain" tintColor="red"`,
+  `${IMAGE_BASE_SOURCE} style={{ objectFit: "fill", tintColor: "red" }}`,
+  `${IMAGE_BASE_SOURCE} blurRadius={2} resizeMethod="resize" resizeMultiplier={2} progressiveRenderingEnabled={true} fadeDuration={0} capInsets={{ top: 1, left: 2, bottom: 3, right: 4 }}`,
+  `${IMAGE_BASE_SOURCE} accessible={true} accessibilityLabel="logo" accessibilityRole="image" accessibilityHint="opens logo" accessibilityValue={{ text: "loaded" }} accessibilityState={{ selected: true }} nativeID="logo" pointerEvents="none" collapsable={false}`,
+  `${IMAGE_BASE_SOURCE} onLayout={() => {}} borderRadius={4} borderTopLeftRadius={1} borderTopRightRadius={2} borderBottomLeftRadius={3} borderBottomRightRadius={4}`,
+  `${IMAGE_BASE_SOURCE} crossOrigin="use-credentials" referrerPolicy="origin"`,
+];
+
 describe('native attribute conformance', () => {
   it('derives a sane native attribute set from the installed React Native', () => {
     // Extraction must not silently collapse (e.g. if React Native restructured these configs).
@@ -118,15 +154,24 @@ describe('native attribute conformance', () => {
     for (const attribute of ['numberOfLines', 'allowFontScaling', 'ellipsizeMode', 'selectable']) {
       expect(NATIVE_TEXT_ATTRIBUTES.has(attribute), `expected "${attribute}" to be a native Text attribute`).toBe(true);
     }
+    for (const attribute of ['source', 'src', 'resizeMode', 'tintColor']) {
+      expect(NATIVE_IMAGE_ATTRIBUTES.has(attribute), `expected "${attribute}" to be a native Image attribute`).toBe(
+        true
+      );
+    }
     // ...and wrapper-only props must NOT be (otherwise the test could not catch the bug class).
     for (const attribute of ['aria-hidden', 'aria-live', 'aria-labelledby', 'aria-valuenow', 'tabIndex', 'id']) {
       expect(NATIVE_VIEW_ATTRIBUTES.has(attribute), `"${attribute}" must not be a native attribute`).toBe(false);
+    }
+    for (const attribute of ['alt', 'aria-hidden']) {
+      expect(NATIVE_IMAGE_ATTRIBUTES.has(attribute), `"${attribute}" must not be a native Image attribute`).toBe(false);
     }
   });
 
   it('exercises the optimized path (otherwise conformance would pass vacuously)', () => {
     expect(optimizeAndInspect(viewSource('testID="element"'), viewOptimizer, 'View')?.optimized).toBe(true);
     expect(optimizeAndInspect(textSource('numberOfLines={1}'), textOptimizer, 'Text')?.optimized).toBe(true);
+    expect(optimizeAndInspect(imageSource(IMAGE_BASE_SOURCE), imageOptimizer, 'Image', 'ios')?.optimized).toBe(true);
   });
 
   describe('View', () => {
@@ -153,6 +198,33 @@ describe('native attribute conformance', () => {
         expect(leaked, `optimized <Text ${attributes}> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
           []
         );
+      }
+    );
+  });
+
+  describe('Image', () => {
+    it.each(IMAGE_WRAPPER_ONLY_PROPS)(
+      'leaves only native attributes on the host for <Image %s /> when optimized',
+      (attributes) => {
+        const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image', 'ios');
+        if (!result?.optimized) return; // bailed out: nothing reaches the native component
+        const leaked = result.attributes.filter((attribute) => !NATIVE_IMAGE_ATTRIBUTES.has(attribute));
+        expect(leaked, `optimized <Image ${attributes} /> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
+          []
+        );
+      }
+    );
+
+    it.each(IMAGE_PASSTHROUGH_PROPS)(
+      'optimizes and leaves only native attributes on the host for <Image %s />',
+      (attributes) => {
+        const result = optimizeAndInspect(imageSource(attributes), imageOptimizer, 'Image', 'ios');
+        expect(result?.optimized).toBe(true);
+        const leaked = result?.attributes.filter((attribute) => !NATIVE_IMAGE_ATTRIBUTES.has(attribute));
+        expect(
+          leaked,
+          `optimized <Image ${attributes} /> leaks non-native attribute(s): ${leaked?.join(', ')}`
+        ).toEqual([]);
       }
     );
   });

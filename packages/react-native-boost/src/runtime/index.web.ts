@@ -30,6 +30,16 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
   return props;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageAccessibilityProps(props: Record<string, any>): Record<string, any> {
+  return props;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function processImageSourceProps(props: Record<string, any>): Record<string, any> {
+  return props;
+}
+
 export * from './types';
 export * from './utils/constants';
 
@@ -38,4 +48,5 @@ export * from './utils/constants';
 /* eslint-disable @typescript-eslint/no-require-imports,unicorn/prefer-module */
 export const NativeText = require('react-native').Text;
 export const NativeView = require('react-native').View;
+export const NativeImage = require('react-native').Image;
 /* eslint-enable @typescript-eslint/no-require-imports,unicorn/prefer-module */

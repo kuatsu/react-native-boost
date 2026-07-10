@@ -11,6 +11,14 @@ export interface PluginOptimizationOptions {
    * @default true
    */
   view?: boolean;
+  /**
+   * Whether to optimize the `Image` component.
+   *
+   * Uses deprecated React Native deep imports and may print React Native deep-import deprecation
+   * warnings, so it is opt-in for now.
+   * @default false
+   */
+  image?: boolean;
 }
 
 export interface PluginOptions {
@@ -40,7 +48,7 @@ export interface PluginOptions {
   /**
    * Toggle individual optimizers.
    *
-   * If omitted, all available optimizers are enabled.
+   * If omitted, `Text` and `View` are enabled and `Image` stays disabled.
    */
   optimizations?: PluginOptimizationOptions;
   /**
@@ -79,9 +87,21 @@ export interface PluginOptions {
    * @default false
    */
   dangerouslyOptimizeTextWithUnknownAncestors?: boolean;
+  /**
+   * Opt-in flag that allows Image optimization when ancestor components cannot be statically resolved.
+   *
+   * This increases optimization coverage, but may introduce behavioral differences when an unresolved
+   * ancestor renders a React Native `Text` wrapper: Android images under text render through the inline
+   * image host rather than the normal image view, and optimizing them would emit the wrong host.
+   * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
+   * @default false
+   */
+  dangerouslyOptimizeImageWithUnknownAncestors?: boolean;
 }
 
-export type OptimizableComponent = 'Text' | 'View';
+export type OptimizableComponent = 'Text' | 'View' | 'Image';
+
+export type TargetPlatform = 'ios' | 'android' | 'web';
 
 export interface OptimizationLogPayload {
   component: OptimizableComponent;
@@ -110,7 +130,7 @@ export type Optimizer = (
   logger: PluginLogger,
   options?: PluginOptions,
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
-  platform?: string,
+  platform?: TargetPlatform,
   /**
    * Whether "Unistyles mode" is active for this build (resolved once at plugin init from the `unistyles`
    * option + install auto-detection). When `true`, optimizers classify each element's `style` origin and

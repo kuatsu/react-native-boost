@@ -229,6 +229,14 @@ export const addDefaultProperty = (path: NodePath<t.JSXOpeningElement>, key: str
 };
 
 /**
+ * Builds a JSX attribute, emitting a string literal directly as the value (`name="x"`) and wrapping
+ * any other expression in a container (`name={expr}`).
+ */
+export function makeAttribute(name: string, value: t.Expression): t.JSXAttribute {
+  return t.jsxAttribute(t.jsxIdentifier(name), t.isStringLiteral(value) ? value : t.jsxExpressionContainer(value));
+}
+
+/**
  * Builds an `ObjectProperty` from a single plain JSX attribute. A shorthand attribute (or empty
  * expression container) resolves to boolean `true`. A key that is not a valid JS identifier (e.g.
  * `aria-label`) becomes a string-literal property key.

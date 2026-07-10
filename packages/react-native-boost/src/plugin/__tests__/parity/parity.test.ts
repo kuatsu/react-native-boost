@@ -10,10 +10,13 @@ vi.mock('../../../runtime/components/native-text', async () => ({
 vi.mock('../../../runtime/components/native-view', async () => ({
   NativeView: (await import('./capture')).NativeViewCapturer,
 }));
+vi.mock('../../../runtime/components/native-image', async () => ({
+  NativeImage: (await import('./capture')).NativeImageCapturer,
+}));
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, boostOptimizes } from './boost';
-import { normalize } from './normalize';
+import { normalize, normalizeImage } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
 
@@ -106,6 +109,113 @@ const VIEW_CASES = [
 // a silent loss of optimization — from masquerading as a passing parity test.
 const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
 
+const IMAGE_CASES = [
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer object" } }} />',
+  '<Image source={{ uri: "", width: 16, height: 16 }} referrerPolicy="origin" />',
+  '<Image source={{ uri: "logo.png" }} width={16} height={16} />',
+  '<Image src="https://example.com/logo.png" width={16} height={16} />',
+  '<Image src="https://example.com/src.png" source={{ uri: "source.png", width: 16, height: 16 }} width={20} />',
+  '<Image source={[{ uri: "logo.png", width: 16, height: 16 }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2 }]} style={{ width: 16, height: 16 }} />',
+  '<Image source={[{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer first" } }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2, headers: { Authorization: "Bearer second" } }]} style={{ width: 16, height: 16 }} />',
+  '<Image source={{ uri: "logo.png", width: null, height: 16 }} width={20} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode={null} style={{ resizeMode: "contain" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode="" style={{ resizeMode: "contain" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} resizeMode="contain" style={{ objectFit: "fill" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} tintColor={null} style={{ tintColor: "red" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
+  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
+];
+
+const BAILED_IMAGE_CASES = new Set([
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
+  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
+]);
+
+const DYNAMIC_IMAGE_CASES: Array<[string, string]> = [
+  ['<Image source={asset} />', 'const asset = { uri: "asset.png", width: 11, height: 12 };'],
+  ['<Image source={require("./asset.png")} />', 'const require = () => ({ uri: "asset.png", width: 11, height: 12 });'],
+  [
+    '<Image src={url} width={16} height={8} crossOrigin={crossOrigin} referrerPolicy={policy} />',
+    'const url = "https://example.com/logo.png"; const crossOrigin = "use-credentials"; const policy = "origin";',
+  ],
+  [
+    '<Image source={{ uri: "logo.png" }} style={imageStyle} resizeMode={mode} tintColor={tint} />',
+    'const imageStyle = [{ width: 16, height: 8 }, { objectFit: "fill", tintColor: "red" }]; const mode = ""; const tint = undefined;',
+  ],
+];
+
+const getFirstImageSource = (props: Record<string, unknown>) => {
+  const source = props.source;
+  if (!Array.isArray(source)) throw new Error('expected Image source to be normalized to an array');
+  return source[0] as Record<string, unknown>;
+};
+
+const IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>, os: (typeof PLATFORMS)[number]) => void>(
+  [
+    [
+      '<Image source={{ uri: "logo.png" }} width={16} height={16} />',
+      (props) => expect(normalize(props).style).toMatchObject({ width: 16, height: 16 }),
+    ],
+    [
+      '<Image src="https://example.com/logo.png" width={16} height={16} />',
+      (props) => expect(getFirstImageSource(props)).toMatchObject({ width: 16, height: 16 }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
+      (props) =>
+        expect(getFirstImageSource(props).headers).toEqual({
+          'Access-Control-Allow-Credentials': 'true',
+          'Referrer-Policy': 'origin',
+        }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
+      (props) => expect(props).toMatchObject({ accessibilityLabel: 'Logo', accessible: true }),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
+      (props) => expect(props.accessibilityLabel).toBe('Logo'),
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
+      (props, os) => {
+        if (os === 'android') expect(props.importantForAccessibility).toBe('no-hide-descendants');
+      },
+    ],
+    [
+      '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
+      (props, os) => {
+        if (os === 'android') expect(props.accessibilityState).toEqual({ selected: true, busy: true });
+        else expect(props.accessibilityState).toEqual({ selected: true });
+      },
+    ],
+  ]
+);
+
+const DYNAMIC_IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>) => void>([
+  [
+    '<Image src={url} width={16} height={8} crossOrigin={crossOrigin} referrerPolicy={policy} />',
+    (props) => {
+      expect(getFirstImageSource(props)).toMatchObject({
+        width: 16,
+        height: 8,
+        headers: {
+          'Access-Control-Allow-Credentials': 'true',
+          'Referrer-Policy': 'origin',
+        },
+      });
+    },
+  ],
+]);
+
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
@@ -115,6 +225,26 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it.each(IMAGE_CASES)('Image: %s', async (jsx) => {
+      const boost = await captureBoost(os, jsx);
+      expect(boost.optimized).toBe(!BAILED_IMAGE_CASES.has(jsx));
+      if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
+      const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props, os);
+    });
+
+    it.each(DYNAMIC_IMAGE_CASES)('Image dynamic: %s', async (jsx, preamble) => {
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Image dynamic case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      DYNAMIC_IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props);
     });
 
     it('Text: mixed dynamic style preserves userSelect flatten order', async () => {
