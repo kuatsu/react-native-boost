@@ -166,7 +166,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
     throw new PluginError('No file found in Babel hub');
   }
 
-  const nativeSource = buildStaticNativeSource(path.node.attributes);
+  const nativeSource = buildStaticNativeSource(path.node.attributes, platform);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 
   logger.optimized({ component: 'Image', path });
@@ -239,7 +239,6 @@ function processImageProps(
     ...remaining,
     accessibilityInfo?.spreadAttribute,
     makeAttribute('style', buildStyle(nativeSource, styleInfo)),
-    emitsAndroidProps ? makeAttribute('src', t.cloneNode(nativeSource.sourceArray, true)) : undefined,
     makeAttribute('source', nativeSource.sourceArray),
     emitsAndroidProps && nativeSource.androidHeaders
       ? makeAttribute('headers', t.cloneNode(nativeSource.androidHeaders, true))
@@ -356,9 +355,17 @@ function buildRuntimeImageInfo(path: NodePath<t.JSXOpeningElement>, file: HubFil
   };
 }
 
-function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
+function buildStaticNativeSource(
+  attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>,
+  platform?: string
+): NativeSource | undefined {
   const requestHeaders = buildRequestHeaders(attributes);
   if (!requestHeaders) return undefined;
+
+  // Android's wrapper propagates a single-entry array source's intrinsic width/height into the layout
+  // style (flag-gated on RN 0.85, unconditional since 0.86); iOS never does. Applying it on RN
+  // 0.83/0.84 adopts that bug-fix early — a deliberate, benign divergence (user style still wins).
+  const propagatesArrayDimensions = platform === 'android';
 
   const src = findAttribute(attributes, 'src');
   if (src) {
@@ -367,9 +374,13 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
     const source = findAttribute(attributes, 'source');
     const width = getAttributeExpression(attributes, 'width');
     const height = getAttributeExpression(attributes, 'height');
+    // On Android the dimensions are emitted twice (source entry AND style), so a non-literal
+    // expression would be evaluated twice; defer those to the runtime helper instead.
+    if (propagatesArrayDimensions) {
+      if (width && !isStaticLiteralTree(width)) return undefined;
+      if (height && !isStaticLiteralTree(height)) return undefined;
+    }
     const headers = t.cloneNode(requestHeaders.headers, true);
-    // `src` resolves to an array source in RN's wrapper, and array sources do not synthesize
-    // width/height into style. Keep the dimensions in the source entry only.
     return {
       sourceAttributes: [src, source].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined),
       requestHeaderAttributes: requestHeaders.attributes,
@@ -383,6 +394,8 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
       ]),
       consumesSizeProps: true,
       androidHeaders: t.cloneNode(requestHeaders.headers, true),
+      width: propagatesArrayDimensions && width ? t.cloneNode(width, true) : undefined,
+      height: propagatesArrayDimensions && height ? t.cloneNode(height, true) : undefined,
     };
   }
 
@@ -394,12 +407,16 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
 
   if (t.isArrayExpression(sourceExpression)) {
     if (requestHeaders.attributes.length > 0) return undefined;
+    const singleEntry = sourceExpression.elements.length === 1 ? sourceExpression.elements[0] : undefined;
+    const dimensionSource = propagatesArrayDimensions && t.isObjectExpression(singleEntry) ? singleEntry : undefined;
     return {
       sourceAttributes: [source],
       requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.cloneNode(sourceExpression, true),
       consumesSizeProps: false,
       androidHeaders: getFirstSourceHeaders(sourceExpression),
+      width: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'width') : undefined,
+      height: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'height') : undefined,
     };
   }
 
@@ -409,22 +426,28 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
   const width = getNullishFallback(sourceWidth, getAttributeExpression(attributes, 'width'));
   const height = getNullishFallback(sourceHeight, getAttributeExpression(attributes, 'height'));
   const sourceArrayObject = buildSourceObject(sourceObject, requestHeaders);
-  // RN's wrapper only synthesizes style dimensions when it receives an object source. `src` and
-  // source+request-header props with a truthy `uri` go through ImageSourceUtils as array sources, so
-  // their width/height stay in the source payload and do not become layout style.
+  // An object source with generated request headers and a truthy `uri` goes through ImageSourceUtils
+  // as a single-entry ARRAY source, so the width/height ?? prop fallback does not apply: only the
+  // source entry's own dimensions reach the style, and only on Android (see above). A plain object
+  // source gets no top-level Android `headers` either — since RN 0.85 the wrapper only lifts them
+  // from ARRAY sources, leaving an object source's inline headers in the source entry (RN 0.83/0.84's
+  // default wrapper still lifted them; another case of adopting the newer semantics early).
   const usesGeneratedHeaders =
     requestHeaders.headers.properties.length > 0 && hasObjectProperty(sourceArrayObject, 'headers');
+  const arrayDimensionSource = usesGeneratedHeaders && propagatesArrayDimensions ? sourceArrayObject : undefined;
 
   return {
     sourceAttributes: [source],
     requestHeaderAttributes: requestHeaders.attributes,
     sourceArray: t.arrayExpression([sourceArrayObject]),
     consumesSizeProps: true,
-    androidHeaders: usesGeneratedHeaders
-      ? t.cloneNode(requestHeaders.headers, true)
-      : getObjectPropertyExpression(sourceArrayObject, 'headers'),
-    width: usesGeneratedHeaders ? undefined : width,
-    height: usesGeneratedHeaders ? undefined : height,
+    androidHeaders: usesGeneratedHeaders ? t.cloneNode(requestHeaders.headers, true) : undefined,
+    width: usesGeneratedHeaders
+      ? arrayDimensionSource && getObjectPropertyExpression(arrayDimensionSource, 'width')
+      : width,
+    height: usesGeneratedHeaders
+      ? arrayDimensionSource && getObjectPropertyExpression(arrayDimensionSource, 'height')
+      : height,
   };
 }
 

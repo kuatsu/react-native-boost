@@ -31,15 +31,43 @@ const VIEW_CONFIG_SOURCES = {
 } as const;
 
 /**
- * Reads and parses a React Native source file, trying each supported dialect in turn: the configs
- * are `@flow`, but recent versions use `as const` casts that the parser's `flow` plugin rejects and
- * its `typescript` plugin accepts, so we fall back rather than pinning one dialect.
+ * React Native's own Flow parser (which emits Babel-compatible ASTs in `babel` mode), resolved
+ * through the installed react-native's dependency chain so its supported syntax always matches the
+ * RN sources we parse. Undefined when the chain no longer ships it.
+ */
+const hermesParser = (() => {
+  try {
+    const requireFromReactNative = createRequire(resolveReactNative('react-native/package.json'));
+    const requireFromHermesPlugin = createRequire(
+      requireFromReactNative.resolve('babel-plugin-syntax-hermes-parser/package.json')
+    );
+    return requireFromHermesPlugin('hermes-parser') as {
+      parse(source: string, options: Record<string, unknown>): t.File;
+    };
+  } catch {
+    return undefined;
+  }
+})();
+
+/**
+ * Reads and parses a React Native source file. The configs are `@flow` and use Flow `as` casts,
+ * which no Babel dialect fully accepts (`flow` rejects the casts, `typescript` rejects object-type
+ * spreads), so we parse with RN's own hermes-parser and keep the Babel dialects as a fallback for
+ * RN versions that don't ship it (or hypothetically move these files to TypeScript).
  */
 function parseReactNativeSource(subpath: string): t.File {
   const source = readFileSync(resolveReactNative(`react-native/${subpath}`), 'utf8');
-  const dialects = [['flow'], ['flow', 'jsx'], ['typescript'], ['typescript', 'jsx']] as const;
 
   let lastError: unknown;
+  if (hermesParser) {
+    try {
+      return hermesParser.parse(source, { babel: true, sourceType: 'module' });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const dialects = [['flow'], ['flow', 'jsx'], ['typescript'], ['typescript', 'jsx']] as const;
   for (const plugins of dialects) {
     try {
       const ast = parseSync(source, {

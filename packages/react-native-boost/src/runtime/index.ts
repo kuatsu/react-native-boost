@@ -7,11 +7,16 @@ import {
   processColor as rnProcessColor,
 } from 'react-native';
 import type { ColorValue, ProcessedColorValue } from 'react-native';
+// The module exists on the whole supported RN range (>= 0.83); only the individual getters vary by
+// version, so each access is guarded. A namespace import (not a named one) keeps a missing getter a
+// plain `undefined` property access under strict ESM interop.
+import * as ReactNativeFeatureFlags from 'react-native/src/private/featureflags/ReactNativeFeatureFlags';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
 const propsCache = new WeakMap();
 const imageBaseStyle = { overflow: 'hidden' } as const;
+const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
 const emptyImageSource = { uri: undefined, width: undefined, height: undefined };
 
 // Resolve RN's `processColor` once. The `typeof` guard degrades to a passthrough on
@@ -33,6 +38,44 @@ const objectFitToResizeMode: Record<string, string> = {
 };
 
 /**
+ * Reads RN's `defaultTextToOverflowHidden` feature flag, the switch behind `Text`'s default
+ * `overflow: 'hidden'` style (RN ≥ 0.85). The getter does not exist on RN < 0.85, where the wrapper
+ * applies no default — so `false` is exact parity there, not a degradation. The try/catch only guards
+ * a throwing getter (impossible in a working app: `Text.js` calls it unguarded).
+ */
+function readDefaultTextToOverflowHidden(): boolean {
+  try {
+    return (
+      typeof ReactNativeFeatureFlags.defaultTextToOverflowHidden === 'function' &&
+      ReactNativeFeatureFlags.defaultTextToOverflowHidden()
+    );
+  } catch {
+    return false;
+  }
+}
+
+let cachedDefaultTextStyle: TextStyle | false | undefined;
+
+/**
+ * The default style `Text` prepends to every element's `style` — `{ overflow: 'hidden' }` when
+ * `defaultTextToOverflowHidden` is on (RN ≥ 0.85 default), and `undefined` otherwise. The plugin
+ * prepends this as the first `style` array entry of every optimized `Text`, so the user's own
+ * `overflow` still wins; an `undefined` is ignored by RN's style flattening, so on RN versions
+ * without the flag the resolved props are identical to passing no default at all.
+ *
+ * @remarks
+ * The flag is read lazily on first use and memoized, mirroring `Text.js`'s render-time read rather
+ * than locking the flag at import: RN's `ReactNativeFeatureFlags.override` throws once a flag has been
+ * accessed, so a module-load read would break apps that legitimately override flags during startup.
+ * Memoizing cannot diverge from RN — an override after the first `Text` render throws in stock RN too.
+ */
+export function getDefaultTextStyle(): TextStyle | undefined {
+  // `false` (not `undefined`) is the memoized flag-off state so the flag is only ever read once.
+  cachedDefaultTextStyle ??= readDefaultTextToOverflowHidden() ? textDefaultOverflowStyle : false;
+  return cachedDefaultTextStyle || undefined;
+}
+
+/**
  * Normalizes `Text` style values for `NativeText`.
  *
  * @param style - Style prop passed to a text-like component.
@@ -41,9 +84,13 @@ const objectFitToResizeMode: Record<string, string> = {
  * - Flattens style arrays via `StyleSheet.flatten`
  * - Converts numeric `fontWeight` values to string values
  * - Maps `userSelect` and `verticalAlign` to native-compatible props
+ * - Prepends {@link getDefaultTextStyle} so the flag-gated `overflow: 'hidden'` default applies to
+ *   dynamically-styled (and falsy-styled) `Text` exactly as the wrapper applies it
  */
 export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<TextProps> {
-  if (!style) return {};
+  const defaultTextStyle = getDefaultTextStyle();
+
+  if (!style) return defaultTextStyle ? { style: defaultTextStyle } : {};
 
   // Cache the computed props
   let props = propsCache.get(style);
@@ -54,7 +101,10 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
 
   style = StyleSheet.flatten(style) as TextStyle;
 
-  if (!style) return {};
+  if (!style) {
+    if (defaultTextStyle) props.style = defaultTextStyle;
+    return props;
+  }
 
   if (typeof style?.fontWeight === 'number') {
     style.fontWeight = style.fontWeight.toString() as TextStyle['fontWeight'];
@@ -72,7 +122,7 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
     delete style.verticalAlign;
   }
 
-  props.style = style;
+  props.style = defaultTextStyle ? [defaultTextStyle, style] : style;
   return props;
 }
 
@@ -143,7 +193,15 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
   let headers;
 
   if (Array.isArray(source)) {
-    style = [imageBaseStyle, props.style];
+    // Android's wrapper propagates a single-entry array source's intrinsic width/height into the
+    // layout style (flag-gated on RN 0.85, unconditional since 0.86); iOS never does. Applying it on
+    // RN 0.83/0.84 adopts that bug-fix early — a deliberate, benign divergence (user style still wins).
+    const singleSource = source.length === 1 ? source[0] : undefined;
+    style = [
+      Platform.OS === 'android' && singleSource != null && { width: singleSource.width, height: singleSource.height },
+      imageBaseStyle,
+      props.style,
+    ];
     sources = source;
     headers = source[0]?.headers;
   } else {
@@ -151,7 +209,10 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
     const height = source.height ?? props.height;
     style = [{ width, height }, imageBaseStyle, props.style];
     sources = [source];
-    headers = source.headers;
+    // No top-level Android `headers` for an object source: since RN 0.85 the wrapper only lifts them
+    // from ARRAY sources (an object source's inline headers stay in the source entry). RN 0.83/0.84's
+    // default wrapper still lifted them; see the plugin's `buildStaticNativeSource` for the rationale
+    // of adopting the newer semantics on the whole supported range.
   }
 
   const flattenedStyle = StyleSheet.flatten(style);
@@ -170,7 +231,6 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
   Object.assign(result, tintColor === undefined ? {} : { tintColor });
 
   if (Platform.OS === 'android') {
-    result.src = sources;
     Object.assign(result, headers === null || headers === undefined ? {} : { headers });
   }
 
@@ -438,11 +498,21 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
     result.accessibilityLabelledBy = accessibilityLabelledBy;
   }
 
-  if (ariaHidden === true && Platform.OS === 'ios') {
-    result.accessible = false;
-  } else if (alt !== undefined) {
+  // The two wrappers resolve `accessible` with DIFFERENT nullish semantics: iOS computes
+  // `ariaHidden !== true && (alt !== undefined ? true : accessible)`, while Android (RN >= 0.85)
+  // skips a nullish `alt`/`accessible` entirely (`!= null`), so an `alt={null}` forces `accessible`
+  // on iOS only.
+  if (Platform.OS === 'ios') {
+    if (ariaHidden === true) {
+      result.accessible = false;
+    } else if (alt !== undefined) {
+      result.accessible = true;
+    } else if (accessible !== undefined) {
+      result.accessible = accessible;
+    }
+  } else if (alt != null) {
     result.accessible = true;
-  } else if (accessible !== undefined) {
+  } else if (accessible != null) {
     result.accessible = accessible;
   }
 

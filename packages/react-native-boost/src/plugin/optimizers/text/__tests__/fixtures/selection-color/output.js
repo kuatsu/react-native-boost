@@ -1,4 +1,5 @@
 import {
+  getDefaultTextStyle as _getDefaultTextStyle,
   processSelectionColor as _processSelectionColor,
   getDefaultTextAccessible as _getDefaultTextAccessible,
   NativeText as _NativeText,
@@ -6,6 +7,7 @@ import {
 import { Text } from 'react-native';
 <_NativeText
   {..._processSelectionColor('red')}
+  style={_getDefaultTextStyle()}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}>

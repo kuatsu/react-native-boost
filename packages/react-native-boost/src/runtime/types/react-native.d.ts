@@ -9,3 +9,8 @@ declare module 'react-native/Libraries/Components/View/ViewNativeComponent' {
 declare module 'react-native/Libraries/Image/ImageViewNativeComponent' {
   export default React.ComponentType<ImageProps>;
 }
+
+declare module 'react-native/src/private/featureflags/ReactNativeFeatureFlags' {
+  // Declared optional: the getter only exists on RN >= 0.85, so consumers must guard the access.
+  export const defaultTextToOverflowHidden: (() => boolean) | undefined;
+}

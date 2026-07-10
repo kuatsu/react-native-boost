@@ -17,6 +17,10 @@ export function processSelectionColor(selectionColor?: unknown): { selectionColo
 // `accessible={getDefaultTextAccessible()}` a no-op.
 export const getDefaultTextAccessible = (): boolean | undefined => undefined;
 
+// Web has no native Text host (and no RN feature flags), so there is no `overflow: 'hidden'` default
+// to replicate. Returning `undefined` makes the injected style (or style-array prepend) a no-op.
+export const getDefaultTextStyle = (): undefined => undefined;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processTextAccessibilityProps(props: Record<string, any>): Record<string, any> {
   return props;
