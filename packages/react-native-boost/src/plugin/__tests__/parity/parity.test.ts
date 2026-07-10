@@ -139,6 +139,18 @@ describe('differential parity', () => {
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
+    it('Text: static userSelect overrides selectable from a later spread', async () => {
+      const jsx =
+        '<Text aria-disabled={_b0} style={{ verticalAlign: "middle", fontWeight: 400, userSelect: "none", width: 10 }} selectionColor={"blue"} {..._s0}>hello</Text>';
+      const preamble = 'const _b0 = false;\nconst _s0 = { selectable: true };';
+      const boost = await captureBoost(os, jsx, preamble);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected Text static userSelect spread case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(boost.which).toEqual(wrapper.which);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
     it.each(VIEW_CASES)('View: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
       expect(boost.optimized).toBe(!BAILED_VIEW_CASES.has(jsx));

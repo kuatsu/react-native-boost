@@ -427,16 +427,16 @@ function processProps(
   // ============================================
   // 4. Assemble the final attribute list
   // ============================================
-  // `styleSpread` (the runtime `processTextStyle` call) is emitted AFTER the direct attributes so a
-  // `userSelect`-derived `selectable` it computes at runtime overrides a direct `selectable`, mirroring
-  // `Text`'s late `userSelect` override. `selectionColorSpread` writes a disjoint key (`selectionColor`),
-  // so its position is free — it leads for readability.
+  // `selectableAttribute` and `styleSpread` are emitted AFTER the remaining attributes so style-derived
+  // `userSelect` overrides direct or spread-carried `selectable`, mirroring `Text`'s late override.
+  // `selectionColorSpread` writes a disjoint key (`selectionColor`), so its position is free — it leads
+  // for readability.
   path.node.attributes = [
     selectionColorSpread,
     accessibilitySpread,
-    selectableAttribute,
     staticStyleAttribute,
     ...remainingAttributes,
+    selectableAttribute,
     styleSpread,
     accessibleAttribute,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
