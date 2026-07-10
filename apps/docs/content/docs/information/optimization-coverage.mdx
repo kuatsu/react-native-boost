@@ -111,6 +111,15 @@ Set `dangerouslyOptimizeViewWithUnknownAncestors: true` to optimize `unknown` an
   ancestors render Text wrappers.
 </Callout>
 
+## Image Coverage
+
+`Image` optimization is opt-in for now because it uses deprecated React Native deep imports, which may print deprecation warnings. See [Configure the Babel Plugin](/docs/configuration/configure).
+
+The optimizer rewrites supported `Image` elements when the target platform is known (`ios` or `android`) and the
+source/style/accessibility props can be reproduced safely.
+
+In Unistyles mode, an Image is skipped when its `style` is (or may be) a Unistyles style.
+
 ## Spread Props: Resolvable vs Unresolvable
 
 Unresolvable spread props are treated as unsafe and cause bailouts.
@@ -124,19 +133,3 @@ Unresolvable spread props are treated as unsafe and cause bailouts.
 ```
 
 Same rule applies to `View`.
-
-## Image Coverage
-
-`Image` optimization is opt-in for now because it uses React Native's internal Image host path, which may print
-deep-import deprecation warnings in newer React Native versions.
-
-Enable it with:
-
-```js
-['react-native-boost/plugin', { optimizations: { image: true } }];
-```
-
-The optimizer rewrites supported `Image` elements when the target platform is known (`ios` or `android`) and the
-source/style/accessibility props can be reproduced safely.
-
-In Unistyles mode, an Image is only skipped when its `style` is (or may be) a Unistyles style.

@@ -14,7 +14,7 @@ export interface PluginOptimizationOptions {
   /**
    * Whether to optimize the `Image` component.
    *
-   * Uses React Native's internal Image host path and may print React Native deep-import deprecation
+   * Uses deprecated React Native deep imports and may print React Native deep-import deprecation
    * warnings, so it is opt-in for now.
    * @default false
    */

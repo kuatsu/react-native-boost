@@ -23,6 +23,7 @@ module.exports = {
         optimizations: {
           text: true,
           view: true,
+          image: false,
         },
       },
     ],
@@ -30,7 +31,7 @@ module.exports = {
 };
 ```
 
-`Image` optimization is currently opt-in because it depends on React Native's internal Image host export path. Enable it explicitly when you want to test it:
+`Image` optimization is currently **opt-in** because it depends on deprecated React Native import paths. Enabling it will log React Native import deprecation warnings to the console. To enable it, explicitly flip it to `true`:
 
 ```js
 ['react-native-boost/plugin', { optimizations: { image: true } }];
