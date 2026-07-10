@@ -1,7 +1,8 @@
 import { highlight } from 'fumadocs-core/highlight';
 import { CodeBlock, type CodeBlockProps, Pre } from 'fumadocs-ui/components/codeblock';
-import { ExternalLink, Github } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { GithubIcon } from '@/components/icons/github';
 import { cn } from '@/lib/cn';
 
 // `CodeBlock` renders `title` as a `ReactNode`, but inherits the `<figure>` element's `title` typing
@@ -62,7 +63,7 @@ function SnippetHeader({ url, owner, repo, path }: { url: string } & ParsedBlobU
       rel="noreferrer noopener"
       title={`${owner}/${repo}/${path}`}
       className="group/snippet flex min-w-0 items-center gap-1.5 transition-colors hover:text-fd-foreground">
-      <Github className="size-3.5 shrink-0" />
+      <GithubIcon className="size-3.5 shrink-0" />
       <span className="shrink-0 font-medium text-fd-foreground">
         {owner}/{repo}
       </span>
