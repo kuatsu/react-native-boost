@@ -227,7 +227,7 @@ function applyAriaHidden(
  * - Resolves the platform-specific `accessible` default (see {@link getDefaultTextAccessible})
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
+export function processTextAccessibilityProps(props: Record<string, any>): Record<string, any> {
   const {
     accessibilityLabel,
     ['aria-label']: ariaLabel,
@@ -314,7 +314,7 @@ export function processAccessibilityProps(props: Record<string, any>): Record<st
  * @param props - Accessibility and ARIA props.
  * @returns Props with the ARIA cluster translated/aggregated into their native counterparts.
  * @remarks
- * Unlike {@link processAccessibilityProps} (the `Text` helper) there is no `accessible` default and no
+ * Unlike {@link processTextAccessibilityProps} (the `Text` helper) there is no `accessible` default and no
  * `disabled` reconciliation — the `View` wrapper does neither. A static `tabIndex` is folded to
  * `focusable` at build time; only a dynamic `tabIndex` reaches this helper.
  * - `aria-labelledby` → `accessibilityLabelledBy` (comma-split into a string array)

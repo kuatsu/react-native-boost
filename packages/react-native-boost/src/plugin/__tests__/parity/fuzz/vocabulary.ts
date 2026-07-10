@@ -141,7 +141,7 @@ const imageStyleValue = fc.oneof(
 
 // ── Text ────────────────────────────────────────────────────────────────────────────────────────
 export const TEXT_VOCAB: PropSpec[] = [
-  // Accessibility / normalized → always routed through `processAccessibilityProps` at runtime.
+  // Accessibility / normalized → always routed through `processTextAccessibilityProps` at runtime.
   { name: 'accessibilityLabel', arb: withNullish(str), disposition: 'a11y; merged with aria-label' },
   { name: 'aria-label', arb: withNullish(str), disposition: 'a11y; wins over accessibilityLabel' },
   { name: 'accessibilityState', arb: a11yStateObject, disposition: 'a11y; aria-state merge target' },

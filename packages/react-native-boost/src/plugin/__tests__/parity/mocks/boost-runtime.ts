@@ -12,5 +12,5 @@ export const NativeImage = NativeImageCapturer;
 
 export const processTextStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
 export const processViewStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
-export const processAccessibilityProps = (props: Record<string, unknown>): Record<string, unknown> => props;
+export const processTextAccessibilityProps = (props: Record<string, unknown>): Record<string, unknown> => props;
 export const processImageAccessibilityProps = (props: Record<string, unknown>): Record<string, unknown> => props;

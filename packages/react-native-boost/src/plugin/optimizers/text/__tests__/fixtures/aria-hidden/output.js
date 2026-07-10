@@ -1,10 +1,10 @@
 import {
-  processAccessibilityProps as _processAccessibilityProps,
+  processTextAccessibilityProps as _processTextAccessibilityProps,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  {..._processAccessibilityProps({
+  {..._processTextAccessibilityProps({
     'aria-hidden': true,
   })}
   allowFontScaling={true}

@@ -2,7 +2,7 @@ import { vi, describe, it, expect, afterEach } from 'vitest';
 import {
   processTextStyle,
   processSelectionColor,
-  processAccessibilityProps,
+  processTextAccessibilityProps,
   processViewAccessibilityProps,
   processImageAccessibilityProps,
   processImageSourceProps,
@@ -156,10 +156,10 @@ describe('getDefaultTextAccessible', () => {
   });
 });
 
-describe('processAccessibilityProps', () => {
+describe('processTextAccessibilityProps', () => {
   it('sets default accessible to true and has no accessibilityLabel if not provided', () => {
     const props = {};
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessible).toBe(true);
     expect(normalized.accessibilityLabel).toBeUndefined();
     expect(normalized.accessibilityState).toBeUndefined();
@@ -167,7 +167,7 @@ describe('processAccessibilityProps', () => {
 
   it('defaults accessible to false on Android', () => {
     Platform.OS = 'android';
-    expect(processAccessibilityProps({}).accessible).toBe(false);
+    expect(processTextAccessibilityProps({}).accessible).toBe(false);
   });
 
   it('merges accessibility labels using aria-label over accessibilityLabel', () => {
@@ -175,7 +175,7 @@ describe('processAccessibilityProps', () => {
       'accessibilityLabel': 'Label one',
       'aria-label': 'Label two',
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessibilityLabel).toBe('Label two');
   });
 
@@ -183,7 +183,7 @@ describe('processAccessibilityProps', () => {
     const props = {
       accessibilityLabel: 'Only label',
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessibilityLabel).toBe('Only label');
   });
 
@@ -193,7 +193,7 @@ describe('processAccessibilityProps', () => {
       'aria-disabled': false,
       'aria-selected': true,
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessibilityState).toEqual({
       busy: true,
       checked: undefined,
@@ -209,7 +209,7 @@ describe('processAccessibilityProps', () => {
       'aria-busy': true, // should override busy
       'aria-disabled': true, // new property
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessibilityState).toEqual({
       busy: true,
       checked: false,
@@ -224,7 +224,7 @@ describe('processAccessibilityProps', () => {
       'foo': 'bar',
       'aria-expanded': false,
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.foo).toBe('bar');
     expect(normalized.accessibilityState).toEqual({
       busy: undefined,
@@ -239,54 +239,54 @@ describe('processAccessibilityProps', () => {
     const props = {
       accessible: false,
     };
-    const normalized = processAccessibilityProps(props);
+    const normalized = processTextAccessibilityProps(props);
     expect(normalized.accessible).toBe(false);
   });
 
   it('derives disabled from accessibilityState.disabled when the disabled prop is absent', () => {
-    const normalized = processAccessibilityProps({ accessibilityState: { disabled: true } });
+    const normalized = processTextAccessibilityProps({ accessibilityState: { disabled: true } });
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toEqual({ disabled: true });
   });
 
   it('mirrors a standalone disabled prop into accessibilityState', () => {
-    const normalized = processAccessibilityProps({ disabled: true });
+    const normalized = processTextAccessibilityProps({ disabled: true });
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toEqual({ disabled: true });
   });
 
   it('lets an explicit disabled prop win over accessibilityState.disabled', () => {
-    const normalized = processAccessibilityProps({ disabled: true, accessibilityState: { disabled: false } });
+    const normalized = processTextAccessibilityProps({ disabled: true, accessibilityState: { disabled: false } });
     expect(normalized.disabled).toBe(true);
     expect(normalized.accessibilityState).toEqual({ disabled: true });
   });
 
   it('does not synthesize accessibilityState when disabled is false and state is absent', () => {
-    const normalized = processAccessibilityProps({ disabled: false });
+    const normalized = processTextAccessibilityProps({ disabled: false });
     expect(normalized.disabled).toBe(false);
     expect(normalized.accessibilityState).toBeUndefined();
   });
 
   it('translates aria-hidden true to accessibilityElementsHidden and importantForAccessibility', () => {
-    const normalized = processAccessibilityProps({ 'aria-hidden': true });
+    const normalized = processTextAccessibilityProps({ 'aria-hidden': true });
     expect(normalized.accessibilityElementsHidden).toBe(true);
     expect(normalized.importantForAccessibility).toBe('no-hide-descendants');
   });
 
   it('translates aria-hidden false without forcing importantForAccessibility', () => {
-    const normalized = processAccessibilityProps({ 'aria-hidden': false });
+    const normalized = processTextAccessibilityProps({ 'aria-hidden': false });
     expect(normalized.accessibilityElementsHidden).toBe(false);
     expect(normalized.importantForAccessibility).toBeUndefined();
   });
 
   it('lets aria-hidden win over an explicit accessibilityElementsHidden', () => {
-    const normalized = processAccessibilityProps({ 'aria-hidden': true, 'accessibilityElementsHidden': false });
+    const normalized = processTextAccessibilityProps({ 'aria-hidden': true, 'accessibilityElementsHidden': false });
     expect(normalized.accessibilityElementsHidden).toBe(true);
     expect(normalized.importantForAccessibility).toBe('no-hide-descendants');
   });
 
   it('falls back to an explicit accessibilityElementsHidden when aria-hidden is absent', () => {
-    const normalized = processAccessibilityProps({
+    const normalized = processTextAccessibilityProps({
       accessibilityElementsHidden: true,
       importantForAccessibility: 'no',
     });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import fc from 'fast-check';
 
 // Same as parity.test.ts: mock the runtime's host COMPONENTS to the shared capturers while keeping the
-// real runtime HELPERS (processAccessibilityProps / processTextStyle / processViewAccessibilityProps)
+// real runtime HELPERS (processTextAccessibilityProps / processTextStyle / processViewAccessibilityProps)
 // under test. vi.mock is per-file, so the fuzz file repeats the block.
 vi.mock('../../../../runtime/components/native-text', async () => ({
   NativeText: (await import('../capture')).NativeTextCapturer,
@@ -135,7 +135,7 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
 });
 
 // ── Exhaustive cross-product: Text `disabled` × `accessibilityState.disabled` × `accessible` ────────
-// The reconcile in processAccessibilityProps has a genuinely non-trivial condition; enumerate the 27
+// The reconcile in processTextAccessibilityProps has a genuinely non-trivial condition; enumerate the 27
 // combinations per platform rather than sampling them.
 const TRISTATE = ['absent', 'true', 'false'] as const;
 const disabledCombos = TRISTATE.flatMap((disabled) =>

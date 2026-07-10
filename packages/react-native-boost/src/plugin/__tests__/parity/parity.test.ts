@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock the runtime's host COMPONENTS to the shared capturers, keeping the real runtime HELPERS
-// (`processAccessibilityProps` / `processTextStyle`) under test. This is also what stops
+// (`processTextAccessibilityProps` / `processTextStyle`) under test. This is also what stops
 // native-text.tsx / native-view.tsx from running their CJS `require('react-native')` (see §4.5 of
 // the implementation plan), which would otherwise pull raw Flow source into node.
 vi.mock('../../../runtime/components/native-text', async () => ({

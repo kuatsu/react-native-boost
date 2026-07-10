@@ -9,9 +9,9 @@ import { markOptimizedHost, OptimizedHostKind } from './optimized-host';
  *
  * @param opts - Object containing the function arguments:
  *   - file: The Babel file object (e.g. HubFile)
- *   - nameHint: The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'processAccessibilityProps')
+ *   - nameHint: The name hint which also acts as the cache key to ensure the import is only added once (e.g. 'processTextAccessibilityProps')
  *   - path: The current Babel NodePath
- *   - importName: The named import string (e.g. 'processAccessibilityProps'), used when importType is 'named'
+ *   - importName: The named import string (e.g. 'processTextAccessibilityProps'), used when importType is 'named'
  *   - moduleName: The module to import from (e.g. 'react-native-boost/runtime')
  *   - importType: Either 'named' (default) or 'default' to determine the type of import to use.
  *

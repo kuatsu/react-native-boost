@@ -44,7 +44,7 @@ export const textBlacklistedProperties = new Set([
 ]);
 
 /**
- * Props handed off to `processAccessibilityProps` at runtime: the accessibility props plus `disabled`
+ * Props handed off to `processTextAccessibilityProps` at runtime: the accessibility props plus `disabled`
  * (reconciled against `accessibilityState.disabled`) and the explicit `accessibilityElementsHidden` /
  * `importantForAccessibility` natives that `aria-hidden` reconciles against — collecting them lets the
  * helper own the `aria-hidden` precedence instead of leaving them as direct attributes that would
@@ -64,7 +64,7 @@ const NORMALIZED_PROPERTIES = new Set([
  * unconditionally, a resolvable one bails only when its object literal contains a guarded key — deferring
  * to the wrapper, which handles them correctly. Mirrors View's `VIEW_SPREAD_GUARD_KEYS`.
  *
- * TODO: rather than bail, route a resolvable spread's contents through `processAccessibilityProps` /
+ * TODO: rather than bail, route a resolvable spread's contents through `processTextAccessibilityProps` /
  * `processTextStyle` (and the `numberOfLines` clamp) so these elements keep optimizing. Deferred because
  * it requires replicating RN's spread→direct merge precedence across the a11y merge, `disabled`
  * reconciliation, and style.
@@ -288,7 +288,7 @@ function processProps(
 
   // `Text` always resolves a platform-specific `accessible` default and reconciles `disabled` with
   // `accessibilityState.disabled`. When any accessibility prop or `disabled` is present we hand the
-  // element off to `processAccessibilityProps` (which also performs the aria/label merges); otherwise
+  // element off to `processTextAccessibilityProps` (which also performs the aria/label merges); otherwise
   // only the `accessible` default is needed, so we inject it directly to keep the common path cheap.
   const shouldNormalize =
     hasAccessibilityProperty(path, currentAttributes) ||
@@ -308,9 +308,9 @@ function processProps(
 
     const normalizeIdentifier = addFileImportHint({
       file,
-      nameHint: 'processAccessibilityProps',
+      nameHint: 'processTextAccessibilityProps',
       path,
-      importName: 'processAccessibilityProps',
+      importName: 'processTextAccessibilityProps',
       moduleName: RUNTIME_MODULE_NAME,
     });
 
@@ -394,7 +394,7 @@ function processProps(
     // When passing the style by identity (Unistyles routing) it is retained here, untouched.
     if (!passStyleByIdentity && styleAttribute && attribute === styleAttribute) continue;
 
-    // Skip the props we routed through `processAccessibilityProps`
+    // Skip the props we routed through `processTextAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
 
     // Skip the selectionColor attribute (replaced with a `processSelectionColor` spread)

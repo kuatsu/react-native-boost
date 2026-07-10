@@ -18,7 +18,7 @@ export function processSelectionColor(selectionColor?: unknown): { selectionColo
 export const getDefaultTextAccessible = (): boolean | undefined => undefined;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function processAccessibilityProps(props: Record<string, any>): Record<string, any> {
+export function processTextAccessibilityProps(props: Record<string, any>): Record<string, any> {
   return props;
 }
 
