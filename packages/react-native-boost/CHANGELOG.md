@@ -2,6 +2,17 @@
 
 # [1.6.0](https://github.com/kuatsu/react-native-boost/compare/v1.5.0...v1.6.0) (2026-07-11)
 
+
+### Bug Fixes
+
+* **text:** fix two parity edge cases ([#75](https://github.com/kuatsu/react-native-boost/issues/75)) ([cc94e0e](https://github.com/kuatsu/react-native-boost/commit/cc94e0ecba0f67a23d498ca9d4cf717ddf493b88))
+* **text:** preserve style selectable precedence ([#76](https://github.com/kuatsu/react-native-boost/issues/76)) ([b5ff429](https://github.com/kuatsu/react-native-boost/commit/b5ff429ed778948a03d76fc357c9052e464075cf))
+
+
+### Features
+
+* **image:** add opt-in Image optimizer ([#66](https://github.com/kuatsu/react-native-boost/issues/66)) ([0edb5da](https://github.com/kuatsu/react-native-boost/commit/0edb5da8dc75461e0c9f765a1df6bac394be5a96))
+
 # [1.5.0](https://github.com/kuatsu/react-native-boost/compare/v1.4.0...v1.5.0) (2026-06-24)
 
 

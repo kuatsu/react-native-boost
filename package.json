@@ -16,6 +16,11 @@
     "prepare": "husky"
   },
   "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "overrides": {
+      "conventional-changelog-angular": "8.3.1"
+    }
+  },
   "devDependencies": {
     "@commitlint/cli": "^21.2.0",
     "@commitlint/config-conventional": "^21.2.0",
