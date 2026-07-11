@@ -1,5 +1,7 @@
 # Changelog
 
+# [1.6.0](https://github.com/kuatsu/react-native-boost/compare/v1.5.0...v1.6.0) (2026-07-11)
+
 # [1.5.0](https://github.com/kuatsu/react-native-boost/compare/v1.4.0...v1.5.0) (2026-06-24)
 
 
