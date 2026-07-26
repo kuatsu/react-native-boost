@@ -44,6 +44,12 @@ export function processImageSourceProps(props: Record<string, any>): Record<stri
   return props;
 }
 
+// The plugin skips `Image` entirely on web, so these gates are never emitted into a web build. They
+// exist so the web shim still exposes the full native runtime surface if a natively-transformed file
+// is bundled for web; react-native-web reads neither a top-level `headers` prop nor these dimensions.
+export const processImageObjectSourceHeaders = <T>(headers: T): T => headers;
+export const processImageArraySourceDimensions = <T>(dimensions: T): T => dimensions;
+
 export * from './types';
 export * from './utils/constants';
 

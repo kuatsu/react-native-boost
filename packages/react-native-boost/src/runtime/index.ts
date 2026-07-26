@@ -75,6 +75,92 @@ export function getDefaultTextStyle(): TextStyle | undefined {
   return cachedDefaultTextStyle || undefined;
 }
 
+let cachedReactNativeMinor: number | null | undefined;
+
+/**
+ * The installed React Native minor version (as in `0.<minor>`), or `null` when it cannot be
+ * determined — a non-RN host, or a future major where the minor no longer identifies the release.
+ * Callers treat `null` as "the current wrapper behavior".
+ *
+ * @remarks
+ * `Platform.constants` is a synchronous native-constants read, so it happens lazily on first use and
+ * is memoized rather than run at module load.
+ */
+function getReactNativeMinor(): number | null {
+  if (cachedReactNativeMinor === undefined) {
+    let version: { major?: number; minor?: number } | undefined;
+    try {
+      version = (Platform as { constants?: { reactNativeVersion?: { major?: number; minor?: number } } }).constants
+        ?.reactNativeVersion;
+    } catch {
+      version = undefined;
+    }
+    cachedReactNativeMinor =
+      version != null && version.major === 0 && typeof version.minor === 'number' ? version.minor : null;
+  }
+  return cachedReactNativeMinor;
+}
+
+/**
+ * Whether RN's Android `Image` wrapper lifts a plain OBJECT source's inline `headers` onto the
+ * top-level `headers` prop — the only prop Android's `ReactImageView` reads for HTTP headers.
+ *
+ * True on RN <= 0.84 and >= 0.87, false on RN 0.85/0.86: deleting the legacy wrapper path
+ * (react-native#55291) dropped the lift, and react-native#56905 restored it in 0.87.0-rc.0 with no
+ * 0.86 backport. Boost tracks the installed version instead of papering over the gap, so an
+ * optimized build stays indistinguishable from the wrapper on every supported version.
+ *
+ * ARRAY sources are unaffected (every version lifts `source[0].headers`), and iOS has no top-level
+ * `headers` prop at all — it reads them per source entry natively.
+ */
+function liftsObjectSourceHeaders(): boolean {
+  const minor = getReactNativeMinor();
+  return minor === null || minor <= 84 || minor >= 87;
+}
+
+let cachedPropagatesArraySourceDimensions: boolean | undefined;
+
+/**
+ * Whether RN's Android `Image` wrapper propagates a single-entry ARRAY source's intrinsic
+ * width/height into the layout style. Introduced in RN 0.85 behind `fixImageSrcDimensionPropagation`
+ * (default on) and unconditional since 0.86; absent on RN <= 0.84. The flag getter exists only on
+ * 0.85, so it decides there — honoring an override — and the version decides everywhere else.
+ */
+function propagatesArraySourceDimensions(): boolean {
+  if (cachedPropagatesArraySourceDimensions === undefined) {
+    let fromFlag: boolean | undefined;
+    try {
+      if (typeof ReactNativeFeatureFlags.fixImageSrcDimensionPropagation === 'function') {
+        fromFlag = ReactNativeFeatureFlags.fixImageSrcDimensionPropagation();
+      }
+    } catch {
+      fromFlag = undefined;
+    }
+    const minor = getReactNativeMinor();
+    cachedPropagatesArraySourceDimensions = fromFlag ?? (minor === null || minor >= 85);
+  }
+  return cachedPropagatesArraySourceDimensions;
+}
+
+/**
+ * Gates a plain OBJECT source's inline `headers` for the top-level Android `headers` prop. The
+ * plugin wraps the statically-extracted headers in this call so build-time output tracks the
+ * installed RN exactly. See {@link liftsObjectSourceHeaders}.
+ */
+export function processImageObjectSourceHeaders<T>(headers: T): T | undefined {
+  return liftsObjectSourceHeaders() ? headers : undefined;
+}
+
+/**
+ * Gates the layout style entry synthesized from a single-entry ARRAY source's intrinsic dimensions.
+ * The plugin emits this as the first `style` array entry so build-time output tracks the installed
+ * RN exactly; an `undefined` entry is ignored by style flattening, exactly like the wrapper's
+ * `false`. See {@link propagatesArraySourceDimensions}.
+ */
+export function processImageArraySourceDimensions<T>(dimensions: T): T | undefined {
+  return propagatesArraySourceDimensions() ? dimensions : undefined;
+}
+
 /**
  * Normalizes `Text` style values for `NativeText`.
  *
@@ -194,11 +280,12 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
 
   if (Array.isArray(source)) {
     // Android's wrapper propagates a single-entry array source's intrinsic width/height into the
-    // layout style (flag-gated on RN 0.85, unconditional since 0.86); iOS never does. Applying it on
-    // RN 0.83/0.84 adopts that bug-fix early — a deliberate, benign divergence (user style still wins).
+    // layout style; iOS never does. See {@link propagatesArraySourceDimensions} for the version gate.
     const singleSource = source.length === 1 ? source[0] : undefined;
     style = [
-      Platform.OS === 'android' && singleSource != null && { width: singleSource.width, height: singleSource.height },
+      Platform.OS === 'android' &&
+        singleSource != null &&
+        propagatesArraySourceDimensions() && { width: singleSource.width, height: singleSource.height },
       imageBaseStyle,
       props.style,
     ];
@@ -209,10 +296,9 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
     const height = source.height ?? props.height;
     style = [{ width, height }, imageBaseStyle, props.style];
     sources = [source];
-    // No top-level Android `headers` for an object source: since RN 0.85 the wrapper only lifts them
-    // from ARRAY sources (an object source's inline headers stay in the source entry). RN 0.83/0.84's
-    // default wrapper still lifted them; see the plugin's `buildStaticNativeSource` for the rationale
-    // of adopting the newer semantics on the whole supported range.
+    // An object source's inline headers only reach the top-level Android `headers` prop on the RN
+    // versions whose wrapper lifts them. See {@link liftsObjectSourceHeaders}.
+    headers = liftsObjectSourceHeaders() ? source.headers : undefined;
   }
 
   const flattenedStyle = StyleSheet.flatten(style);

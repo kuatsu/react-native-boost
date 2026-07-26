@@ -11,6 +11,8 @@ export const NativeView = NativeViewCapturer;
 export const NativeImage = NativeImageCapturer;
 
 export const getDefaultTextStyle = (): undefined => undefined;
+export const processImageObjectSourceHeaders = <T>(headers: T): T => headers;
+export const processImageArraySourceDimensions = <T>(dimensions: T): T => dimensions;
 export const processTextStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
 export const processViewStyle = (style: unknown): Record<string, unknown> => (style ? { style } : {});
 export const processTextAccessibilityProps = (props: Record<string, unknown>): Record<string, unknown> => props;

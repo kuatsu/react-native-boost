@@ -40,6 +40,9 @@ vi.mock('react-native', () => {
   };
   const Platform = {
     OS: 'ios' as 'ios' | 'android',
+    // Backs the runtime's Image wrapper-version gates. Defaults to the RN this repo builds against;
+    // the version-dependent tests re-import this mock after `vi.resetModules()` and overwrite it.
+    constants: { reactNativeVersion: { major: 0, minor: 86, patch: 0 } },
     select<T>(spec: Record<string, T>): T | undefined {
       return Platform.OS in spec ? spec[Platform.OS] : spec.default;
     },
@@ -64,6 +67,32 @@ vi.mock('react-native', () => {
 afterEach(() => {
   Platform.OS = 'ios';
 });
+
+type PlatformMock = { OS: string; constants?: { reactNativeVersion?: unknown } };
+
+const DEFAULT_MOCK_RN_VERSION = { major: 0, minor: 86, patch: 0 };
+
+/**
+ * Reloads the runtime against a specific installed RN version, for the branches that mirror a
+ * wrapper behavior that changed across the supported range. `vi.resetModules()` re-evaluates the
+ * runtime (clearing its memoized version read) but NOT the `react-native` mock factory, so the mock
+ * is mutated in place and restored by {@link restorePlatformMock}. Pass `undefined` to model a host
+ * that exposes no version at all.
+ */
+const loadRuntime = async (minor: number | undefined, os: 'ios' | 'android' = 'android') => {
+  vi.resetModules();
+  const { Platform: platformMock } = (await import('react-native')) as unknown as { Platform: PlatformMock };
+  platformMock.OS = os;
+  platformMock.constants = minor === undefined ? undefined : { reactNativeVersion: { major: 0, minor, patch: 0 } };
+  return await import('..');
+};
+
+const restorePlatformMock = async () => {
+  const { Platform: platformMock } = (await import('react-native')) as unknown as { Platform: PlatformMock };
+  platformMock.OS = 'ios';
+  platformMock.constants = { reactNativeVersion: DEFAULT_MOCK_RN_VERSION };
+  vi.resetModules();
+};
 
 describe('processTextStyle', () => {
   it('returns empty object for falsy style', () => {
@@ -615,6 +644,70 @@ describe('processImageSourceProps', () => {
     ).toMatchObject({
       resizeMode: 'stretch',
       tintColor: 'red',
+    });
+  });
+
+  // RN's Android wrapper lifts a plain OBJECT source's inline `headers` onto the top-level `headers`
+  // prop — the only prop Android reads for HTTP headers — on RN <= 0.84 and >= 0.87, but not on
+  // 0.85/0.86 (react-native#55291 dropped it, react-native#56905 restored it). The runtime reads the
+  // installed version once, so each case reloads it against a fresh mock.
+  describe('object-source headers follow the installed RN version', () => {
+    afterEach(restorePlatformMock);
+
+    it.each([83, 84, 87, 88])('lifts them on RN 0.%i', async (minor) => {
+      const runtime = await loadRuntime(minor);
+      const source = { uri: 'logo.png', headers: { Authorization: 'Bearer object' } };
+      expect(runtime.processImageSourceProps({ source }).headers).toEqual({ Authorization: 'Bearer object' });
+      expect(runtime.processImageObjectSourceHeaders({ Authorization: 'Bearer object' })).toEqual({
+        Authorization: 'Bearer object',
+      });
+    });
+
+    it.each([85, 86])('drops them on RN 0.%i, matching the wrapper of that version', async (minor) => {
+      const runtime = await loadRuntime(minor);
+      const source = { uri: 'logo.png', headers: { Authorization: 'Bearer object' } };
+      expect('headers' in runtime.processImageSourceProps({ source })).toBe(false);
+      expect(runtime.processImageObjectSourceHeaders({ Authorization: 'Bearer object' })).toBeUndefined();
+    });
+
+    it('lifts them when the version cannot be read (the safe direction)', async () => {
+      const runtime = await loadRuntime(undefined);
+      expect(
+        runtime.processImageSourceProps({ source: { uri: 'logo.png', headers: { Authorization: 'x' } } }).headers
+      ).toEqual({ Authorization: 'x' });
+    });
+
+    // An ARRAY source's `source[0].headers` is lifted by every supported version, gate or not.
+    it.each([84, 86, 87])('always lifts array-source headers on RN 0.%i', async (minor) => {
+      const runtime = await loadRuntime(minor);
+      expect(
+        runtime.processImageSourceProps({ source: [{ uri: 'logo.png', headers: { Authorization: 'Bearer first' } }] })
+          .headers
+      ).toEqual({ Authorization: 'Bearer first' });
+    });
+  });
+
+  // Propagating a single-entry ARRAY source's intrinsic dimensions into the layout style arrived in
+  // RN 0.85 (behind `fixImageSrcDimensionPropagation`) and is unconditional since 0.86.
+  describe('array-source dimension propagation follows the installed RN version', () => {
+    afterEach(restorePlatformMock);
+
+    const source = [{ uri: 'logo.png', width: 16, height: 8 }];
+
+    it.each([83, 84])('does not propagate on RN 0.%i', async (minor) => {
+      const runtime = await loadRuntime(minor);
+      expect(runtime.processImageSourceProps({ source }).style).toEqual([false, { overflow: 'hidden' }, undefined]);
+      expect(runtime.processImageArraySourceDimensions({ width: 16, height: 8 })).toBeUndefined();
+    });
+
+    it.each([85, 86, 87])('propagates on RN 0.%i', async (minor) => {
+      const runtime = await loadRuntime(minor);
+      expect(runtime.processImageSourceProps({ source }).style).toEqual([
+        { width: 16, height: 8 },
+        { overflow: 'hidden' },
+        undefined,
+      ]);
+      expect(runtime.processImageArraySourceDimensions({ width: 16, height: 8 })).toEqual({ width: 16, height: 8 });
     });
   });
 
