@@ -1,11 +1,16 @@
 import {
+  getDefaultTextStyle as _getDefaultTextStyle,
   getDefaultTextAccessible as _getDefaultTextAccessible,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 import { Link } from 'expo-router';
 <>
-  <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
+  <_NativeText
+    style={_getDefaultTextStyle()}
+    allowFontScaling={true}
+    ellipsizeMode={'tail'}
+    accessible={_getDefaultTextAccessible()}>
     This should be optimized
   </_NativeText>
   <Link asChild>

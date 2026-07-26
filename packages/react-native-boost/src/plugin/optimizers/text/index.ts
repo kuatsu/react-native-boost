@@ -327,6 +327,26 @@ function processProps(
   let selectableAttribute: t.JSXAttribute | undefined;
   let staticStyleAttribute: t.JSXAttribute | undefined;
   let styleSpread: t.JSXSpreadAttribute | undefined;
+
+  // `Text` prepends a flag-gated `{ overflow: 'hidden' }` default to EVERY element's style (RN ≥ 0.85).
+  // The runtime constant resolves the flag lazily and memoizes — `undefined` (ignored by RN's style
+  // flattening) on RN versions/hosts without the flag — so prepending it as the first array entry is
+  // exact parity per RN version and the user's own `overflow` still wins. Skipped on web (no native
+  // Text host; the web runtime's fallback is the wrapper itself) and for Unistyles routing (raw style
+  // pass-through, see above). The dynamic-style path receives the same prepend inside
+  // `processTextStyle` instead.
+  const emitsDefaultStyle = !passStyleByIdentity && platform !== 'web';
+  const buildDefaultTextStyleExpression = (): t.Expression => {
+    const defaultStyleIdentifier = addFileImportHint({
+      file,
+      nameHint: 'getDefaultTextStyle',
+      path,
+      importName: 'getDefaultTextStyle',
+      moduleName: RUNTIME_MODULE_NAME,
+    });
+    return t.callExpression(t.identifier(defaultStyleIdentifier.name), []);
+  };
+
   // `passStyleByIdentity` (Unistyles routing) skips all style transforms — the original `style`
   // attribute is left untouched in the collected attributes below so it reaches the native host intact.
   if (styleExpr && !passStyleByIdentity) {
@@ -348,7 +368,12 @@ function processProps(
     // helper, where the WeakMap reference cache and `StyleSheet.flatten` are the actual win.
     const staticStyle = tryBuildStaticTextStyle(styleExpr);
     if (staticStyle) {
-      staticStyleAttribute = t.jsxAttribute(t.jsxIdentifier('style'), t.jsxExpressionContainer(staticStyle));
+      staticStyleAttribute = t.jsxAttribute(
+        t.jsxIdentifier('style'),
+        t.jsxExpressionContainer(
+          emitsDefaultStyle ? t.arrayExpression([buildDefaultTextStyleExpression(), staticStyle]) : staticStyle
+        )
+      );
     } else {
       const flattenIdentifier = addFileImportHint({
         file,
@@ -360,6 +385,14 @@ function processProps(
       const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
       styleSpread = t.jsxSpreadAttribute(flattenedStyleExpr);
     }
+  } else if (!styleAttribute && emitsDefaultStyle) {
+    // No style at all still gets the wrapper's default. A style attribute without an extractable
+    // expression (e.g. `style=""`) is left verbatim instead — emitting a second `style` would have the
+    // later attribute silently discard one of the two.
+    staticStyleAttribute = t.jsxAttribute(
+      t.jsxIdentifier('style'),
+      t.jsxExpressionContainer(buildDefaultTextStyleExpression())
+    );
   }
 
   // --- selectionColor ---

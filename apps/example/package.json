@@ -15,27 +15,28 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~55.0.6",
-    "@react-native-community/slider": "5.1.2",
+    "@expo/metro-runtime": "~57.0.3",
+    "@react-native-community/slider": "5.2.0",
     "@react-navigation/native": "^7.3.3",
     "@react-navigation/native-stack": "^7.17.5",
-    "expo": "^55.0.3",
-    "expo-status-bar": "~55.0.4",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "react-native": "0.83.2",
+    "expo": "^57.0.4",
+    "expo-splash-screen": "~57.0.2",
+    "expo-status-bar": "~57.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
     "react-native-boost": "workspace:*",
     "react-native-nitro-modules": "0.36.1",
-    "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.23.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
     "react-native-time-to-render": "workspace:*",
     "react-native-unistyles": "3.2.5",
-    "react-native-web": "^0.21.2"
+    "react-native-web": "~0.21.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@types/react": "~19.2.14",
-    "typescript": "~5.9.3"
+    "typescript": "~6.0.3"
   },
   "private": true
 }

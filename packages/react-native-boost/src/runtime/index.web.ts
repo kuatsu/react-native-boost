@@ -17,6 +17,10 @@ export function processSelectionColor(selectionColor?: unknown): { selectionColo
 // `accessible={getDefaultTextAccessible()}` a no-op.
 export const getDefaultTextAccessible = (): boolean | undefined => undefined;
 
+// Web has no native Text host (and no RN feature flags), so there is no `overflow: 'hidden'` default
+// to replicate. Returning `undefined` makes the injected style (or style-array prepend) a no-op.
+export const getDefaultTextStyle = (): undefined => undefined;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processTextAccessibilityProps(props: Record<string, any>): Record<string, any> {
   return props;
@@ -39,6 +43,12 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
 export function processImageSourceProps(props: Record<string, any>): Record<string, any> {
   return props;
 }
+
+// The plugin skips `Image` entirely on web, so these gates are never emitted into a web build. They
+// exist so the web shim still exposes the full native runtime surface if a natively-transformed file
+// is bundled for web; react-native-web reads neither a top-level `headers` prop nor these dimensions.
+export const processImageObjectSourceHeaders = <T>(headers: T): T => headers;
+export const processImageArraySourceDimensions = <T>(dimensions: T): T => dimensions;
 
 export * from './types';
 export * from './utils/constants';

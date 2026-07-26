@@ -1,4 +1,4 @@
-import { NativeText as _NativeText } from 'react-native-boost/runtime';
+import { getDefaultTextStyle as _getDefaultTextStyle, NativeText as _NativeText } from 'react-native-boost/runtime';
 import { NativeText as _UnistylesNativeText } from 'react-native-unistyles/components/native/NativeText';
 import { getDefaultTextAccessible as _getDefaultTextAccessible } from 'react-native-boost/runtime';
 import _UnistylesNativeView from 'react-native-unistyles/components/native/NativeView';
@@ -18,9 +18,12 @@ const C = (props) => (
       unistyles
     </_UnistylesNativeText>
     <_NativeText
-      style={{
-        color: 'red',
-      }}
+      style={[
+        _getDefaultTextStyle(),
+        {
+          color: 'red',
+        },
+      ]}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>

@@ -4,8 +4,12 @@ export const Image = Object.assign(() => 'Image', {
   resolveAssetSource: <T>(source: T): T => source,
 });
 
+// `constants.reactNativeVersion` backs the runtime's Image wrapper-version gates. Pinned rather than
+// read from the installed RN so unit expectations are deterministic; the version-dependent branches
+// have their own tests that reload the runtime against a specific version.
 export const Platform = {
   OS: 'ios',
+  constants: { reactNativeVersion: { major: 0, minor: 86, patch: 0 } },
 };
 
 export const StyleSheet = {

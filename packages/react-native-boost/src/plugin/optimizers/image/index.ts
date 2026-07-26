@@ -166,7 +166,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
     throw new PluginError('No file found in Babel hub');
   }
 
-  const nativeSource = buildStaticNativeSource(path.node.attributes);
+  const nativeSource = buildStaticNativeSource(path.node.attributes, platform);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 
   logger.optimized({ component: 'Image', path });
@@ -187,6 +187,18 @@ type NativeSource = {
   androidHeaders?: t.Expression;
   width?: t.Expression;
   height?: t.Expression;
+  /**
+   * `width`/`height` came from an ARRAY source's single entry, which only the wrapper of some RN
+   * versions propagates into the layout style — so they are emitted through the runtime gate
+   * `processImageArraySourceDimensions` instead of inline.
+   */
+  arraySourceDimensions?: boolean;
+  /**
+   * `androidHeaders` came from a plain OBJECT source's inline `headers`, which only the wrapper of
+   * some RN versions lifts to the top-level prop — so they are emitted through the runtime gate
+   * `processImageObjectSourceHeaders` instead of inline.
+   */
+  objectSourceHeaders?: boolean;
 };
 
 type StyleInfo = {
@@ -235,18 +247,40 @@ function processImageProps(
   const tintColor = buildTintColor(explicitTintColor, styleInfo?.tintColor, platform);
   const emitsAndroidProps = platform === 'android';
 
+  // Both gates are Android-only and are wired up only when there is something to gate, so an Image
+  // that hits neither case keeps a fully static prop bag.
+  const gatesArrayDimensions =
+    emitsAndroidProps &&
+    nativeSource.arraySourceDimensions === true &&
+    (nativeSource.width !== undefined || nativeSource.height !== undefined);
+  const arrayDimensionsGate = gatesArrayDimensions
+    ? addRuntimeHelper(path, file, 'processImageArraySourceDimensions')
+    : undefined;
+
+  const androidHeaders =
+    emitsAndroidProps && nativeSource.androidHeaders
+      ? nativeSource.objectSourceHeaders
+        ? t.callExpression(addRuntimeHelper(path, file, 'processImageObjectSourceHeaders'), [
+            t.cloneNode(nativeSource.androidHeaders, true),
+          ])
+        : t.cloneNode(nativeSource.androidHeaders, true)
+      : undefined;
+
   path.node.attributes = [
     ...remaining,
     accessibilityInfo?.spreadAttribute,
-    makeAttribute('style', buildStyle(nativeSource, styleInfo)),
-    emitsAndroidProps ? makeAttribute('src', t.cloneNode(nativeSource.sourceArray, true)) : undefined,
+    makeAttribute('style', buildStyle(nativeSource, styleInfo, arrayDimensionsGate)),
     makeAttribute('source', nativeSource.sourceArray),
-    emitsAndroidProps && nativeSource.androidHeaders
-      ? makeAttribute('headers', t.cloneNode(nativeSource.androidHeaders, true))
-      : undefined,
+    androidHeaders ? makeAttribute('headers', androidHeaders) : undefined,
     makeAttribute('resizeMode', buildResizeMode(explicitResizeMode, styleInfo)),
     tintColor ? makeAttribute('tintColor', tintColor) : undefined,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
+}
+
+function addRuntimeHelper(path: NodePath<t.JSXOpeningElement>, file: HubFile, importName: string): t.Identifier {
+  return t.identifier(
+    addFileImportHint({ file, nameHint: importName, path, importName, moduleName: RUNTIME_MODULE_NAME }).name
+  );
 }
 
 function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
@@ -356,9 +390,19 @@ function buildRuntimeImageInfo(path: NodePath<t.JSXOpeningElement>, file: HubFil
   };
 }
 
-function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): NativeSource | undefined {
+function buildStaticNativeSource(
+  attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>,
+  platform?: string
+): NativeSource | undefined {
   const requestHeaders = buildRequestHeaders(attributes);
   if (!requestHeaders) return undefined;
+
+  // Two Android-only wrapper behaviors vary across the supported RN range: propagating a single-entry
+  // ARRAY source's intrinsic dimensions into the layout style, and lifting a plain OBJECT source's
+  // inline headers to the top-level `headers` prop. iOS does neither on any version. Both are emitted
+  // through runtime gates (see the `arraySourceDimensions` / `objectSourceHeaders` flags) so the
+  // build-time output tracks the installed RN exactly instead of picking one version's semantics.
+  const emitsAndroidProps = platform === 'android';
 
   const src = findAttribute(attributes, 'src');
   if (src) {
@@ -367,9 +411,13 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
     const source = findAttribute(attributes, 'source');
     const width = getAttributeExpression(attributes, 'width');
     const height = getAttributeExpression(attributes, 'height');
+    // On Android the dimensions are emitted twice (source entry AND style), so a non-literal
+    // expression would be evaluated twice; defer those to the runtime helper instead.
+    if (emitsAndroidProps) {
+      if (width && !isStaticLiteralTree(width)) return undefined;
+      if (height && !isStaticLiteralTree(height)) return undefined;
+    }
     const headers = t.cloneNode(requestHeaders.headers, true);
-    // `src` resolves to an array source in RN's wrapper, and array sources do not synthesize
-    // width/height into style. Keep the dimensions in the source entry only.
     return {
       sourceAttributes: [src, source].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined),
       requestHeaderAttributes: requestHeaders.attributes,
@@ -383,6 +431,9 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
       ]),
       consumesSizeProps: true,
       androidHeaders: t.cloneNode(requestHeaders.headers, true),
+      width: emitsAndroidProps && width ? t.cloneNode(width, true) : undefined,
+      height: emitsAndroidProps && height ? t.cloneNode(height, true) : undefined,
+      arraySourceDimensions: true,
     };
   }
 
@@ -394,12 +445,17 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
 
   if (t.isArrayExpression(sourceExpression)) {
     if (requestHeaders.attributes.length > 0) return undefined;
+    const singleEntry = sourceExpression.elements.length === 1 ? sourceExpression.elements[0] : undefined;
+    const dimensionSource = emitsAndroidProps && t.isObjectExpression(singleEntry) ? singleEntry : undefined;
     return {
       sourceAttributes: [source],
       requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.cloneNode(sourceExpression, true),
       consumesSizeProps: false,
       androidHeaders: getFirstSourceHeaders(sourceExpression),
+      width: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'width') : undefined,
+      height: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'height') : undefined,
+      arraySourceDimensions: true,
     };
   }
 
@@ -409,11 +465,14 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
   const width = getNullishFallback(sourceWidth, getAttributeExpression(attributes, 'width'));
   const height = getNullishFallback(sourceHeight, getAttributeExpression(attributes, 'height'));
   const sourceArrayObject = buildSourceObject(sourceObject, requestHeaders);
-  // RN's wrapper only synthesizes style dimensions when it receives an object source. `src` and
-  // source+request-header props with a truthy `uri` go through ImageSourceUtils as array sources, so
-  // their width/height stay in the source payload and do not become layout style.
+  // An object source with generated request headers and a truthy `uri` goes through ImageSourceUtils
+  // as a single-entry ARRAY source, so the width/height ?? prop fallback does not apply: only the
+  // source entry's own dimensions reach the style, and only on Android. Without generated headers it
+  // stays an OBJECT source, whose own dimensions always reach the style and whose inline `headers`
+  // are lifted only on the RN versions that do so — hence the gate.
   const usesGeneratedHeaders =
     requestHeaders.headers.properties.length > 0 && hasObjectProperty(sourceArrayObject, 'headers');
+  const arrayDimensionSource = usesGeneratedHeaders && emitsAndroidProps ? sourceArrayObject : undefined;
 
   return {
     sourceAttributes: [source],
@@ -423,8 +482,14 @@ function buildStaticNativeSource(attributes: Array<t.JSXAttribute | t.JSXSpreadA
     androidHeaders: usesGeneratedHeaders
       ? t.cloneNode(requestHeaders.headers, true)
       : getObjectPropertyExpression(sourceArrayObject, 'headers'),
-    width: usesGeneratedHeaders ? undefined : width,
-    height: usesGeneratedHeaders ? undefined : height,
+    objectSourceHeaders: !usesGeneratedHeaders,
+    width: usesGeneratedHeaders
+      ? arrayDimensionSource && getObjectPropertyExpression(arrayDimensionSource, 'width')
+      : width,
+    height: usesGeneratedHeaders
+      ? arrayDimensionSource && getObjectPropertyExpression(arrayDimensionSource, 'height')
+      : height,
+    arraySourceDimensions: usesGeneratedHeaders,
   };
 }
 
@@ -475,14 +540,18 @@ function buildSourceObject(sourceObject: t.ObjectExpression, requestHeaders: Req
   return nativeSource;
 }
 
-function buildStyle(nativeSource: NativeSource, styleInfo: StyleInfo): t.ArrayExpression {
+function buildStyle(
+  nativeSource: NativeSource,
+  styleInfo: StyleInfo,
+  arrayDimensionsGate?: t.Identifier
+): t.ArrayExpression {
+  const dimensions = t.objectExpression([
+    ...(nativeSource.width ? [t.objectProperty(t.identifier('width'), t.cloneNode(nativeSource.width, true))] : []),
+    ...(nativeSource.height ? [t.objectProperty(t.identifier('height'), t.cloneNode(nativeSource.height, true))] : []),
+  ]);
+
   return t.arrayExpression([
-    t.objectExpression([
-      ...(nativeSource.width ? [t.objectProperty(t.identifier('width'), t.cloneNode(nativeSource.width, true))] : []),
-      ...(nativeSource.height
-        ? [t.objectProperty(t.identifier('height'), t.cloneNode(nativeSource.height, true))]
-        : []),
-    ]),
+    arrayDimensionsGate ? t.callExpression(arrayDimensionsGate, [dimensions]) : dimensions,
     t.cloneNode(IMAGE_BASE_STYLE, true),
     ...(styleInfo?.styleExpression ? [styleInfo.styleExpression] : []),
   ]);

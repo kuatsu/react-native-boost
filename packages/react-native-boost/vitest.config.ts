@@ -6,6 +6,9 @@ const runtimeMockPath = fileURLToPath(new URL('src/runtime/__tests__/mocks/react
 const imageViewNativeComponentMockPath = fileURLToPath(
   new URL('src/runtime/__tests__/mocks/ImageViewNativeComponent.ts', import.meta.url)
 );
+const featureFlagsMockPath = fileURLToPath(
+  new URL('src/runtime/__tests__/mocks/ReactNativeFeatureFlags.ts', import.meta.url)
+);
 const parityConfig = fileURLToPath(new URL('src/plugin/__tests__/parity/vitest.config.parity.mts', import.meta.url));
 
 export default defineConfig({
@@ -19,6 +22,10 @@ export default defineConfig({
             {
               find: /^react-native\/Libraries\/Image\/ImageViewNativeComponent$/,
               replacement: resolve(imageViewNativeComponentMockPath),
+            },
+            {
+              find: /^react-native\/src\/private\/featureflags\/ReactNativeFeatureFlags$/,
+              replacement: resolve(featureFlagsMockPath),
             },
           ],
         },

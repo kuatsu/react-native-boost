@@ -74,8 +74,12 @@ const textSource = (attributes: string) => `${SOURCE_HEADER}const element = <Tex
 const imageSource = (attributes: string) => `${SOURCE_HEADER}const element = <Image ${attributes} />;`;
 
 /**
- * Props the wrapper translates to a different native prop. Passing them through verbatim drops
- * them on the floor, so the plugin must either translate or bail on these.
+ * Props the wrapper translates to a different native prop. The plugin must translate or bail. Note
+ * that RN 0.86 lists the raw `aria-*` / `tabIndex` / `id` aliases in `validAttributes`, but the
+ * native side only consumes them when `enableNativeViewPropTransformations` is on — it is off by
+ * default (and was deleted in 0.87 in favor of keeping the translation in JS), so raw pass-through
+ * would still silently drop them. This test can no longer catch such a leak for those props (they
+ * pass the `validAttributes` filter); the parity suite covers them at the prop-value level instead.
  */
 const VIEW_WRAPPER_ONLY_PROPS = [
   'aria-hidden',
@@ -160,10 +164,15 @@ describe('native attribute conformance', () => {
       );
     }
     // ...and wrapper-only props must NOT be (otherwise the test could not catch the bug class).
-    for (const attribute of ['aria-hidden', 'aria-live', 'aria-labelledby', 'aria-valuenow', 'tabIndex', 'id']) {
+    // RN 0.86 added the raw `aria-*` aliases, `tabIndex`, and `id` to the native view config, so they
+    // no longer work as wrapper-only sentinels — but the native side still DISCARDS them unless
+    // `enableNativeViewPropTransformations` is on (off by default; deleted again in 0.87), so raw
+    // pass-through remains lossy and the plugin must keep translating them.
+    for (const attribute of ['aria-modal']) {
       expect(NATIVE_VIEW_ATTRIBUTES.has(attribute), `"${attribute}" must not be a native attribute`).toBe(false);
     }
-    for (const attribute of ['alt', 'aria-hidden']) {
+    expect(NATIVE_TEXT_ATTRIBUTES.has('onPress'), `"onPress" must not be a native Text attribute`).toBe(false);
+    for (const attribute of ['alt', 'aria-modal']) {
       expect(NATIVE_IMAGE_ATTRIBUTES.has(attribute), `"${attribute}" must not be a native Image attribute`).toBe(false);
     }
   });

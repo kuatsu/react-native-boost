@@ -1,4 +1,5 @@
 import {
+  getDefaultTextStyle as _getDefaultTextStyle,
   getDefaultTextAccessible as _getDefaultTextAccessible,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
@@ -8,7 +9,11 @@ const benchmarks = [
     title: 'Text',
     count: 10_000,
     optimizedComponent: (
-      <_NativeText allowFontScaling={true} ellipsizeMode={'tail'} accessible={_getDefaultTextAccessible()}>
+      <_NativeText
+        style={_getDefaultTextStyle()}
+        allowFontScaling={true}
+        ellipsizeMode={'tail'}
+        accessible={_getDefaultTextAccessible()}>
         Nice text
       </_NativeText>
     ),
