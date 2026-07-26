@@ -16,13 +16,18 @@
     "prepare": "husky"
   },
   "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "overrides": {
+      "conventional-changelog-angular": "8.3.1"
+    }
+  },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.0",
+    "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.8",
-    "oxfmt": "^0.57.0",
-    "oxlint": "^1.72.0",
+    "lint-staged": "^17.1.0",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
     "typescript": "~6.0.3"
   }
 }
