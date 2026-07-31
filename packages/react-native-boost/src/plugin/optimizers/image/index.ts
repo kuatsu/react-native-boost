@@ -174,7 +174,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
   if (nativeSource && styleInfo !== null) {
     processImageProps(path, file, nativeSource, styleInfo, platform);
   } else {
-    processRuntimeImageProps(path, file);
+    processRuntimeImageProps(path, file, platform);
   }
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
@@ -226,7 +226,7 @@ function processImageProps(
   styleInfo: StyleInfo,
   platform?: string
 ) {
-  const accessibilityInfo = buildImageAccessibilityInfo(path, file);
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform);
   const consumed = new Set<t.JSXAttribute>([
     ...nativeSource.sourceAttributes,
     ...nativeSource.requestHeaderAttributes,
@@ -283,8 +283,8 @@ function addRuntimeHelper(path: NodePath<t.JSXOpeningElement>, file: HubFile, im
   );
 }
 
-function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
-  const accessibilityInfo = buildImageAccessibilityInfo(path, file);
+function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platform?: string) {
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform);
   const runtimeInfo = buildRuntimeImageInfo(path, file);
   if (!runtimeInfo) return;
 
@@ -301,7 +301,8 @@ function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: Hub
 
 function buildImageAccessibilityInfo(
   path: NodePath<t.JSXOpeningElement>,
-  file: HubFile
+  file: HubFile,
+  platform?: string
 ): ImageAccessibilityInfo | undefined {
   const directNames = getDirectAttributeNames(path.node.attributes);
   const hasAlt = directNames.has('alt');
@@ -309,8 +310,15 @@ function buildImageAccessibilityInfo(
   const hasHiddenTrigger = directNames.has('aria-hidden');
   const hasLabelledByTrigger = directNames.has('aria-labelledby');
   const hasStateTrigger = [...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name));
+  // Android drops a nullish `accessible`, so passing the authored value through would emit an
+  // `accessible={null}` the wrapper never sets. iOS forwards it unchanged, so only Android needs the helper.
+  const accessible = getAttributeExpression(path.node.attributes, 'accessible');
+  const hasNullableAccessible =
+    platform === 'android' && accessible !== undefined && !isStaticNonNullishExpression(accessible);
 
-  if (!hasLabelTrigger && !hasHiddenTrigger && !hasLabelledByTrigger && !hasStateTrigger) return undefined;
+  if (!hasLabelTrigger && !hasHiddenTrigger && !hasLabelledByTrigger && !hasStateTrigger && !hasNullableAccessible) {
+    return undefined;
+  }
 
   const helperNames = new Set<string>();
   if (hasLabelTrigger) {
@@ -318,7 +326,7 @@ function buildImageAccessibilityInfo(
     helperNames.add('aria-label');
     helperNames.add('accessibilityLabel');
   }
-  if (hasAlt) {
+  if (hasAlt || hasNullableAccessible) {
     helperNames.add('accessible');
   }
   if (hasHiddenTrigger) {

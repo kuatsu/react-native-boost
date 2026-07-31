@@ -461,6 +461,37 @@ describe('image unknown platform output', () => {
   });
 });
 
+describe('image nullable accessible', () => {
+  const source = (value: string) => `
+    import { Image } from 'react-native';
+    <Image source={{ uri: 'logo.png', width: 16, height: 16 }} accessible={${value}} />;
+  `;
+
+  it.each(['maybeAccessible', 'null'])(
+    'routes accessible={%s} through the runtime helper on Android',
+    async (value) => {
+      const output = await transformImage(source(value), 'android');
+
+      expect(output).toContain('processImageAccessibilityProps');
+      expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(false);
+    }
+  );
+
+  it('keeps a provably non-nullish accessible inline on Android', async () => {
+    const output = await transformImage(source('false'), 'android');
+
+    expect(output).not.toContain('processImageAccessibilityProps');
+    expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(true);
+  });
+
+  it('passes accessible straight through on iOS, which forwards it unchanged', async () => {
+    const output = await transformImage(source('maybeAccessible'), 'ios');
+
+    expect(output).not.toContain('processImageAccessibilityProps');
+    expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(true);
+  });
+});
+
 describe('image consumed props', () => {
   it.each(['ios', 'android'] as const)(
     'removes wrapper-consumed size and request props from optimized %s output',
