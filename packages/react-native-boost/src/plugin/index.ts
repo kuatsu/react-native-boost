@@ -6,6 +6,7 @@ import { createLogger } from './utils/logger';
 import { viewOptimizer } from './optimizers/view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
+import { activityIndicatorOptimizer } from './optimizers/activity-indicator';
 
 export type { PluginOptimizationOptions, PluginOptions } from './types';
 
@@ -47,6 +48,8 @@ export default declare((api, rawOptions, dirname?: string) => {
         if (options.optimizations?.text !== false) textOptimizer(path, logger, options, platform, unistylesEnabled);
         if (options.optimizations?.view !== false) viewOptimizer(path, logger, options, platform, unistylesEnabled);
         if (options.optimizations?.image !== false) imageOptimizer(path, logger, options, platform, unistylesEnabled);
+        if (options.optimizations?.activityIndicator !== false)
+          activityIndicatorOptimizer(path, logger, options, platform, unistylesEnabled);
       },
     },
   };

@@ -9,7 +9,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 React Native Boost consists of two pieces:
 
-- A Babel plugin that statically analyzes your source code and replaces safe `Text`, `View`, and `Image` components with their direct native counterparts, leading to significant performance improvements compared to the JS-based wrapper components.
+- A Babel plugin that statically analyzes your source code and replaces safe `Text`, `View`, `Image`, and `ActivityIndicator` components with their direct native output, leading to significant performance improvements compared to the JS-based wrapper components.
 - A runtime package used internally by the plugin for cross-platform-safe imports and helper utilities.
 
 The analyzer is intentionally strict and skips any optimizations that may lead to user-facing bugs and behavioral changes.

@@ -2,7 +2,7 @@ import { transformSync, type TransformCaller } from '@babel/core';
 import * as React from 'react';
 import boostPlugin from '../../index'; // src/plugin/index.ts — the full Boost plugin
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
-import { renderAndCaptureSingle } from './capture';
+import { renderAndCaptureAll, type Capture } from './capture';
 import { writeAndImportFresh } from './generated';
 import { setPlatformOS, type PlatformOS } from './mocks/Platform';
 
@@ -24,7 +24,7 @@ interface BoostOptimized {
 function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runtimeParentIsSafe = true): string {
   setPlatformOS(os);
   const source =
-    `import { Image, Text, View } from 'react-native';\n${preamble}\n` +
+    `import { ActivityIndicator, Image, Text, View } from 'react-native';\n${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {
     configFile: false,
@@ -56,11 +56,21 @@ export async function captureBoost(
   jsxBody: string,
   preamble = ''
 ): Promise<BoostBailed | BoostOptimized> {
+  const result = await captureBoostHosts(os, jsxBody, preamble);
+  if (!result.optimized) return result;
+  if (result.hosts.length !== 1) throw new Error(`Expected one Boost host, received ${result.hosts.length}`);
+  const { which, props } = result.hosts[0];
+  return { optimized: true, which, props };
+}
+
+export async function captureBoostHosts(
+  os: PlatformOS,
+  jsxBody: string,
+  preamble = ''
+): Promise<BoostBailed | { optimized: true; hosts: Capture[] }> {
   const code = transformBoostCase(os, jsxBody, preamble);
-  // Single-element snippet: the runtime import is injected iff that element was optimized.
   if (!code.includes(RUNTIME_MODULE_NAME)) return { optimized: false };
 
   const mod = await writeAndImportFresh('boost', code);
-  const { which, props } = renderAndCaptureSingle(React.createElement(mod.default));
-  return { optimized: true, which, props };
+  return { optimized: true, hosts: renderAndCaptureAll(React.createElement(mod.default)) };
 }

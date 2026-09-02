@@ -1,4 +1,4 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { startMarker } from 'react-native-time-to-render';
@@ -20,6 +20,13 @@ const benchmarks = [
     // @boost-ignore
     unoptimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
     optimizedComponent: <View style={{ borderWidth: 1, borderColor: 'red' }} />,
+  },
+  {
+    title: 'ActivityIndicator',
+    count: 2000,
+    // @boost-ignore
+    unoptimizedComponent: <ActivityIndicator animating={false} />,
+    optimizedComponent: <ActivityIndicator animating={false} />,
   },
   {
     title: 'Image',

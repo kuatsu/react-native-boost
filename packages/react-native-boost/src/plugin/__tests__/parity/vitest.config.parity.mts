@@ -40,6 +40,8 @@ const basenameRedirects: Array<[RegExp, string]> = [
   [/(^|[./])ViewNativeComponent$/, u('./mocks/ViewNativeComponent.ts')],
   [/(^|[./])TextNativeComponent$/, u('./mocks/TextNativeComponent.ts')],
   [/(^|[./])ImageViewNativeComponent$/, u('./mocks/ImageViewNativeComponent.ts')],
+  [/(^|[./])ActivityIndicatorViewNativeComponent(?:\.js)?$/, u('./mocks/ActivityIndicatorViewNativeComponent.ts')],
+  [/(^|[./])ProgressBarAndroidNativeComponent(?:\.js)?$/, u('./mocks/ProgressBarAndroidNativeComponent.ts')],
   [/(^|[./])TextInlineImageNativeComponent$/, u('./mocks/TextInlineImageNativeComponent.ts')],
   [/(^|[./])NativeImageLoader(Android|IOS)$/, u('./mocks/NativeImageLoader.ts')],
   [/(^|[./])StyleSheet$/, u('./mocks/StyleSheet.ts')],
@@ -67,6 +69,22 @@ export default defineConfig({
       },
       transform(code, id) {
         if (!RN_SRC.test(id)) return null;
+        if (/\/ActivityIndicator\/ActivityIndicator\.js$/.test(id)) {
+          // The real wrapper binds its platform host at module load. The parity suite changes platforms
+          // in one process, so select at render time while leaving the wrapper's prop logic unchanged.
+          code = code.replace(
+            `const PlatformActivityIndicator =
+  Platform.OS === 'android'
+    ? require('../ProgressBarAndroid/ProgressBarAndroid').default
+    : require('./ActivityIndicatorViewNativeComponent').default;`,
+            `import ProgressBarAndroid from '../ProgressBarAndroid/ProgressBarAndroid.android';
+import ActivityIndicatorView from './ActivityIndicatorViewNativeComponent';
+const PlatformActivityIndicator = props =>
+  Platform.OS === 'android'
+    ? React.createElement(ProgressBarAndroid, props)
+    : React.createElement(ActivityIndicatorView, props);`
+          );
+        }
         const out = transformSync(code, {
           configFile: false,
           babelrc: false,

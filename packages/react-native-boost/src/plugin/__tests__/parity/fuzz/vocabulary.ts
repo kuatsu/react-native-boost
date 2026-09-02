@@ -308,6 +308,29 @@ export const VIEW_VOCAB: PropSpec[] = [
   { name: 'shouldRasterizeIOS', arb: bool, disposition: 'probe pass-through' },
 ];
 
+// ── ActivityIndicator ──────────────────────────────────────────────────────────────────────────────
+export const ACTIVITY_INDICATOR_VOCAB: PropSpec[] = [
+  { name: 'animating', arb: withNullish(bool), disposition: 'undefined default true; null passes through' },
+  { name: 'color', arb: withNullish(fc.constantFrom('"red"', '"blue"')), disposition: 'platform default' },
+  { name: 'hidesWhenStopped', arb: withNullish(bool), disposition: 'undefined default true' },
+  {
+    name: 'size',
+    arb: withNullish(fc.constantFrom('"small"', '"large"', '16', '24')),
+    disposition: 'size prop and inner dimensions',
+  },
+  { name: 'style', arb: styleValue, disposition: 'outer container style composition' },
+  { name: 'onLayout', arb: fc.constant('() => {}'), disposition: 'moved to outer View' },
+  { name: 'testID', arb: withNullish(str), disposition: 'inner host pass-through' },
+  { name: 'accessibilityLabel', arb: withNullish(str), disposition: 'inner host pass-through' },
+  {
+    name: 'accessibilityRole',
+    arb: fc.constantFrom('"progressbar"', '"none"'),
+    disposition: 'inner host pass-through',
+  },
+  { name: 'accessible', arb: withNullish(bool), disposition: 'inner host pass-through' },
+  { name: 'collapsable', arb: bool, disposition: 'inner host pass-through' },
+];
+
 // ── Image ─────────────────────────────────────────────────────────────────────────────────────────
 export const IMAGE_SOURCE_VOCAB: PropSpec[] = [
   {

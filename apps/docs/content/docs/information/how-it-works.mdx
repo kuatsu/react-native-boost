@@ -3,7 +3,7 @@ title: How It Works
 description: Why React Native Boost makes your app faster (the short version).
 ---
 
-In React Native, `Text`, `View`, and `Image` aren't quite what they appear to be. They look like basic building blocks, but each one is a small JavaScript component that runs **every time it renders**, wrapping a lower-level native component underneath.
+In React Native, `Text`, `View`, `Image`, and `ActivityIndicator` aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript components **every time it renders**, wrapping lower-level native components underneath.
 
 That wrapper is genuinely useful. It handles edge cases and powers conveniences such as accessibility props, style normalization, and Image source processing. But many elements do not need that runtime work, so the wrapper becomes pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
@@ -11,7 +11,7 @@ React Native Boost removes the wrapper when it isn't needed.
 
 ## The one-sentence version
 
-At build time, Boost rewrites `Text`, `View`, and `Image` elements into the native components they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
+At build time, Boost rewrites `Text`, `View`, `Image`, and `ActivityIndicator` elements into the native output they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
 
 ## A quick before and after
 
@@ -23,7 +23,7 @@ At build time, Boost rewrites `Text`, `View`, and `Image` elements into the nati
 <NativeText allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
 ```
 
-`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlines above. Boost just skips the middleman. The defaults the wrapper would have applied are baked in at build time, so what ends up on screen is identical.
+`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlined above. Boost just skips the middleman. The defaults the wrapper would have applied are baked in at build time, so what ends up on screen is identical.
 
 These optimized components are imported from `react-native-boost/runtime` rather than `react-native` directly. That indirection lets them fall back to the standard components on web and other platforms where the native versions aren't available.
 

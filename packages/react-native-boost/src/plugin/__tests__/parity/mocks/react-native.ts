@@ -1,5 +1,10 @@
 import Platform from './Platform';
-import { NativeImageCapturer, NativeTextCapturer, NativeViewCapturer } from '../capture';
+import {
+  NativeActivityIndicatorCapturer,
+  NativeImageCapturer,
+  NativeTextCapturer,
+  NativeViewCapturer,
+} from '../capture';
 import { flattenStyle } from '../normalize';
 import { processColor } from './processColor';
 
@@ -18,9 +23,13 @@ export const View = NativeViewCapturer;
 export const Image = Object.assign(NativeImageCapturer, {
   resolveAssetSource: <T>(source: T): T => source,
 });
+export const ActivityIndicator = NativeActivityIndicatorCapturer;
 
 // `processTextStyle` (the runtime under test) calls `StyleSheet.flatten`, so it must faithfully
 // reproduce RN's flatten semantics — an identity stub would silently break every dynamic-`style` parity
 // comparison (arrays would never merge, the top-level conversions would never fire). It shares the one
 // `flattenStyle` the comparison normalizer uses, so the Boost side flattens identically to the wrapper.
-export const StyleSheet = { flatten: flattenStyle };
+export const StyleSheet = {
+  flatten: flattenStyle,
+  compose: (first: unknown, second: unknown) => (second ? [first, second] : first),
+};

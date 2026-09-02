@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import {
+  ACTIVITY_INDICATOR_VOCAB,
   IMAGE_SOURCE_VOCAB,
   IMAGE_VOCAB,
   TEXT_VOCAB,
@@ -12,7 +13,7 @@ import {
 // attr, simplify a value, collapse dynamic→static) and the renderer turns it into valid JSX by
 // construction, so shrinking never explores malformed snippets.
 
-export type Tag = 'Image' | 'Text' | 'View';
+export type Tag = 'ActivityIndicator' | 'Image' | 'Text' | 'View';
 
 /** One attribute: the value's source code, and whether it is inlined or hoisted to a preamble const. */
 export interface GenAttr {
@@ -135,6 +136,14 @@ const viewSpecArb: fc.Arbitrary<ElementSpec> = fc.record({
   child: fc.constant<ChildSpec | null>(null),
 });
 
+const activityIndicatorSpecArb: fc.Arbitrary<ElementSpec> = fc.record({
+  tag: fc.constant<Tag>('ActivityIndicator'),
+  attrs: attrsArb(ACTIVITY_INDICATOR_VOCAB),
+  blacklisted: fc.constant<GenAttr | null>(null),
+  spreads: spreadsArb(ACTIVITY_INDICATOR_VOCAB),
+  child: fc.constant<ChildSpec | null>(null),
+});
+
 const imageSourceArb: fc.Arbitrary<GenAttr> = fc
   .constantFrom(...IMAGE_SOURCE_VOCAB)
   .chain((spec) => spec.arb.map((code): GenAttr => ({ name: spec.name, code, dynamic: false })));
@@ -147,7 +156,12 @@ const imageSpecArb: fc.Arbitrary<ElementSpec> = fc.record({
   child: fc.constant<ChildSpec | null>(null),
 });
 
-export const elementSpecArb: fc.Arbitrary<ElementSpec> = fc.oneof(textSpecArb, viewSpecArb, imageSpecArb);
+export const elementSpecArb: fc.Arbitrary<ElementSpec> = fc.oneof(
+  activityIndicatorSpecArb,
+  textSpecArb,
+  viewSpecArb,
+  imageSpecArb
+);
 
 export const platformArb = fc.constantFrom('ios' as const, 'android' as const);
 
@@ -189,6 +203,10 @@ export function render(spec: ElementSpec): RenderedCase {
 
   if (spec.tag === 'View') {
     return { preamble: declarations.join('\n'), jsxBody: `<View${attrs} />` };
+  }
+
+  if (spec.tag === 'ActivityIndicator') {
+    return { preamble: declarations.join('\n'), jsxBody: `<ActivityIndicator${attrs} />` };
   }
 
   if (spec.tag === 'Image') {

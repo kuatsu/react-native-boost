@@ -16,6 +16,11 @@ export interface PluginOptimizationOptions {
    * @default true
    */
   image?: boolean;
+  /**
+   * Whether to optimize the `ActivityIndicator` component.
+   * @default true
+   */
+  activityIndicator?: boolean;
 }
 
 export interface PluginOptions {
@@ -94,9 +99,17 @@ export interface PluginOptions {
    * @default false
    */
   dangerouslyOptimizeImageWithUnknownAncestors?: boolean;
+  /**
+   * Opt-in flag that allows ActivityIndicator optimization when ancestor components cannot be statically resolved.
+   *
+   * This can change Text ancestor context when an unresolved ancestor renders a React Native `Text` wrapper.
+   * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
+   * @default false
+   */
+  dangerouslyOptimizeActivityIndicatorWithUnknownAncestors?: boolean;
 }
 
-export type OptimizableComponent = 'Text' | 'View' | 'Image';
+export type OptimizableComponent = 'Text' | 'View' | 'Image' | 'ActivityIndicator';
 
 export type TargetPlatform = 'ios' | 'android' | 'web';
 

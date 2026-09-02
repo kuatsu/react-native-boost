@@ -13,9 +13,12 @@ vi.mock('../../../runtime/components/native-view', async () => ({
 vi.mock('../../../runtime/components/native-image', async () => ({
   NativeImage: (await import('./capture')).NativeImageCapturer,
 }));
+vi.mock('../../../runtime/components/native-activity-indicator', async () => ({
+  NativeActivityIndicator: (await import('./capture')).NativeActivityIndicatorCapturer,
+}));
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
-import { captureBoost, boostOptimizes } from './boost';
+import { captureBoost, captureBoostHosts, boostOptimizes } from './boost';
 import { reactNativeVersion } from './mocks/Platform';
 import { normalize, normalizeImage } from './normalize';
 
@@ -112,6 +115,31 @@ const VIEW_CASES = [
 // View cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
 // a silent loss of optimization — from masquerading as a passing parity test.
 const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
+
+const ACTIVITY_INDICATOR_CASES: Array<[string, string?]> = [
+  ['<ActivityIndicator />'],
+  ['<ActivityIndicator animating={false} />'],
+  ['<ActivityIndicator animating={null} color={null} hidesWhenStopped={null} size={null} />'],
+  ['<ActivityIndicator color="red" hidesWhenStopped={false} />'],
+  ['<ActivityIndicator size="large" />'],
+  ['<ActivityIndicator size={24} />'],
+  ['<ActivityIndicator style={{ margin: 4 }} />'],
+  ['<ActivityIndicator onLayout={() => {}} testID="spinner" accessibilityLabel="Loading" />'],
+  ['<ActivityIndicator key="spinner" size="small" style={false} />'],
+  [
+    '<ActivityIndicator animating={animating} color={color} hidesWhenStopped={hides} size={size} style={style} />',
+    'const animating = undefined; const color = undefined; const hides = undefined; const size = 28; const style = { margin: 3 };',
+  ],
+  ['<ActivityIndicator {...{ size: "large" }} />'],
+  ['<ActivityIndicator>child</ActivityIndicator>'],
+  ['<Text><ActivityIndicator /></Text>'],
+];
+
+const BAILED_ACTIVITY_INDICATOR_CASES = new Set([
+  '<ActivityIndicator {...{ size: "large" }} />',
+  '<ActivityIndicator>child</ActivityIndicator>',
+  '<Text><ActivityIndicator /></Text>',
+]);
 
 const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} />',
@@ -239,6 +267,23 @@ describe('differential parity', () => {
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which); // same native host kind
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it.each(ACTIVITY_INDICATOR_CASES)('ActivityIndicator: %s', async (jsx, preamble = '') => {
+      const boost = await captureBoostHosts(os, jsx, preamble);
+      expect(boost.optimized).toBe(!BAILED_ACTIVITY_INDICATOR_CASES.has(jsx));
+      if (!boost.optimized) return;
+
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      expect(boost.hosts.map((host) => host.which)).toEqual(['NativeView', 'NativeActivityIndicator']);
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      if (jsx.includes('onLayout')) {
+        expect(typeof boost.hosts[0].props.onLayout).toBe('function');
+        expect(typeof wrapper[0].props.onLayout).toBe('function');
+        expect(boost.hosts[1].props.onLayout).toBeUndefined();
+        expect(wrapper[1].props.onLayout).toBeUndefined();
+      }
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
     it.each(IMAGE_CASES)('Image: %s', async (jsx) => {

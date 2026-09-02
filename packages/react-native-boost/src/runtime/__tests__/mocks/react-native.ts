@@ -3,6 +3,7 @@ export const Text = () => 'Text';
 export const Image = Object.assign(() => 'Image', {
   resolveAssetSource: <T>(source: T): T => source,
 });
+export const ActivityIndicator = () => 'ActivityIndicator';
 
 // `constants.reactNativeVersion` backs the runtime's Image wrapper-version gates. Pinned rather than
 // read from the installed RN so unit expectations are deterministic; the version-dependent branches

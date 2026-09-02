@@ -1,6 +1,6 @@
 ---
 title: Technical Deep Dive
-description: A technical tour of the Text and View wrappers, the render-time tax they impose, and how React Native Boost removes it at build time.
+description: A technical tour of React Native wrapper overhead and how React Native Boost removes it at build time.
 ---
 
 This page is the long version of [How It Works](/docs/information/how-it-works). It walks through what the
@@ -288,7 +288,11 @@ Dynamic values, or `aria-*` state/value groups that the wrapper merges, are rout
 
 `Image` source, style, and accessibility props are normalized before Boost swaps the wrapper for
 `NativeImage`. Static values are processed at build time. Dynamic values use small runtime helpers.
-Compared to `Text` and `View`, the host component for `Image` is not imported directly. React Native does not export it through a supported interface, and only exports it through deprecated deep imports which log warnings when used. The plugin therefore registers the `RCTImageView` host directly.
+Compared to `Text` and `View`, the host component for `Image` is not imported directly. React Native does not export it through a supported interface, and only exports it through deprecated deep imports which log warnings when used. The runtime loads the public `Image` module to register `RCTImageView`, then renders that registered host directly.
+
+### ActivityIndicator
+
+`ActivityIndicator` normally renders an outer `View`, an iOS spinner host or Android `ProgressBarAndroid` wrapper, and then the platform host. Boost emits the outer native `View` and platform host directly. It inlines static defaults, sizes, and styles. Dynamic direct props use small helpers. Similar to `Image`, `ActivityIndicator` is registered manually without a deep import.
 
 For the complete matrix of what's optimized, translated, and skipped, see
 [Coverage & Bailouts](/docs/information/optimization-coverage).
@@ -296,11 +300,11 @@ For the complete matrix of what's optimized, translated, and skipped, see
 ## Inside the plugin
 
 The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`,
-`View`, and `Image` optimizers; each follows the same shape.
+`View`, `Image`, and `ActivityIndicator` optimizers; each follows the same shape.
 
 <Mermaid
   chart={`flowchart TD
-  el["JSXOpeningElement (Text, View, or Image)"] --> g{"Resolves to the react-native component?"}
+  el["JSXOpeningElement (supported component)"] --> g{"Resolves to the react-native component?"}
   g -- no --> skip["Leave unchanged"]
   g -- yes --> b{"Does any bailout check fail?"}
   b -- "yes, and no @boost-force" --> skip
@@ -328,7 +332,7 @@ to a string/number; `<Text>{maybeJSX()}</Text>` is not.
 
 ### Ancestor classification
 
-The most intricate check is shared by all three optimizers. Components under a `Text` can need different
+The most intricate check is shared by the optimizers. Components under a `Text` can need different
 host semantics. A nested `Text` uses `RCTVirtualText`, and Android uses a separate inline Image host.
 Before optimizing, the plugin therefore walks **up** the tree and classifies the ancestor chain as one of:
 
@@ -344,7 +348,7 @@ false-negatives (a regression).
 
 The `unknown` case is *often* safe in practice (third-party components rarely wrap children in `Text`), but there are still cases where optimizing components with an `unknown` ancestor could genuinely cause regressions. Therefore, Boost provides
 explicit opt-in escape hatches: `dangerouslyOptimizeViewWithUnknownAncestors`, 
-`dangerouslyOptimizeTextWithUnknownAncestors` and `dangerouslyOptimizeImageWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
+`dangerouslyOptimizeTextWithUnknownAncestors`, `dangerouslyOptimizeImageWithUnknownAncestors`, and `dangerouslyOptimizeActivityIndicatorWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
 
 ### Rewriting and import injection
 
@@ -359,6 +363,7 @@ API lives on the [Runtime Library](/docs/runtime-library) page. The most load-be
 
 - **`NativeText` / `NativeView`** resolve `unstable_NativeText` / `unstable_NativeView` from `react-native` at module load, and **gracefully fall back** to the standard `Text`/`View` on web or any runtime where these exports are missing.
 - **`NativeImage`** loads React Native's public `Image` module to register its host, then renders the registered `RCTImageView` name directly. Web uses the standard `Image` component.
+- **`ActivityIndicator` runtime** registers the platform host through the public module. Small helpers preserve dynamic default, size, and style behavior. Static cases do not call them per render.
 - **`processTextStyle(style)`** does the same flatten-and-normalize work as the wrapper, with one small difference: it **caches by reference in a `WeakMap`**. When you pass a `StyleSheet.create` reference, the first call flattens it and every later call returns the cached result. The wrapper re-flattens on every render. (Only stable references hit the cache; an inline `style={{…}}` is a fresh reference each render, so it re-flattens either way.)
 - **`processAccessibilityProps(props)`** mirrors `Text`'s `aria-*` translation, `accessibilityState` merge, `disabled` reconciliation, and platform `accessible` default. It runs only when the element actually has accessibility props.
 - **`processViewAccessibilityProps(props)`** does the same for `View`'s ARIA cluster (`aria-labelledby` split, live-region mapping, state/value aggregation, `tabIndex` → `focusable`).

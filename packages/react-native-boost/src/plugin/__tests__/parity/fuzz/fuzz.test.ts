@@ -13,9 +13,12 @@ vi.mock('../../../../runtime/components/native-view', async () => ({
 vi.mock('../../../../runtime/components/native-image', async () => ({
   NativeImage: (await import('../capture')).NativeImageCapturer,
 }));
+vi.mock('../../../../runtime/components/native-activity-indicator', async () => ({
+  NativeActivityIndicator: (await import('../capture')).NativeActivityIndicatorCapturer,
+}));
 
-import { captureBoost } from '../boost';
-import { captureWrapper } from '../wrapper';
+import { captureBoostHosts } from '../boost';
+import { captureWrapperHosts } from '../wrapper';
 import { normalize, normalizeImage } from '../normalize';
 import { reactNativeVersion, type PlatformOS } from '../mocks/Platform';
 import { elementSpecArb, platformArb, render, type Tag } from './generator';
@@ -45,26 +48,29 @@ type CaseResult = Skipped | Matched | Diverged;
 /**
  * Run one generated case through both oracles. Returns `skipped` when Boost bails (equivalent to the
  * wrapper by construction), `match` when the optimized output equals the wrapper, or `divergence` with
- * the differing keys + both bags. Throws only on a genuine harness error (e.g. a value that makes BOTH
- * sides throw, or a wrapper render that is not single-host) — never on a parity difference.
+ * the differing keys + both bags. Throws only on a genuine harness error, never on a parity difference.
  */
 async function runCase(os: PlatformOS, jsxBody: string, preamble: string): Promise<CaseResult> {
-  const boost = await captureBoost(os, jsxBody, preamble);
+  const boost = await captureBoostHosts(os, jsxBody, preamble);
   if (!boost.optimized) return { status: 'skipped' };
 
-  const wrapper = await captureWrapper(os, jsxBody, preamble);
-  const isImage = boost.which === 'NativeImage' || wrapper.which === 'NativeImage';
-  const boostNorm = isImage ? normalizeImage(boost.props, reactNativeVersion.minor) : normalize(boost.props);
-  const wrapperNorm = isImage ? normalizeImage(wrapper.props, reactNativeVersion.minor) : normalize(wrapper.props);
-  const keys = divergingKeys(boostNorm, wrapperNorm);
+  const wrapper = await captureWrapperHosts(os, jsxBody, preamble);
+  const normalizeHost = (host: (typeof boost.hosts)[number]) => ({
+    which: host.which,
+    props:
+      host.which === 'NativeImage' ? normalizeImage(host.props, reactNativeVersion.minor) : normalize(host.props),
+  });
+  const boostProps = { hosts: boost.hosts.map(normalizeHost) };
+  const wrapperProps = { hosts: wrapper.map(normalizeHost) };
+  const keys = divergingKeys(boostProps, wrapperProps);
+  if (keys.length === 0) return { status: 'match' };
 
-  if (boost.which === wrapper.which && keys.length === 0) return { status: 'match' };
   return {
     status: 'divergence',
-    whichBoost: boost.which,
-    whichWrapper: wrapper.which,
-    boost: boostNorm,
-    wrapper: wrapperNorm,
+    whichBoost: boost.hosts.map((host) => host.which).join(' → '),
+    whichWrapper: wrapper.map((host) => host.which).join(' → '),
+    boost: boostProps,
+    wrapper: wrapperProps,
     keys,
   };
 }
@@ -90,6 +96,7 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
       let optimized = 0;
       let skipped = 0;
       const byTag: Record<Tag, { optimized: number; skipped: number }> = {
+        ActivityIndicator: { optimized: 0, skipped: 0 },
         Image: { optimized: 0, skipped: 0 },
         Text: { optimized: 0, skipped: 0 },
         View: { optimized: 0, skipped: 0 },
@@ -118,6 +125,7 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
         `[fuzz] cases=${total} optimized=${optimized} skipped=${skipped} ` +
           `optimize-rate=${(rate * 100).toFixed(1)}% elapsed=${elapsed.toFixed(0)}ms ` +
           `(${(total / (elapsed / 1000)).toFixed(1)} cases/s) ` +
+          `activity=${byTag.ActivityIndicator.optimized}/${byTag.ActivityIndicator.optimized + byTag.ActivityIndicator.skipped} ` +
           `image=${byTag.Image.optimized}/${byTag.Image.optimized + byTag.Image.skipped} ` +
           `text=${byTag.Text.optimized}/${byTag.Text.optimized + byTag.Text.skipped} ` +
           `view=${byTag.View.optimized}/${byTag.View.optimized + byTag.View.skipped}`
@@ -129,6 +137,8 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
       const imageRate = byTag.Image.optimized / imageTotal;
       expect(imageTotal).toBeGreaterThan(0);
       expect(imageRate).toBeGreaterThan(0.2);
+      const activityTotal = byTag.ActivityIndicator.optimized + byTag.ActivityIndicator.skipped;
+      expect(activityTotal).toBeGreaterThan(0);
     },
     Math.max(30_000, NUM_RUNS * 80)
   );
