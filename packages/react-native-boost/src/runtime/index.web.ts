@@ -1,6 +1,7 @@
 // This is a dummy file to ensure that nothing breaks when using the runtime in a web environment.
 
-import { TextProps, TextStyle } from 'react-native';
+import { ActivityIndicator as NativeActivityIndicator } from 'react-native';
+import type { ActivityIndicatorProps, TextProps, TextStyle } from 'react-native';
 import { GenericStyleProp } from './types';
 
 export const processTextStyle = (style: GenericStyleProp<TextStyle>) => ({ style }) as Partial<TextProps>;
@@ -11,6 +12,28 @@ export const processTextStyle = (style: GenericStyleProp<TextStyle>) => ({ style
 export function processSelectionColor(selectionColor?: unknown): { selectionColor?: unknown } {
   return selectionColor == null ? {} : { selectionColor };
 }
+
+export function resolveActivityIndicatorDefault<T>(value: T | undefined, fallback: T): T {
+  return value === undefined ? fallback : value;
+}
+
+export const activityIndicatorStyles = {
+  container: { alignItems: 'center', justifyContent: 'center' },
+  small: { width: 20, height: 20 },
+  large: { width: 36, height: 36 },
+} as const;
+
+export function processActivityIndicatorStyle(style: ActivityIndicatorProps['style']) {
+  return style ? [activityIndicatorStyles.container, style] : activityIndicatorStyles.container;
+}
+
+export function processActivityIndicatorSize(size: ActivityIndicatorProps['size'] = 'small') {
+  if (size === 'small') return { style: activityIndicatorStyles.small, size };
+  if (size === 'large') return { style: activityIndicatorStyles.large, size };
+  return { style: { height: size, width: size }, size: undefined };
+}
+
+export { NativeActivityIndicator };
 
 // On Web there is no platform-specific `accessible` default to apply; react-native-web's `Text`
 // derives accessibility from the rendered DOM. Returning `undefined` makes the injected
