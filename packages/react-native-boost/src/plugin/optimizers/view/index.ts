@@ -81,7 +81,7 @@ export const viewOptimizer: Optimizer = (path, logger, options, _platform, unist
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
       shouldBail: () => hasAmbiguousIdNativeID(path),
     },
-    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeViewWithUnknownAncestors === true),
+    ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
   if (forced) {

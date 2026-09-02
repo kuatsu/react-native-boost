@@ -29,7 +29,7 @@ async function getTocInsertions(slug: string): Promise<TocInsertion[]> {
   }
 
   if (slug === 'configuration/configure') {
-    const [pluginOptionsToc, pluginOptimizationOptionsToc] = await Promise.all([
+    const [pluginOptionsToc, optimizationOptionsToc, assumptionsToc, integrationOptionsToc] = await Promise.all([
       getAutoOptionSectionsToc({
         path: pluginTypesPath,
         name: 'PluginOptions',
@@ -42,6 +42,18 @@ async function getTocInsertions(slug: string): Promise<TocInsertion[]> {
         idPrefix: 'plugin-optimization-options',
         depth: 3,
       }),
+      getAutoOptionSectionsToc({
+        path: pluginTypesPath,
+        name: 'PluginAssumptions',
+        idPrefix: 'plugin-assumptions',
+        depth: 3,
+      }),
+      getAutoOptionSectionsToc({
+        path: pluginTypesPath,
+        name: 'PluginIntegrationOptions',
+        idPrefix: 'plugin-integration-options',
+        depth: 3,
+      }),
     ]);
 
     return [
@@ -50,8 +62,16 @@ async function getTocInsertions(slug: string): Promise<TocInsertion[]> {
         items: pluginOptionsToc,
       },
       {
-        afterUrl: '#plugin-optimization-options',
-        items: pluginOptimizationOptionsToc,
+        afterUrl: '#optimization-options',
+        items: optimizationOptionsToc,
+      },
+      {
+        afterUrl: '#assumptions',
+        items: assumptionsToc,
+      },
+      {
+        afterUrl: '#integration-options',
+        items: integrationOptionsToc,
       },
     ];
   }

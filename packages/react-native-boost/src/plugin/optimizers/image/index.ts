@@ -128,7 +128,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
     },
-    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeImageWithUnknownAncestors === true),
+    ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
   const hardSkipReason = getFirstBailoutReason(hardChecks);

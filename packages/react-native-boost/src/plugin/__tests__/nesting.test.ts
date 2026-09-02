@@ -5,7 +5,7 @@ import { formatTestResult } from '../utils/format-test-result';
 
 pluginTester({
   plugin,
-  pluginOptions: { silent: true },
+  pluginOptions: { logLevel: 'silent' },
   title: 'nesting',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-nesting'),
   babelOptions: {
@@ -16,7 +16,7 @@ pluginTester({
 
 pluginTester({
   plugin,
-  pluginOptions: { silent: true, unistyles: true },
+  pluginOptions: { logLevel: 'silent', integrations: { unistyles: 'on' } },
   title: 'nesting unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-nesting-unistyles'),
   babelOptions: {

@@ -16,9 +16,9 @@ pluginTester({
 
 pluginTester({
   plugin: generateTestPlugin(viewOptimizer, {
-    dangerouslyOptimizeViewWithUnknownAncestors: true,
+    assumptions: { unknownAncestorsDoNotRenderText: true },
   }),
-  title: 'view dangerous unknown ancestors',
+  title: 'view unknown ancestor assumption',
   babelOptions: {
     plugins: ['@babel/plugin-syntax-jsx'],
   },
@@ -33,7 +33,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(viewOptimizer, { unistyles: true }),
+  plugin: generateTestPlugin(viewOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'view unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
   babelOptions: {

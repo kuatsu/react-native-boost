@@ -1,6 +1,7 @@
 import { styleText } from 'node:util';
 import {
   HubFile,
+  LogLevel,
   OptimizationLogPayload,
   PluginLogger,
   SkippedOptimizationLogPayload,
@@ -16,15 +17,16 @@ export const noopLogger: PluginLogger = {
   warning() {},
 };
 
-export const createLogger = ({ verbose, silent }: { verbose: boolean; silent: boolean }): PluginLogger => {
-  if (silent) return noopLogger;
+export const createLogger = (logLevel: LogLevel = 'info'): PluginLogger => {
+  if (logLevel === 'silent') return noopLogger;
 
   return {
     optimized(payload) {
+      if (logLevel === 'warn') return;
       writeLog('optimized', `Optimized ${payload.component} in ${formatPathLocation(payload.path)}`);
     },
     skipped(payload) {
-      if (!verbose) return;
+      if (logLevel !== 'debug') return;
       writeLog('skipped', `Skipped ${payload.component} in ${formatPathLocation(payload.path)} (${payload.reason})`);
     },
     forced(payload) {
@@ -55,14 +57,14 @@ function formatWarningContext(payload: WarningLogPayload): string {
   return location;
 }
 
-type LogLevel = 'optimized' | 'skipped' | 'forced' | 'warning';
+type LogCategory = 'optimized' | 'skipped' | 'forced' | 'warning';
 
-function writeLog(level: LogLevel, message: string): void {
+function writeLog(level: LogCategory, message: string): void {
   const levelTag = formatLevel(level);
   console.log(`${LOG_PREFIX} ${levelTag} ${message}`);
 }
 
-function formatLevel(level: LogLevel): string {
+function formatLevel(level: LogCategory): string {
   if (level === 'optimized') return styleText('green', '[optimized]');
   if (level === 'skipped') return styleText('yellow', '[skipped]');
   if (level === 'forced') return styleText('red', '[forced]');

@@ -13,8 +13,8 @@ const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies'
  * `require.resolve` probe: in a monorepo (or with a hoisted/transitive copy) the package is often
  * resolvable from a project that does not actually use it, which would wrongly enable the mode and its
  * bailouts for unrelated packages. A declared dependency is the project's own signal that it uses
- * Unistyles. The result still only auto-enables the mode and emits a one-time hint to set the `unistyles`
- * flag explicitly, since a declared dependency does not prove Unistyles' own Babel plugin is active.
+ * Unistyles. The result still only auto-enables the mode and emits a one-time hint to set the integration
+ * to `on`, since a declared dependency does not prove Unistyles' own Babel plugin is active.
  */
 export function isUnistylesInstalled(fromDirectory: string | undefined): boolean {
   const packageJson = readNearestPackageJson(fromDirectory ?? process.cwd());
