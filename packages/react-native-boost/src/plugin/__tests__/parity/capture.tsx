@@ -32,6 +32,7 @@ export const NativeTextCapturer = makeCapturer('NativeText');
 export const NativeVirtualTextCapturer = makeCapturer('NativeVirtualText');
 export const NativeViewCapturer = makeCapturer('NativeView');
 export const NativeImageCapturer = makeCapturer('NativeImage');
+export const NativeActivityIndicatorCapturer = makeCapturer('NativeActivityIndicator');
 export const TextInlineImageCapturer = makeCapturer('TextInlineImage');
 
 /** Render an element and return every native host it produced, in render order. */

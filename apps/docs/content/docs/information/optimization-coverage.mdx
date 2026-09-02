@@ -12,6 +12,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 | `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `has unresolved runtime parent that may render Text`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 | `Image` | Imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+| `ActivityIndicator` | Imported from `react-native`, native platform known, direct props only, no children, safe ancestor chain | `target platform is unknown`, `has spread props`, `contains children`, `contains an impure prop expression that cannot be safely reordered`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
 
 ## Global Bailouts
 
@@ -119,6 +120,14 @@ The `Image` optimizer rewrites supported `Image` elements when the target platfo
 source/style/accessibility props can be reproduced safely.
 
 In Unistyles mode, an Image is skipped when its `style` is (or may be) a Unistyles style.
+
+## ActivityIndicator Coverage
+
+The `ActivityIndicator` optimizer replaces the wrapper tree with the same outer native `View` and platform spinner host. It resolves static defaults, built-in or numeric sizes, and static style composition at build time. Dynamic direct props use small runtime helpers.
+
+It skips elements with spreads, children, impure prop expressions, Unistyles styles, or an unsafe ancestor chain. A spread can change the wrapper's prop precedence. An impure expression could run in a different order after one component expands into two hosts. These cases stay on the React Native wrapper.
+
+Set `dangerouslyOptimizeActivityIndicatorWithUnknownAncestors: true` to optimize unknown ancestors too. This has the same Text-ancestor risk as the View option.
 
 ## Spread Props: Resolvable vs Unresolvable
 

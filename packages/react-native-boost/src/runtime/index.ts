@@ -6,7 +6,7 @@ import {
   Image as RNImage,
   processColor as rnProcessColor,
 } from 'react-native';
-import type { ColorValue, ProcessedColorValue } from 'react-native';
+import type { ActivityIndicatorProps, ColorValue, ProcessedColorValue } from 'react-native';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
@@ -14,6 +14,13 @@ const propsCache = new WeakMap();
 const imageBaseStyle = { overflow: 'hidden' } as const;
 const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
 const emptyImageSource = { uri: undefined, width: undefined, height: undefined };
+export const activityIndicatorStyles = {
+  container: { alignItems: 'center', justifyContent: 'center' },
+  small: { width: 20, height: 20 },
+  large: { width: 36, height: 36 },
+} as const;
+let activityIndicatorSmallProps: { style: (typeof activityIndicatorStyles)['small']; size: 'small' } | undefined;
+let activityIndicatorLargeProps: { style: (typeof activityIndicatorStyles)['large']; size: 'large' } | undefined;
 
 // Resolve RN's `processColor` once. The `typeof` guard degrades to a passthrough on
 // a non-RN host that lacks it (see {@link processSelectionColor}); the web build never reaches this — it
@@ -197,6 +204,24 @@ export function processSelectionColor(selectionColor?: ColorValue | number | nul
   if (processColor === undefined) return { selectionColor };
   const processed = processColor(selectionColor);
   return processed === undefined ? {} : { selectionColor: processed };
+}
+
+export function resolveActivityIndicatorDefault<T>(value: T | undefined, fallback: T): T {
+  return value === undefined ? fallback : value;
+}
+
+export function processActivityIndicatorStyle(style: ActivityIndicatorProps['style']) {
+  return StyleSheet.compose(activityIndicatorStyles.container, style);
+}
+
+export function processActivityIndicatorSize(size: ActivityIndicatorProps['size'] = 'small') {
+  if (size === 'small') {
+    return (activityIndicatorSmallProps ??= { style: activityIndicatorStyles.small, size: 'small' });
+  }
+  if (size === 'large') {
+    return (activityIndicatorLargeProps ??= { style: activityIndicatorStyles.large, size: 'large' });
+  }
+  return { style: { height: size, width: size }, size: undefined };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -598,3 +623,4 @@ export * from './utils/constants';
 export * from './components/native-text';
 export * from './components/native-view';
 export { NativeImage } from './components/native-image';
+export { NativeActivityIndicator } from './components/native-activity-indicator';

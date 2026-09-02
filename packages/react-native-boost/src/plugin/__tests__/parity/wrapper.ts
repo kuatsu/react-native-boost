@@ -18,10 +18,14 @@ async function compileWrapperCase(os: PlatformOS, jsxBody: string, preamble = ''
         os === 'ios' ? 'react-native/Libraries/Image/Image.ios' : 'react-native/Libraries/Image/Image.android'
       }';\n`
     : '';
+  const activityIndicatorImport = jsxBody.includes('<ActivityIndicator')
+    ? `import ActivityIndicator from 'react-native/Libraries/Components/ActivityIndicator/ActivityIndicator';\n`
+    : '';
   const source =
     `import Text from 'react-native/Libraries/Text/Text';\n` +
     `import View from 'react-native/Libraries/Components/View/View';\n` +
     imageImport +
+    activityIndicatorImport +
     `${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {

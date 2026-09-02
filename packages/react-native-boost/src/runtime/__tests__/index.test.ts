@@ -10,6 +10,10 @@ import {
   clampNumberOfLines,
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
+  processActivityIndicatorSize,
+  processActivityIndicatorStyle,
+  resolveActivityIndicatorDefault,
+  activityIndicatorStyles,
 } from '..';
 import { Platform, StyleSheet, TextStyle } from 'react-native';
 
@@ -53,9 +57,11 @@ vi.mock('react-native', () => {
     Image: Object.assign(() => 'Image', {
       resolveAssetSource: <T>(source: T): T => source,
     }),
+    ActivityIndicator: () => 'ActivityIndicator',
     Platform,
     StyleSheet: {
       flatten: flattenStyle,
+      compose: (first: unknown, second: unknown) => (second ? [first, second] : first),
     },
     // Distinguishable stand-in for RN's `processColor` so `processSelectionColor` can be asserted to
     // actually call it (a named color → packed int) rather than passing the value through unchanged.
@@ -145,6 +151,34 @@ describe('processTextStyle', () => {
     expect(resultStyle.userSelect).toBeUndefined();
     expect(resultStyle.verticalAlign).toBeUndefined();
     expect(style).toEqual({ fontWeight: 700, userSelect: 'auto', verticalAlign: 'middle', margin: 10 });
+  });
+});
+
+describe('ActivityIndicator helpers', () => {
+  it('applies defaults only to undefined', () => {
+    expect(resolveActivityIndicatorDefault(undefined, true)).toBe(true);
+    expect(resolveActivityIndicatorDefault(null, true)).toBeNull();
+    expect(resolveActivityIndicatorDefault(false, true)).toBe(false);
+  });
+
+  it('resolves built-in and numeric sizes', () => {
+    expect(processActivityIndicatorSize()).toEqual({ style: activityIndicatorStyles.small, size: 'small' });
+    expect(processActivityIndicatorSize().style).toBe(activityIndicatorStyles.small);
+    expect(processActivityIndicatorSize('large')).toEqual({ style: activityIndicatorStyles.large, size: 'large' });
+    expect(processActivityIndicatorSize('large').style).toBe(activityIndicatorStyles.large);
+    expect(processActivityIndicatorSize(24)).toEqual({ style: { height: 24, width: 24 }, size: undefined });
+    expect(processActivityIndicatorSize(null as never)).toEqual({
+      style: { height: null, width: null },
+      size: undefined,
+    });
+  });
+
+  it('composes the container and user styles', () => {
+    expect(processActivityIndicatorStyle(undefined)).toEqual({ alignItems: 'center', justifyContent: 'center' });
+    expect(processActivityIndicatorStyle({ margin: 4 })).toEqual([
+      { alignItems: 'center', justifyContent: 'center' },
+      { margin: 4 },
+    ]);
   });
 });
 
