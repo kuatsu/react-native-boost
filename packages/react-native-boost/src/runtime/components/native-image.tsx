@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports,unicorn/prefer-module */
-
 import type { ComponentType } from 'react';
-import { createElement } from 'react';
 import type { ImageProps } from 'react-native';
 import * as reactNativeModule from 'react-native';
 
@@ -12,46 +9,15 @@ type ReactNativeImageModule = {
   };
 };
 
-type NativeImageModule = {
-  default?: ComponentType<ImageProps>;
-};
-
-type FallbackImageProps = Omit<ImageProps, 'src'> & {
-  headers?: unknown;
-  src?: unknown;
-};
-
-const reactNative = reactNativeModule as ReactNativeImageModule;
-
-function loadImageViewNativeComponent(): NativeImageModule {
-  return require('react-native/Libraries/Image/ImageViewNativeComponent');
-}
-
-export function resolveNativeImageComponent(
-  reactNativeModule: ReactNativeImageModule,
-  loadNativeComponent: () => NativeImageModule = loadImageViewNativeComponent
-): ComponentType<ImageProps> {
-  if (reactNativeModule.Platform.OS === 'web') return reactNativeModule.Image;
-
-  try {
-    return loadNativeComponent().default ?? createFallbackImageComponent(reactNativeModule.Image);
-  } catch {
-    return createFallbackImageComponent(reactNativeModule.Image);
-  }
-}
-
-function createFallbackImageComponent(ImageComponent: ComponentType<ImageProps>): ComponentType<ImageProps> {
-  const FallbackImage = ({ headers: _headers, src: _src, ...props }: FallbackImageProps) =>
-    createElement(ImageComponent, props);
-
-  return FallbackImage as ComponentType<ImageProps>;
-}
+// Accessing Image loads its module, which registers the RCTImageView host before the string is used.
+const { Image, Platform } = reactNativeModule as ReactNativeImageModule;
 
 /**
- * Native Image component with graceful fallback.
+ * Native Image host registered by React Native's public `Image` module.
  *
- * @remarks
- * React Native does not expose an `unstable_NativeImage`, so this uses the internal host when
- * available and falls back to `Image`.
+ * React Native's component registry returns the host name as the component value. This avoids RN's
+ * deprecated `Libraries` deep import and its Babel warning. Keep the public `Image` access above:
+ * using the string without first loading `Image` leaves the host unregistered.
  */
-export const NativeImage: ComponentType<ImageProps> = resolveNativeImageComponent(reactNative);
+export const NativeImage: ComponentType<ImageProps> =
+  Platform.OS === 'web' ? Image : ('RCTImageView' as unknown as ComponentType<ImageProps>);

@@ -49,7 +49,7 @@ export const generateCombinedTestPlugin = (options: PluginOptions = {}, platform
         JSXOpeningElement(path) {
           textOptimizer(path, logger, options, platform, unistylesEnabled);
           viewOptimizer(path, logger, options, platform, unistylesEnabled);
-          if (options.optimizations?.image === true) imageOptimizer(path, logger, options, platform, unistylesEnabled);
+          if (options.optimizations?.image !== false) imageOptimizer(path, logger, options, platform, unistylesEnabled);
         },
       },
     };

@@ -210,9 +210,9 @@ Fewer fibers means less for React to build, diff, and commit on every frame (som
 
 ## What Boost emits
 
-Boost's core move is to swap the JSX element's type from `Text`/`View` to `NativeText`/`NativeView`
-(imported from `react-native-boost/runtime`), after reproducing (at *build time*) whatever inescapable
-work the wrapper would have done for the specific element.
+Boost's core move is to swap the JSX element's type from `Text`/`View`/`Image` to
+`NativeText`/`NativeView`/`NativeImage` (imported from `react-native-boost/runtime`), after reproducing
+(at *build time*) whatever inescapable work the wrapper would have done for the specific element.
 
 ### Text
 
@@ -284,21 +284,27 @@ Dynamic values, or `aria-*` state/value groups that the wrapper merges, are rout
 <_NativeView {..._processViewAccessibilityProps(Object.assign({}, { 'aria-label': label }))} />;
 ```
 
+### Image
+
+`Image` source, style, and accessibility props are normalized before Boost swaps the wrapper for
+`NativeImage`. Static values are processed at build time. Dynamic values use small runtime helpers.
+Compared to `Text` and `View`, the host component for `Image` is not imported directly. React Native does not export it through a supported interface, and only exports it through deprecated deep imports which log warnings when used. The plugin therefore registers the `RCTImageView` host directly.
+
 For the complete matrix of what's optimized, translated, and skipped, see
 [Coverage & Bailouts](/docs/information/optimization-coverage).
 
 ## Inside the plugin
 
-The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`
-optimizer and the `View` optimizer; each follows the same shape.
+The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`,
+`View`, and `Image` optimizers; each follows the same shape.
 
 <Mermaid
   chart={`flowchart TD
-  el["JSXOpeningElement (Text or View)"] --> g{"Resolves to the react-native component?"}
+  el["JSXOpeningElement (Text, View, or Image)"] --> g{"Resolves to the react-native component?"}
   g -- no --> skip["Leave unchanged"]
   g -- yes --> b{"Does any bailout check fail?"}
   b -- "yes, and no @boost-force" --> skip
-  b -- "no, or @boost-force" --> rw["Rewrite props, swap type to NativeText / NativeView"]
+  b -- "no, or @boost-force" --> rw["Rewrite props, swap type to its native host"]
   rw --> imp["Inject the runtime import (cached once per file)"]`}
 />
 
@@ -323,9 +329,9 @@ to a string/number; `<Text>{maybeJSX()}</Text>` is not.
 
 ### Ancestor classification
 
-The most intricate check is shared by both optimizers. An element nested inside a `Text` must render as
-the *inline* host (`RCTVirtualText`), not the *block* host — so before optimizing, the plugin walks **up**
-the tree and classifies the ancestor chain as one of:
+The most intricate check is shared by all three optimizers. Components under a `Text` can need different
+host semantics. A nested `Text` uses `RCTVirtualText`, and Android uses a separate inline Image host.
+Before optimizing, the plugin therefore walks **up** the tree and classifies the ancestor chain as one of:
 
 - `safe` — no `Text` ancestor anywhere up the chain → optimize.
 - `text` — a `react-native` `Text` is an ancestor → skip.
@@ -338,8 +344,8 @@ it can't prove safety, it returns `unknown` and bails. False-positives (a missed
 false-negatives (a regression).
 
 The `unknown` case is *often* safe in practice (third-party components rarely wrap children in `Text`), but there are still cases where optimizing components with an `unknown` ancestor could genuinely cause regressions. Therefore, Boost provides
-explicit opt-in escape hatches: `dangerouslyOptimizeViewWithUnknownAncestors` and
-`dangerouslyOptimizeTextWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
+explicit opt-in escape hatches: `dangerouslyOptimizeViewWithUnknownAncestors`, 
+`dangerouslyOptimizeTextWithUnknownAncestors` and `dangerouslyOptimizeImageWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
 
 ### Rewriting and import injection
 
@@ -353,6 +359,7 @@ even though the visitor fires thousands of times, each runtime symbol is importe
 API lives on the [Runtime Library](/docs/runtime-library) page. The most load-bearing pieces are:
 
 - **`NativeText` / `NativeView`** resolve `unstable_NativeText` / `unstable_NativeView` from `react-native` at module load, and **gracefully fall back** to the standard `Text`/`View` on web or any runtime where these exports are missing.
+- **`NativeImage`** loads React Native's public `Image` module to register its host, then renders the registered `RCTImageView` name directly. Web uses the standard `Image` component.
 - **`processTextStyle(style)`** does the same flatten-and-normalize work as the wrapper, with one small difference: it **caches by reference in a `WeakMap`**. When you pass a `StyleSheet.create` reference, the first call flattens it and every later call returns the cached result. The wrapper re-flattens on every render. (Only stable references hit the cache; an inline `style={{…}}` is a fresh reference each render, so it re-flattens either way.)
 - **`processAccessibilityProps(props)`** mirrors `Text`'s `aria-*` translation, `accessibilityState` merge, `disabled` reconciliation, and platform `accessible` default. It runs only when the element actually has accessibility props.
 - **`processViewAccessibilityProps(props)`** does the same for `View`'s ARIA cluster (`aria-labelledby` split, live-region mapping, state/value aggregation, `tabIndex` → `focusable`).

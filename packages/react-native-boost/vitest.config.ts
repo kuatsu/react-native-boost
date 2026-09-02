@@ -3,9 +3,6 @@ import { resolve } from 'node:path';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 const runtimeMockPath = fileURLToPath(new URL('src/runtime/__tests__/mocks/react-native.ts', import.meta.url));
-const imageViewNativeComponentMockPath = fileURLToPath(
-  new URL('src/runtime/__tests__/mocks/ImageViewNativeComponent.ts', import.meta.url)
-);
 const parityConfig = fileURLToPath(new URL('src/plugin/__tests__/parity/vitest.config.parity.mts', import.meta.url));
 
 export default defineConfig({
@@ -14,13 +11,7 @@ export default defineConfig({
       {
         // Unit suite: aliases `react-native` to a lightweight mock for the whole project.
         resolve: {
-          alias: [
-            { find: /^react-native$/, replacement: resolve(runtimeMockPath) },
-            {
-              find: /^react-native\/Libraries\/Image\/ImageViewNativeComponent$/,
-              replacement: resolve(imageViewNativeComponentMockPath),
-            },
-          ],
+          alias: [{ find: /^react-native$/, replacement: resolve(runtimeMockPath) }],
         },
         test: {
           name: 'unit',

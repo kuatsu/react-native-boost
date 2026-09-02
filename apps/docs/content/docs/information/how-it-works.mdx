@@ -3,15 +3,15 @@ title: How It Works
 description: Why React Native Boost makes your app faster (the short version).
 ---
 
-In React Native, `Text` and `View` aren't quite what they appear to be. They look like basic building blocks, but each one is a small JavaScript component that runs **every time it renders**, wrapping a lower-level native component underneath.
+In React Native, `Text`, `View`, and `Image` aren't quite what they appear to be. They look like basic building blocks, but each one is a small JavaScript component that runs **every time it renders**, wrapping a lower-level native component underneath.
 
-That wrapper is genuinely useful. It handles a lot of edge cases and powers conveniences like `aria-*` props, `userSelect`, and clamping `numberOfLines`. But most of the time your `Text` or `View` uses none of that, and the wrapper's work is pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
+That wrapper is genuinely useful. It handles edge cases and powers conveniences such as accessibility props, style normalization, and Image source processing. But many elements do not need that runtime work, so the wrapper becomes pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
 React Native Boost removes the wrapper when it isn't needed.
 
 ## The one-sentence version
 
-At build time, Boost rewrites `Text` and `View` elements into the native components they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
+At build time, Boost rewrites `Text`, `View`, and `Image` elements into the native components they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
 
 ## A quick before and after
 
@@ -29,7 +29,7 @@ These optimized components are imported from `react-native-boost/runtime` rather
 
 ## Only when it's safe
 
-Boost never changes how your app looks or behaves. It rewrites a component only when it can **prove** that doing so is safe. For each `Text` or `View` it checks a lot of things. For example:
+Boost never changes how your app looks or behaves. It rewrites a component only when it can **prove** that doing so is safe. For each supported component it checks a lot of things. For example:
 
 - Is this really the `react-native` component, or some other `Text` from another library?
 - Are its props fully compatible with the underlying native component?

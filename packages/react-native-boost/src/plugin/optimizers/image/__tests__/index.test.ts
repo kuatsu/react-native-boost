@@ -132,35 +132,6 @@ pluginTester({
   ],
 });
 
-describe('image plugin option', () => {
-  it('keeps Image optimization opt-in in the full plugin', async () => {
-    const source = `
-      import { Image } from 'react-native';
-      <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
-    `;
-
-    const defaultOutput = await formatTestResult(
-      transformSync(source, {
-        configFile: false,
-        babelrc: false,
-        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
-        plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { silent: true }]],
-      })!.code!
-    );
-    const enabledOutput = await formatTestResult(
-      transformSync(source, {
-        configFile: false,
-        babelrc: false,
-        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
-        plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { silent: true, optimizations: { image: true } }]],
-      })!.code!
-    );
-
-    expect(defaultOutput).not.toContain('NativeImage');
-    expect(enabledOutput).toContain('NativeImage');
-  });
-});
-
 describe('image android output', () => {
   it('emits Android top-level empty headers for src sources', async () => {
     const output = await transformImage(
