@@ -117,72 +117,19 @@ function hasDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: str
   return false;
 }
 
-/**
- * Checks if the path represents a valid JSX component with the specified name.
- *
- * @param path - The NodePath to check.
- * @param componentName - The name of the component to validate against.
- * @returns true if the path is a valid JSX component with the specified name.
- */
-export const isValidJSXComponent = (path: NodePath<t.JSXOpeningElement>, componentName: string): boolean => {
-  // Check if the node name is a JSX identifier
-  if (!t.isJSXIdentifier(path.node.name)) return false;
+export const isReactNativeComponent = (path: NodePath<t.JSXOpeningElement>, expectedImportedName: string): boolean => {
+  if (!t.isJSXIdentifier(path.node.name) || !t.isJSXElement(path.parent)) return false;
 
-  // Check if the parent is a JSX element
-  const parent = path.parent;
-  if (!t.isJSXElement(parent)) return false;
-
-  // For aliasing, we check if the underlying imported name matches the expected name
-  const componentIdentifier = path.node.name.name;
-  const binding = path.scope.getBinding(componentIdentifier);
-  if (!binding) return false;
-  if (
-    binding.kind === 'module' &&
-    t.isImportDeclaration(binding.path.parent) &&
-    t.isImportSpecifier(binding.path.node)
-  ) {
-    const imported = binding.path.node.imported;
-    if (t.isIdentifier(imported)) {
-      return imported.name === componentName;
-    }
-  }
-
-  // Fallback to string match if binding is not available
-  return path.node.name.name === componentName;
-};
-
-/**
- * Checks if the component is imported from 'react-native' and not from a custom module.
- *
- * @param path - The NodePath to check.
- * @param expectedImportedName - The expected import name of the component (we'll also check for aliased imports).
- * @returns true if the component is imported from 'react-native'
- */
-export const isReactNativeImport = (path: NodePath<t.JSXOpeningElement>, expectedImportedName: string): boolean => {
-  if (!t.isJSXIdentifier(path.node.name)) return false;
   const localName = path.node.name.name;
   const binding = path.scope.getBinding(localName);
-  if (!binding) return false;
-  if (binding.kind === 'module') {
-    const importDeclaration = binding.path.parent;
-    if (!t.isImportDeclaration(importDeclaration)) return false;
-    // Verify it's imported from 'react-native'
-    if (importDeclaration.source.value !== 'react-native') return false;
+  if (binding?.kind !== 'module' || !t.isImportDeclaration(binding.path.parent)) return false;
+  if (binding.path.parent.source.value !== 'react-native') return false;
 
-    // For named imports, check the imported name (not the alias)
-    if (t.isImportSpecifier(binding.path.node)) {
-      const imported = binding.path.node.imported;
-      if (t.isIdentifier(imported)) {
-        return imported.name === expectedImportedName;
-      }
-    }
-
-    // For default imports, we just assume it's valid if imported from react-native.
-    if (t.isImportDefaultSpecifier(binding.path.node)) {
-      return true;
-    }
+  if (t.isImportSpecifier(binding.path.node)) {
+    return t.isIdentifier(binding.path.node.imported, { name: expectedImportedName });
   }
-  return false;
+
+  return t.isImportDefaultSpecifier(binding.path.node) && localName === expectedImportedName;
 };
 
 export type AncestorClassification = 'safe' | 'text' | 'unknown';

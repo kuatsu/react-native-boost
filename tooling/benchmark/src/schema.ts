@@ -1,11 +1,10 @@
 /**
  * The JSON contract shared by every stage of the suite (context → collectors → store → report).
  * The archive is keyed by (rnVersion, Boost commit SHA); within a key, results are split per platform.
- * Numbers are only ever comparable within the same `device` and `buildMode` — both are recorded.
+ * Numbers are only ever comparable on the same device.
  */
 
 export type Platform = 'ios' | 'android';
-export type BuildMode = 'release' | 'debug';
 export type BoostMode = 'on' | 'off';
 export type DeviceKind = 'simulator' | 'emulator' | 'device';
 
@@ -103,7 +102,6 @@ export interface FpsMeasurement extends FpsSample {
 
 export interface FpsResult {
   platform: Platform;
-  buildMode: BuildMode;
   device: DeviceInfo;
   measurements: FpsMeasurement[];
 }

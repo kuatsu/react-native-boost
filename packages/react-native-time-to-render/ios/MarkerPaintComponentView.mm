@@ -7,8 +7,6 @@
 #import <react/renderer/components/RNTimeToRenderSpec/EventEmitters.h>
 #import <react/renderer/components/RNTimeToRenderSpec/Props.h>
 #import <react/renderer/components/RNTimeToRenderSpec/RCTComponentViewHelpers.h>
-#import "RCTFabricComponentsPlugins.h"
-
 
 using namespace facebook::react;
 
@@ -64,8 +62,3 @@ using namespace facebook::react;
 }
 
 @end
-
-Class<RCTComponentViewProtocol> TimeToRenderCls(void)
-{
-  return MarkerPaintComponentView.class;
-}

@@ -12,8 +12,7 @@ import {
   hasBlacklistedPropertyInSpread,
   isForcedLine,
   isIgnoredLine,
-  isValidJSXComponent,
-  isReactNativeImport,
+  isReactNativeComponent,
   renameIdToNativeID,
   replaceWithNativeComponent,
   isPrimitiveChild,
@@ -85,8 +84,7 @@ const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute):
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
 export const textOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
-  if (!isValidJSXComponent(path, 'Text')) return;
-  if (!isReactNativeImport(path, 'Text')) return;
+  if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);

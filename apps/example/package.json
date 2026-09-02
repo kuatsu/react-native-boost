@@ -5,8 +5,11 @@
   "scripts": {
     "gen:unoptimized": "node scripts/gen-unoptimized.mjs",
     "prestart": "node scripts/gen-unoptimized.mjs",
+    "predev": "node scripts/gen-unoptimized.mjs",
     "preandroid": "node scripts/gen-unoptimized.mjs",
     "preios": "node scripts/gen-unoptimized.mjs",
+    "preweb": "node scripts/gen-unoptimized.mjs",
+    "pretypecheck": "node scripts/gen-unoptimized.mjs",
     "typecheck": "tsc --noEmit",
     "start": "expo start",
     "dev": "expo start",

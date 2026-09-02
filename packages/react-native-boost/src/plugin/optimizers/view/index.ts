@@ -9,8 +9,7 @@ import {
   hasBlacklistedPropertyInSpread,
   isForcedLine,
   isIgnoredLine,
-  isValidJSXComponent,
-  isReactNativeImport,
+  isReactNativeComponent,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
   createStyleOriginResolver,
@@ -58,8 +57,7 @@ const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabl
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
 export const viewOptimizer: Optimizer = (path, logger, options, _platform, unistylesEnabled) => {
-  if (!isValidJSXComponent(path, 'View')) return;
-  if (!isReactNativeImport(path, 'View')) return;
+  if (!isReactNativeComponent(path, 'View')) return;
 
   const forced = isForcedLine(path);
 

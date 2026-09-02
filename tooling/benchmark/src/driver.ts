@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { exampleDir } from './paths.ts';
-import type { BuildMode, DeviceInfo, ProfileSpec } from './schema.ts';
+import type { DeviceInfo, ProfileSpec } from './schema.ts';
 
 const IOS_BUNDLE_ID = 'com.kuatsu-mkrause.react-native-boost-example';
 const ANDROID_PACKAGE = 'com.kuatsumkrause.reactnativeboostexample';
@@ -31,12 +31,7 @@ function tryExecFile(command: string, args: string[]): void {
  * no cross-build thermal drift). Release `expo run:*` builds, installs, launches once, then the CLI process
  * exits; that clean exit is the build-done signal. Resolves on success, rejects on a build/install failure.
  */
-export function buildAndInstall(device: DeviceInfo, buildMode: BuildMode, env: Record<string, string>): Promise<void> {
-  if (buildMode !== 'release') {
-    return Promise.reject(
-      new Error('launch-arg profile selection requires --mode release (debug keeps Metro attached and never detaches)')
-    );
-  }
+export function buildAndInstall(device: DeviceInfo, env: Record<string, string>): Promise<void> {
   // Refresh the `.unoptimized` twins the A/B render depends on (the `preios`/`preandroid` hooks are
   // bypassed by calling the Expo CLI directly).
   execFileSync('node', ['scripts/gen-unoptimized.mjs'], { cwd: exampleDir(), stdio: 'ignore' });

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { archiveRoot, graphsDir, runDir } from '../paths.ts';
 import { keyOf } from '../store.ts';
-import type { BuildMode, FiberResult, FpsResult, Platform, RunResult } from '../schema.ts';
+import type { FiberResult, FpsResult, Platform, RunResult } from '../schema.ts';
 import {
   anchoredCore,
   anchorWarnings,
@@ -22,7 +22,6 @@ import { barChart, lineChart, SERIES, seriesColor, type Series, type Theme } fro
 const PLATFORMS: Platform[] = ['ios', 'android'];
 const FPS_Y_MAX = 65; // a hair above the 60 Hz ceiling
 const PLATFORM_LABEL: Record<Platform, string> = { ios: 'iOS', android: 'Android' };
-const MODE_LABEL: Record<BuildMode, string> = { release: 'Release', debug: 'Debug' };
 
 const write = (file: string, content: string): void => {
   mkdirSync(join(file, '..'), { recursive: true });
@@ -74,7 +73,7 @@ const runHasCore = (run: RunResult): boolean =>
 function fpsChart(result: FpsResult, theme: Theme): string {
   const loads = loadsOf(result);
   const options = {
-    title: `FPS @ load • ${PLATFORM_LABEL[result.platform]} • ${result.device.name} • ${MODE_LABEL[result.buildMode]}`,
+    title: `FPS @ load • ${PLATFORM_LABEL[result.platform]} • ${result.device.name} • Release`,
     xLabel: ROW_AXIS_LABEL,
     yLabel: 'avg FPS',
     xTicks: loads.map((l) => ({ value: renderedRows(l), label: String(renderedRows(l)) })),
@@ -222,7 +221,7 @@ function fpsTableBaseline(result: FpsResult): string {
     return `| ${renderedRows(load)} | ${off?.avgFps ?? '—'} | ${on?.avgFps ?? '—'} | ${gain} | ${off?.p95FrameMs ?? '—'} | ${on?.p95FrameMs ?? '—'} | ${off?.droppedPct ?? '—'}% → ${on?.droppedPct ?? '—'}% |`;
   });
   return [
-    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
+    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), Release`,
     '',
     ...thermalNote(result),
     '| Text rows | Baseline FPS | Boost FPS | Gain | Baseline p95 ms | Boost p95 ms | Dropped |',
@@ -243,7 +242,7 @@ function fpsTableWithCore(result: FpsResult): string {
     return `| ${renderedRows(p.load)} | ${round1(p.baseline)} | ${round1(p.baselineOptimized)} | ${round1(p.boost)} | ${coreGain} | ${boostGain} | ${boostOverCore} |`;
   });
   return [
-    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
+    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), Release`,
     '',
     ...thermalNote(result),
     'Core-optimized FPS is anchored onto the baseline build via the flag-invariant Boost curve (§ anchor).',
@@ -295,7 +294,7 @@ function fpsTableValidated(result: FpsResult): string {
     return `| ${renderedRows(p.load)} | ${round1(p.baseline)} | ${coreFps} | ${round1(p.boost)} | ${coreGain} | ${boostGain} | ${boostOverCore} |`;
   });
   return [
-    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), ${MODE_LABEL[result.buildMode]}`,
+    `### ${PLATFORM_LABEL[result.platform]} — ${result.device.name} (${result.device.kind}, ${PLATFORM_LABEL[result.platform]} ${result.device.osVersion}), Release`,
     '',
     ...thermalNote(result),
     ...validationBlock(result),

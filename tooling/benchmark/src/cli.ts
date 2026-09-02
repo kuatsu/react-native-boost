@@ -14,7 +14,7 @@ import { resolveContext } from './context.ts';
 import { detectDevice } from './device.ts';
 import { writeArchiveIndex, writeReport, writeRunReport } from './report/index.ts';
 import { keyOf, listRuns, loadRun, saveContext, saveFibers, saveFps } from './store.ts';
-import type { BuildMode, Platform, SweepConfig, ThermalPolicy } from './schema.ts';
+import type { Platform, SweepConfig, ThermalPolicy } from './schema.ts';
 
 type Flags = Record<string, string | true>;
 
@@ -75,7 +75,6 @@ async function main(): Promise<void> {
     throw new Error('--loads must be comma-separated positive numbers (rows rendered per side)');
   }
   const sweep: SweepConfig = { ...DEFAULT_SWEEP, ...(loads ? { loads } : {}) };
-  const buildMode: BuildMode = oneOf(flags.mode, ['release', 'debug'] as const, 'mode') ?? 'release';
   const portArg = valueOf(flags.port, 'port');
   const port = portArg ? Number(portArg) : DEFAULT_SERVER_PORT;
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
@@ -148,10 +147,7 @@ async function main(): Promise<void> {
         continue;
       }
       log(`• ${platform} — FPS sweep (profiles: ${profiles.map((p) => p.id).join(', ')})`);
-      saveFps(
-        key,
-        await collectFps({ platform, buildMode, sweep, port, profiles, thermal, replicates, order, seed, log })
-      );
+      saveFps(key, await collectFps({ platform, sweep, port, profiles, thermal, replicates, order, seed, log }));
     }
   }
 

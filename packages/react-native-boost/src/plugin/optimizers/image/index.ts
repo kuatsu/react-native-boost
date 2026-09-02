@@ -9,9 +9,8 @@ import {
   hasBlacklistedPropertyInSpread,
   isIgnoredLine,
   isForcedLine,
-  isReactNativeImport,
+  isReactNativeComponent,
   isStaticLiteralTree,
-  isValidJSXComponent,
   makeAttribute,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
@@ -85,8 +84,7 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
 
 export const imageOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
   if (platform === 'web') return;
-  if (!isValidJSXComponent(path, 'Image')) return;
-  if (!isReactNativeImport(path, 'Image')) return;
+  if (!isReactNativeComponent(path, 'Image')) return;
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);

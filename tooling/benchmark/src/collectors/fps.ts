@@ -12,7 +12,6 @@ import { startServer } from '../server.ts';
 import type {
   BenchmarkPlan,
   BoostMode,
-  BuildMode,
   DeviceInfo,
   FpsMeasurement,
   FpsResult,
@@ -57,7 +56,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 
 export interface FpsOptions {
   platform: Platform;
-  buildMode: BuildMode;
   sweep: SweepConfig;
   port?: number;
   /** Order of A/B runs; baseline first by default so Boost gains read as the improvement. */
@@ -158,7 +156,6 @@ async function sweepProfile(args: SweepArgs): Promise<FpsMeasurement[]> {
 export async function collectFps(options: FpsOptions): Promise<FpsResult> {
   const {
     platform,
-    buildMode,
     sweep,
     port = DEFAULT_SERVER_PORT,
     boostModes = ['off', 'on'],
@@ -188,9 +185,9 @@ export async function collectFps(options: FpsOptions): Promise<FpsResult> {
     seed,
   };
 
-  log(`building + installing ${buildMode} app once (this can take a few minutes)…`);
+  log('building + installing release app once (this can take a few minutes)…');
   await withTimeout(
-    buildAndInstall(device, buildMode, {
+    buildAndInstall(device, {
       EXPO_PUBLIC_BENCHMARK: '1',
       EXPO_PUBLIC_BENCHMARK_SERVER: `http://${host}:${port}`,
     }),
@@ -205,5 +202,5 @@ export async function collectFps(options: FpsOptions): Promise<FpsResult> {
     const profileMeasurements = await sweepProfile({ device, port, plan, profile, log });
     for (const measurement of profileMeasurements) measurements.push(measurement);
   }
-  return { platform, buildMode, device, measurements };
+  return { platform, device, measurements };
 }

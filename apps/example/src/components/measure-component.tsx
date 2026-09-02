@@ -9,26 +9,10 @@ export interface BenchmarkProperties extends Benchmark {
   markerName: string;
 }
 export default function MeasureComponent(props: BenchmarkProperties) {
-  const optimizedViews = Array.from({ length: props.count }, (_, index) =>
-    React.cloneElement(props.optimizedComponent as React.ReactElement, { key: `optimized-${index}` })
+  const component = props.step === BenchmarkStep.Unoptimized ? props.unoptimizedComponent : props.optimizedComponent;
+  const views = Array.from({ length: props.count }, (_, index) =>
+    React.cloneElement(component as React.ReactElement, { key: index })
   );
-  const unoptimizedViews = Array.from({ length: props.count }, (_, index) =>
-    React.cloneElement(props.unoptimizedComponent as React.ReactElement, { key: `unoptimized-${index}` })
-  );
-
-  if (props.step === BenchmarkStep.Unoptimized) {
-    return (
-      <>
-        <TimeToRenderView
-          markerName={props.markerName}
-          onMarkerPainted={(event) => {
-            props.onRenderTimeChange(Math.round(event.nativeEvent.paintTime));
-          }}
-        />
-        <View style={{ display: 'none' }}>{unoptimizedViews}</View>
-      </>
-    );
-  }
 
   return (
     <>
@@ -38,7 +22,7 @@ export default function MeasureComponent(props: BenchmarkProperties) {
           props.onRenderTimeChange(Math.round(event.nativeEvent.paintTime));
         }}
       />
-      <View style={{ display: 'none' }}>{optimizedViews}</View>
+      <View style={{ display: 'none' }}>{views}</View>
     </>
   );
 }

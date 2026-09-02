@@ -10,7 +10,7 @@ export default function LauncherScreen({ navigation }: RootStackScreenProps<'Lau
 
       <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-        onPress={() => navigation.navigate('TradingDemo', { coinId: 'btc' })}>
+        onPress={() => navigation.navigate('TradingDemo')}>
         <Text style={styles.cardTitle}>Trading Demo</Text>
         <Text style={styles.cardBody}>
           A wall of price cells re-rendering every frame. Toggle Boost on and off to see the FPS impact.

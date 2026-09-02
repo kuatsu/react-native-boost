@@ -12,7 +12,6 @@ pnpm benchmark                       # fibers + FPS (both profiles) on every ava
 pnpm benchmark -- --only fibers      # headless structural metric only — no device, no build
 pnpm benchmark -- --platform ios     # one platform
 pnpm benchmark -- --loads 34,160,300 # override the load sweep (rows per side; on-device range 34–300)
-pnpm benchmark -- --mode debug       # debug build instead of release
 pnpm benchmark -- --profiles default # only the stock-RN profile (today's two-series output; ~½ the FPS time)
 pnpm benchmark -- --report-only      # redraw graphs + index from the existing archive
 ```
@@ -21,7 +20,7 @@ pnpm benchmark -- --report-only      # redraw graphs + index from the existing a
 
 **Targets are auto-detected** — a connected physical device is preferred, otherwise a booted simulator /
 running emulator. The platform is skipped (with a note) if nothing is available, unless you named it with
-`--platform`. Release is the default; the build embeds the JS bundle so the run is headless (no Metro).
+`--platform`.
 
 ## What it measures
 

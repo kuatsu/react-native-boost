@@ -3,7 +3,6 @@ import { CodeBlock, type CodeBlockProps, Pre } from 'fumadocs-ui/components/code
 import { ExternalLink } from 'lucide-react';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { GithubIcon } from '@/components/icons/github';
-import { cn } from '@/lib/cn';
 
 // `CodeBlock` renders `title` as a `ReactNode`, but inherits the `<figure>` element's `title` typing
 // (a plain string). Re-type it so the title bar can be a link element.
@@ -97,7 +96,7 @@ export async function GitHubSnippet({ url, code, lang }: Props): Promise<ReactNo
       pre: ({ children, className, ...preProps }: ComponentProps<'pre'>) => (
         <CodeBlockWithNodeTitle
           {...preProps}
-          className={cn(className)}
+          className={className}
           title={<SnippetHeader url={url} {...parsed} />}
           data-line-numbers
           data-line-numbers-start={parsed.startLine}>

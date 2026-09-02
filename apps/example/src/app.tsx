@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootStackParamList } from './navigation';
-import { coinsById } from './screens/trading-demo/model/coins';
+import { benchmarkCoin } from './screens/trading-demo/model/coins';
 import TradingDemoScreen from './screens/trading-demo';
 import LauncherScreen from './screens/launcher';
 import BenchmarkScreen from './screens/benchmark';
@@ -30,11 +30,7 @@ export default function App() {
         <Stack.Navigator initialRouteName="Launcher">
           <Stack.Screen name="Launcher" component={LauncherScreen} options={{ title: 'Launcher' }} />
           <Stack.Screen name="Benchmark" component={BenchmarkScreen} options={{ title: 'Benchmark' }} />
-          <Stack.Screen
-            name="TradingDemo"
-            component={TradingDemoScreen}
-            options={({ route }) => ({ title: coinsById[route.params.coinId]?.pair ?? 'Price Wall' })}
-          />
+          <Stack.Screen name="TradingDemo" component={TradingDemoScreen} options={{ title: benchmarkCoin.pair }} />
           <Stack.Screen name="UnistylesDemo" component={UnistylesDemoScreen} options={{ title: 'Unistyles' }} />
         </Stack.Navigator>
       </NavigationContainer>

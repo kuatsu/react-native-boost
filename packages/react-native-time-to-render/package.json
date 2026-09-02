@@ -7,7 +7,12 @@
   "codegenConfig": {
     "name": "RNTimeToRenderSpec",
     "type": "all",
-    "jsSrcsDir": "src"
+    "jsSrcsDir": "src",
+    "ios": {
+      "componentProvider": {
+        "TimeToRender": "MarkerPaintComponentView"
+      }
+    }
   },
   "author": "Kuatsu App Agency <hello@kuatsu.de>",
   "license": "MIT",

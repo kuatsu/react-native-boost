@@ -1,7 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { Check, ChevronDown, Copy, ExternalLinkIcon, TextIcon } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { useCopyButton } from 'fumadocs-ui/utils/use-copy-button';
 import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from 'fumadocs-ui/components/ui/popover';
@@ -42,13 +41,11 @@ export function LLMCopyButton({
   return (
     <button
       disabled={isLoading}
-      className={cn(
-        buttonVariants({
-          color: 'secondary',
-          size: 'sm',
-          className: 'gap-2 [&_svg]:size-3.5 [&_svg]:text-fd-muted-foreground',
-        })
-      )}
+      className={buttonVariants({
+        color: 'secondary',
+        size: 'sm',
+        className: 'gap-2 [&_svg]:size-3.5 [&_svg]:text-fd-muted-foreground',
+      })}
       onClick={onClick}>
       {checked ? <Check /> : <Copy />}
       Copy Markdown
@@ -191,13 +188,11 @@ export function ViewOptions({
   return (
     <Popover>
       <PopoverTrigger
-        className={cn(
-          buttonVariants({
-            color: 'secondary',
-            size: 'sm',
-            className: 'gap-2',
-          })
-        )}>
+        className={buttonVariants({
+          color: 'secondary',
+          size: 'sm',
+          className: 'gap-2',
+        })}>
         Open
         <ChevronDown className="size-3.5 text-fd-muted-foreground" />
       </PopoverTrigger>

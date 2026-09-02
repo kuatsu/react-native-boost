@@ -41,7 +41,6 @@ const m = (
 
 const result = (measurements: FpsMeasurement[]): FpsResult => ({
   platform: 'ios',
-  buildMode: 'release',
   device: { platform: 'ios', kind: 'simulator', name: 'iPhone', osVersion: '18.0', id: 'x' },
   measurements,
 });

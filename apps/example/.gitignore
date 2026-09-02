@@ -36,3 +36,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# generated benchmark twin
+*.unoptimized.tsx

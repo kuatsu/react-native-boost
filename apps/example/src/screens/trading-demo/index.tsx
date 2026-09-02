@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackScreenProps } from '../../navigation';
 import { DebugPanel } from './components/debug-panel';
 import { FpsOverlay } from './components/fps-overlay';
-import { coinsById } from './model/coins';
+import { benchmarkCoin } from './model/coins';
 import { createFeedController, FeedSnapshot, PriceDirection } from './model/feed';
 import { formatPrice, formatSignedPercent } from './model/format';
 import { initialLevels, loadForLevels, wallTickMs } from './model/presets';
@@ -26,16 +25,17 @@ const directionTone = (direction: PriceDirection): StatTone => {
   return 'neutral';
 };
 
-export default function TradingDemoScreen({ route }: RootStackScreenProps<'TradingDemo'>) {
-  const coin = coinsById[route.params.coinId];
-  const quoteSymbol = coin.pair.split('/')[1] ?? 'USDT';
+export default function TradingDemoScreen() {
+  const quoteSymbol = benchmarkCoin.pair.split('/')[1] ?? 'USDT';
 
   const [controlsOpen, setControlsOpen] = useState(false);
   const [boost, setBoost] = useState(true);
   const [settledLevels, setSettledLevels] = useState(initialLevels);
   const loadRef = useRef(loadForLevels(initialLevels));
 
-  const [controller] = useState(() => createFeedController(coin, hashString(coin.id), loadForLevels(initialLevels)));
+  const [controller] = useState(() =>
+    createFeedController(benchmarkCoin, hashString(benchmarkCoin.symbol), loadForLevels(initialLevels))
+  );
   const [snapshot, setSnapshot] = useState<FeedSnapshot>(() => controller.snapshot());
 
   useEffect(() => {
@@ -54,21 +54,21 @@ export default function TradingDemoScreen({ route }: RootStackScreenProps<'Tradi
     setSettledLevels(levels);
   };
 
-  const bestAsk = snapshot.asks[0]?.price ?? coin.price;
-  const bestBid = snapshot.bids[0]?.price ?? coin.price;
+  const bestAsk = snapshot.asks[0]?.price ?? benchmarkCoin.price;
+  const bestBid = snapshot.bids[0]?.price ?? benchmarkCoin.price;
   const spreadText = useMemo(
-    () => formatPrice(Math.abs(bestAsk - bestBid), coin.priceDecimals),
-    [bestAsk, bestBid, coin]
+    () => formatPrice(Math.abs(bestAsk - bestBid), benchmarkCoin.priceDecimals),
+    [bestAsk, bestBid]
   );
 
   const stats = useMemo(() => {
-    const spread = Math.abs(coin.changePercent) / 200;
+    const spread = Math.abs(benchmarkCoin.changePercent) / 200;
     return {
-      changeText: formatSignedPercent(coin.changePercent),
-      high: formatPrice(coin.price * (1 + spread + 0.012), coin.priceDecimals),
-      low: formatPrice(coin.price * (1 - spread - 0.009), coin.priceDecimals),
+      changeText: formatSignedPercent(benchmarkCoin.changePercent),
+      high: formatPrice(benchmarkCoin.price * (1 + spread + 0.012), benchmarkCoin.priceDecimals),
+      low: formatPrice(benchmarkCoin.price * (1 - spread - 0.009), benchmarkCoin.priceDecimals),
     };
-  }, [coin]);
+  }, []);
 
   const Stat = boost ? optimizedRows.HeaderStat : unoptimizedRows.HeaderStat;
   const Wall = boost ? optimizedRows.PriceWall : unoptimizedRows.PriceWall;
@@ -77,7 +77,7 @@ export default function TradingDemoScreen({ route }: RootStackScreenProps<'Tradi
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <View style={styles.header}>
         <Stat label="Last Price" value={snapshot.lastPriceText} tone={directionTone(snapshot.lastDirection)} />
-        <Stat label="24h Change" value={stats.changeText} tone={coin.changePercent >= 0 ? 'up' : 'down'} />
+        <Stat label="24h Change" value={stats.changeText} tone={benchmarkCoin.changePercent >= 0 ? 'up' : 'down'} />
         <Stat label="24h High" value={stats.high} />
         <Stat label="24h Low" value={stats.low} />
       </View>
@@ -88,7 +88,7 @@ export default function TradingDemoScreen({ route }: RootStackScreenProps<'Tradi
         lastPriceText={snapshot.lastPriceText}
         lastTone={directionTone(snapshot.lastDirection)}
         spreadText={spreadText}
-        baseSymbol={coin.symbol}
+        baseSymbol={benchmarkCoin.symbol}
         quoteSymbol={quoteSymbol}
       />
 

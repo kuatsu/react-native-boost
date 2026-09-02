@@ -2,24 +2,21 @@
   "name": "react-native-boost",
   "description": "🚀 Boost your React Native app's performance with a single line of code",
   "version": "1.6.0",
-  "main": "dist/index.js",
-  "module": "dist/esm/index.mjs",
-  "types": "dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
     "./runtime": {
       "import": {
         "types": "./dist/runtime/index.d.ts",
-        "default": "./runtime.mjs"
+        "default": "./dist/runtime/esm/index.mjs"
       },
-      "default": "./runtime.js"
+      "default": "./dist/runtime/index.js"
     },
     "./plugin": {
       "import": {
         "types": "./dist/plugin/index.d.ts",
-        "default": "./plugin.mjs"
+        "default": "./dist/plugin/esm/index.mjs"
       },
-      "default": "./plugin.js"
+      "default": "./dist/plugin/index.js"
     }
   },
   "typesVersions": {
@@ -55,12 +52,6 @@
   "files": [
     "src",
     "dist",
-    "runtime.d.ts",
-    "runtime.js",
-    "runtime.mjs",
-    "plugin.d.ts",
-    "plugin.js",
-    "plugin.mjs",
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__",
@@ -88,19 +79,15 @@
   },
   "devDependencies": {
     "@babel/plugin-syntax-jsx": "^7.29.7",
+    "@babel/plugin-syntax-typescript": "^7.29.7",
     "@babel/preset-react": "^7.29.7",
-    "@babel/preset-typescript": "^7.29.7",
     "@react-native/babel-preset": "0.86.0",
     "@release-it/conventional-changelog": "^11.0.1",
-    "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
-    "@rollup/plugin-replace": "^6.0.2",
-    "@rollup/plugin-typescript": "^12.1.2",
     "@types/babel__helper-module-imports": "^7.0.0",
     "@types/babel__helper-plugin-utils": "^7.0.0",
     "@types/node": "^24",
     "babel-plugin-tester": "^12.0.0",
-    "esbuild-node-externals": "^1.23.1",
     "fast-check": "^4.9.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

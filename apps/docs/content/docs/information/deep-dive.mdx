@@ -312,8 +312,7 @@ The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it
 
 Two gates run first, and neither can be overridden:
 
-- **`isValidJSXComponent`** walks from the JSX tag back to its binding and checks the *imported* name, so `import { Text as RNText } from 'react-native'` still resolves to `Text`.
-- **`isReactNativeImport`** verifies the binding's import source is literally `'react-native'`. A local `const Text = SomeLib.Text`, or an import from an internal deep path, does not qualify.
+- **`isReactNativeComponent`** checks the JSX binding, imported name, and `'react-native'` source. Aliases such as `import { Text as RNText } from 'react-native'` work, while local components and deep imports do not qualify.
 
 ### The bailout checks
 

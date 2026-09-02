@@ -6,7 +6,7 @@ This file provides guidance to AI agents when working with code in the `react-na
 
 `react-native-boost` is a Babel plugin that statically analyzes React Native source code and rewrites standard `Text`/`View` JSX elements into their lower-level native counterparts (`NativeText` / `NativeView`), skipping the JS-side wrapper components to gain rendering performance.
 
-This is a pnpm monorepo. `pnpm` is required; npm/yarn will not work.
+This is a pnpm monorepo. Do not use other package managers.
 
 ## Commands
 
@@ -21,15 +21,15 @@ Run from the repo root unless noted:
 
 Package-scoped (the interesting work happens in `packages/react-native-boost`):
 
-- `pnpm package build` — `rollup -c` (cleans `dist` first)
-- `pnpm package test` — Vitest
-- `pnpm package typecheck`
+- `pnpm run package build` — `rollup -c` (cleans `dist` first)
+- `pnpm run package test` — Vitest
+- `pnpm run package typecheck`
 
-Running a single test: Vitest runs from `packages/react-native-boost`. Use `pnpm package test <pattern>` or `cd packages/react-native-boost && pnpm vitest run text`. The optimizer tests are fixture-driven (see Testing below), so to test one transform case, edit/add a fixture directory and run the matching optimizer's test file.
+Running a single test: Vitest runs from `packages/react-native-boost`. Use `pnpm run package test <pattern>` or `cd packages/react-native-boost && pnpm vitest run text`.
 
-Example app (`apps/example`, Expo): `pnpm example start` / `pnpm example ios` / `pnpm example android`. Note `ios`/`android` scripts do `rm -rf ios`/`android` and re-run `expo run:*` (prebuild from scratch).
+Example app (`apps/example`, Expo): `pnpm run example start` / `pnpm run example ios` / `pnpm run example android`.
 
-Commit messages follow Conventional Commits; a commitlint pre-commit hook enforces this. Lint + tests also run on pre-commit via Husky/lint-staged.
+Commit messages follow Conventional Commits.
 
 ## Architecture
 
@@ -40,40 +40,25 @@ Commit messages follow Conventional Commits; a commitlint pre-commit hook enforc
   - `react-native-boost/runtime` — the runtime helper library (`src/runtime`), imported into user code by the plugin
 - `packages/react-native-time-to-render` — a private RN TurboModule used by the example app to measure render time for benchmarking
 - `apps/example` — Expo benchmark and example app
-- `apps/docs` — Fumadoc documentation site
+- `apps/docs` — Fumadocs documentation site
 
 ### Plugin pipeline (`src/plugin`)
 
-Entry: `src/plugin/index.ts`. A single Babel visitor on `JSXOpeningElement` runs each enabled optimizer per element. Per-file state holds the logger; `isIgnoredFile` short-circuits ignored paths.
+The plugin is a single Babel visitor on `JSXOpeningElement` that runs each enabled optimizer per element.
 
-Optimizers live in `src/plugin/optimizers/{text,view}/index.ts`. Both follow the same shape:
+Optimizers live in `src/plugin/optimizers`. They run various guards to ensure optimizations do not break or alter runtime behavior. Some also rewrite props or similar, mirroring wrapper component behavior onto build-time to achieve parity while retaining performance benefits.
 
-1. Guard: `isValidJSXComponent` + `isReactNativeImport` confirm the element is the RN component (not a same-named local).
-2. **Bailout checks** (`BailoutCheck[]` + `getFirstBailoutReason` in `utils/helpers.ts`): a component is only rewritten if it passes every safety check. Each optimizer defines its own blacklisted props and structural checks. When a check fails, the element is left untouched and logged as `skipped`.
-3. **Forcing/ignoring**: line comments `@boost-force` (`isForcedLine`) override _overridable_ bailouts; `@boost-ignore` (`isIgnoredLine`) skips a line. Note dynamic `Text` requires `@boost-force` to be optimized.
-4. Rewrite via `replaceWithNativeComponent`, which swaps the JSX name and injects the needed runtime import into the file.
-
-Key safety logic is in `src/plugin/utils/common/validation.ts`.
-
-Some optimizers also rewrite props at compile time, i.e. the `Text` optimizer extracts `style`/accessibility/`userSelect` into runtime helper calls (`processTextStyle`, `processAccessibilityProps`) injected as imports, adds defaults (`allowFontScaling`, `ellipsizeMode`), and fixes negative `numberOfLines`.
+Full parity with default runtime behavior is a strict acceptance requirement.
 
 ### Runtime library (`src/runtime`)
 
-`NativeText`/`NativeView` (`src/runtime/components`) resolve at module load and gracefully fall back to standard `Text`/`View` on web or when the unstable export is missing. `helpers.ts` holds `processTextStyle` / `processAccessibilityProps` (the functions the plugin's generated imports call). `index.web.ts` is the web build that falls back fully.
-
-### Plugin options
-
-Typed in `src/plugin/types/index.ts` (`PluginOptions`): `ignores`, `verbose`, `silent`, `optimizations.{text,view}`, `dangerouslyOptimizeViewWithUnknownAncestors`.
-
-## Build (`rollup.config.mjs`)
-
-Rollup emits separate CJS + ESM + `.d.ts` bundles for each of: `runtime`, `runtime.web`, and `plugin`. The root `runtime.js`/`plugin.js` shims re-export from `dist`. After editing plugin/runtime source you must rebuild (`pnpm package build`) for the example app or any consumer to pick up changes — `pnpm dev` does this in watch mode.
+Native host components are loaded from a runtime library to gracefully fall back to standard components on web.
 
 ## Testing
 
-Optimizer tests use `babel-plugin-tester` with **fixture directories** under `optimizers/{text,view}/__tests__/fixtures/<case>/`, each containing `code.js` (input) and `output.js` (expected transform). Some cases have `dangerous-output.js` variants for the dangerous-ancestor option. `generate-test-plugin.ts` wraps a single optimizer into a standalone Babel plugin for isolated testing; `format-test-result.ts` normalizes output. Vitest aliases `react-native` to a mock (`src/runtime/__tests__/mocks/react-native.ts`) — see `vitest.config.ts`. To add a transform test, add a new fixture directory; no test code changes needed.
+Optimizer tests use `babel-plugin-tester` with fixture directories, each containing `code.js` (input) and `output.js` (expected transform). Some cases have `dangerous-output.js` variants for the optional dangerous-ancestor option.
 
 ## Tooling notes
 
-- Lint/format is **Oxlint + Oxfmt** (oxc), not ESLint/Prettier. Config: `.oxlintrc.json`, `.oxfmtrc.json`.
-- The example app keeps `*.unoptimized.tsx` twins generated by `apps/example/scripts/gen-unoptimized.mjs` (runs on `prestart`/`preios`/`preandroid`) used by the example app to showcase performance differences. These are GENERATED — edit the canonical source listed in the script and re-run, don't edit the twins.
+- Lint/format is **Oxlint + Oxfmt** (oxc), not ESLint/Prettier.
+- The example app keeps `*.unoptimized.tsx` twins generated by `apps/example/scripts/gen-unoptimized.mjs` (runs on `prestart`/`preios`/`preandroid`). These are GENERATED. Edit the canonical source and re-run, don't edit the twins.

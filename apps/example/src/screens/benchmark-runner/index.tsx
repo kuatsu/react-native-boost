@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getThermalState } from 'react-native-time-to-render';
-import { coins } from '../trading-demo/model/coins';
+import { benchmarkCoin } from '../trading-demo/model/coins';
 import { createFeedController, FeedSnapshot, PriceDirection } from '../trading-demo/model/feed';
 import { formatPrice } from '../trading-demo/model/format';
 import { loadForLevels } from '../trading-demo/model/presets';
@@ -22,8 +22,7 @@ import { BenchmarkPlan, BoostMode, ThermalLevel } from './protocol';
  * needed beyond a status banner).
  */
 
-const coin = coins[0];
-const quoteSymbol = coin.pair.split('/')[1] ?? 'USDT';
+const quoteSymbol = benchmarkCoin.pair.split('/')[1] ?? 'USDT';
 const seed = 1337;
 
 const directionTone = (direction: PriceDirection): StatTone =>
@@ -114,7 +113,7 @@ export default function BenchmarkRunner() {
   useEffect(() => {
     if (!step || !plan) return;
     const config = loadForLevels(step.load);
-    const controller = createFeedController(coin, seed, config);
+    const controller = createFeedController(benchmarkCoin, seed, config);
     setSnapshot(controller.snapshot());
     const id = setInterval(() => setSnapshot(controller.tick(config)), plan.tickMs);
     return () => clearInterval(id);
@@ -231,8 +230,8 @@ export default function BenchmarkRunner() {
   }, [plan]);
 
   const Wall = step?.boost ? optimizedRows.PriceWall : unoptimizedRows.PriceWall;
-  const bestAsk = snapshot?.asks[0]?.price ?? coin.price;
-  const bestBid = snapshot?.bids[0]?.price ?? coin.price;
+  const bestAsk = snapshot?.asks[0]?.price ?? benchmarkCoin.price;
+  const bestBid = snapshot?.bids[0]?.price ?? benchmarkCoin.price;
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -242,8 +241,8 @@ export default function BenchmarkRunner() {
           bids={snapshot.bids}
           lastPriceText={snapshot.lastPriceText}
           lastTone={directionTone(snapshot.lastDirection)}
-          spreadText={formatPrice(Math.abs(bestAsk - bestBid), coin.priceDecimals)}
-          baseSymbol={coin.symbol}
+          spreadText={formatPrice(Math.abs(bestAsk - bestBid), benchmarkCoin.priceDecimals)}
+          baseSymbol={benchmarkCoin.symbol}
           quoteSymbol={quoteSymbol}
         />
       ) : null}
