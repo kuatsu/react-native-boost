@@ -56,7 +56,7 @@ Native host components are loaded from a runtime library to gracefully fall back
 
 ## Testing
 
-Optimizer tests use `babel-plugin-tester` with fixture directories, each containing `code.js` (input) and `output.js` (expected transform). Some cases have `dangerous-output.js` variants for the optional dangerous-ancestor option.
+Optimizer tests use `babel-plugin-tester` with fixture directories, each containing `code.js` (input) and `output.js` (expected transform). Some cases have `dangerous-output.js` variants for the optional unknown-ancestor assumption.
 
 ## Tooling notes
 

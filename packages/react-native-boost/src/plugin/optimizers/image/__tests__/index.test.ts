@@ -13,19 +13,19 @@ const transformImage = async (
   source: string,
   platform: TargetPlatform,
   {
-    dangerouslyOptimizeImageWithUnknownAncestors = false,
+    unknownAncestorsDoNotRenderText = false,
     unistylesEnabled = false,
   }: {
-    dangerouslyOptimizeImageWithUnknownAncestors?: boolean;
+    unknownAncestorsDoNotRenderText?: boolean;
     unistylesEnabled?: boolean;
   } = {}
 ): Promise<string> => {
-  const logger = createLogger({ silent: true, verbose: false });
+  const logger = createLogger('silent');
   const plugin = (): PluginObj => ({
     name: `${platform}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
-        imageOptimizer(path, logger, { dangerouslyOptimizeImageWithUnknownAncestors }, platform, unistylesEnabled);
+        imageOptimizer(path, logger, { assumptions: { unknownAncestorsDoNotRenderText } }, platform, unistylesEnabled);
       },
     },
   });
@@ -117,8 +117,8 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(imageOptimizer, { dangerouslyOptimizeImageWithUnknownAncestors: true }, 'ios'),
-  title: 'image dangerous unknown ancestors',
+  plugin: generateTestPlugin(imageOptimizer, { assumptions: { unknownAncestorsDoNotRenderText: true } }, 'ios'),
+  title: 'image unknown ancestor assumption',
   babelOptions: {
     plugins: ['@babel/plugin-syntax-jsx'],
   },
@@ -403,7 +403,7 @@ describe('image unistyles', () => {
 
 describe('image unknown platform output', () => {
   it('bails because the native Image host prop contract is platform-specific', async () => {
-    const logger = createLogger({ silent: true, verbose: false });
+    const logger = createLogger('silent');
     const plugin = (): PluginObj => ({
       name: 'unknown-platform-image-optimizer-test',
       visitor: {

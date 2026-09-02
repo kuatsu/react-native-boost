@@ -346,9 +346,7 @@ identifiers, recurses into **local function components** (including `memo()`/`fo
 it can't prove safety, it returns `unknown` and bails. False-positives (a missed optimization) are, as everywhere in the plugin, preferred over
 false-negatives (a regression).
 
-The `unknown` case is *often* safe in practice (third-party components rarely wrap children in `Text`), but there are still cases where optimizing components with an `unknown` ancestor could genuinely cause regressions. Therefore, Boost provides
-explicit opt-in escape hatches: `dangerouslyOptimizeViewWithUnknownAncestors`, 
-`dangerouslyOptimizeTextWithUnknownAncestors`, `dangerouslyOptimizeImageWithUnknownAncestors`, and `dangerouslyOptimizeActivityIndicatorWithUnknownAncestors` (see [Configuration](/docs/configuration/configure)).
+The `unknown` case is often safe in practice because third-party components rarely wrap children in `Text`, but there are still cases where this can cause regressions. The project-wide `assumptions.unknownAncestorsDoNotRenderText` option provides an opt-in escape hatch to enable optimizations for this case. See [Configuration](/docs/configuration/configure).
 
 ### Rewriting and import injection
 
@@ -373,10 +371,9 @@ API lives on the [Runtime Library](/docs/runtime-library) page. The most load-be
 Boost is built on one strict contract: **never change rendered output, layout, or the accessibility tree.** Skipping a `Text` that could have been optimized just leaves
 performance on the table; optimizing one that needed the wrapper would be a correctness bug with potential UI or behavior regressions.
 
-Two escape hatches let you override the analysis when *you* know more than the plugin can prove:
-[`@boost-force`](/docs/configuration/boost-decorator#boost-force) on a single element, or the
-`dangerouslyOptimize*WithUnknownAncestors` options for whole-project ancestor resolution. Both are named
-to signal that you've taken ownership of the correctness argument.
+Two escape hatches let you override the analysis when you know more than the plugin can prove:
+[`@boost-force`](/docs/configuration/boost-decorator#boost-force) on one element, or the
+`assumptions.unknownAncestorsDoNotRenderText` option for the full project. Both make you responsible for the resulting behavior.
 
 ## React Native's own roadmap
 
@@ -418,6 +415,6 @@ So, **React Native core is optimizing the runtime, while Boost patches the call 
   <Card
     title="Configuration"
     href="/docs/configuration/configure"
-    description="Plugin options, including the dangerous ancestor flags."
+    description="Plugin options, integrations, and project-wide assumptions."
   />
 </Cards>

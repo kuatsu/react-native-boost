@@ -13,13 +13,13 @@ Enable Boost's Unistyles support layer through the Babel plugin's config options
 // babel.config.js
 module.exports = {
   plugins: [
-    ['react-native-boost/plugin', { unistyles: true }],
+    ['react-native-boost/plugin', { integrations: { unistyles: 'on' } }],
     ['react-native-unistyles/plugin', { root: 'src' }],
   ],
 };
 ```
 
-Set `unistyles: false` to turn the mode off, e.g. when Unistyles is installed in your project's dependencies, but not actually used in code. The order of the two plugins does not matter.
+Set `integrations.unistyles` to `off` when Unistyles is installed in your project's dependencies, but not actually used in code. The order of the two plugins does not matter.
 
 <Callout type="info" title="Auto-detection">
   React Native Boost can auto-detect Unistyles and enable this mode automatically if you haven't explicitly disabled it. However, this auto-detection is fragile and Boost will therefore log a warning to the console. Explicitly set the config flag as shown above to silence the warning.

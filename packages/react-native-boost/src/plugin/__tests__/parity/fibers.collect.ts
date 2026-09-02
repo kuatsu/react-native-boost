@@ -47,7 +47,7 @@ async function compile(source: string, tag: string, boost: boolean): Promise<Rea
     filename: `${tag}.jsx`,
     caller: { name: 'metro', platform: 'ios' } as TransformCaller,
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
-    plugins: boost ? [[boostPlugin, { silent: true }]] : [],
+    plugins: boost ? [[boostPlugin, { logLevel: 'silent' }]] : [],
   });
   const file = fileURLToPath(new URL(`./__generated__/fibers-${tag}-${counter++}.js`, import.meta.url));
   writeFileSync(file, out!.code!);

@@ -1,29 +1,74 @@
 import { NodePath, types as t } from '@babel/core';
 
+export type OptimizationState = 'on' | 'off';
+
+export type OptimizationSetting<Options = never> = OptimizationState | [state: OptimizationState, options: Options];
+
 export interface PluginOptimizationOptions {
   /**
-   * Whether to optimize the `Text` component.
-   * @default true
+   * Replaces the React Native `Text` wrapper with its native host.
+   * @default 'on'
    */
-  text?: boolean;
+  'native-text'?: OptimizationSetting;
   /**
-   * Whether to optimize the `View` component.
-   * @default true
+   * Replaces the React Native `View` wrapper with its native host.
+   * @default 'on'
    */
-  view?: boolean;
+  'native-view'?: OptimizationSetting;
   /**
-   * Whether to optimize the `Image` component.
-   * @default true
+   * Replaces the React Native `Image` wrapper with its native host.
+   * @default 'on'
    */
-  image?: boolean;
+  'native-image'?: OptimizationSetting;
   /**
-   * Whether to optimize the `ActivityIndicator` component.
-   * @default true
+   * Replaces the React Native `ActivityIndicator` wrapper with its native hosts.
+   * @default 'on'
    */
-  activityIndicator?: boolean;
+  'native-activity-indicator'?: OptimizationSetting;
 }
 
+export interface PluginAssumptions {
+  /**
+   * Assume unresolved ancestor components do not render a React Native `Text` around their children.
+   *
+   * This increases optimization coverage, but can emit the wrong native host when the assumption is false.
+   * Enable it only after you verify this behavior across the project.
+   * @default false
+   */
+  unknownAncestorsDoNotRenderText?: boolean;
+}
+
+export type IntegrationState = 'auto' | 'on' | 'off';
+
+export interface PluginIntegrationOptions {
+  /**
+   * Keeps `react-native-unistyles` reactivity working on optimized elements.
+   *
+   * `auto` detects an installed `react-native-unistyles` package and logs a warning when found. Use `on`
+   * when the project uses Unistyles, or `off` when the package is installed but not used in transformed code.
+   * @default 'auto'
+   */
+  unistyles?: IntegrationState;
+}
+
+export type LogLevel = 'silent' | 'warn' | 'info' | 'debug';
+
 export interface PluginOptions {
+  /**
+   * Configures individual optimizations. Omitted entries use their documented defaults.
+   * @default {}
+   */
+  optimizations?: PluginOptimizationOptions;
+  /**
+   * Declares project-wide facts that let Boost apply optimizations it cannot prove safe by static analysis.
+   * @default {}
+   */
+  assumptions?: PluginAssumptions;
+  /**
+   * Configures behavior for supported third-party libraries.
+   * @default {}
+   */
+  integrations?: PluginIntegrationOptions;
   /**
    * Paths to ignore from optimization.
    *
@@ -33,80 +78,13 @@ export interface PluginOptions {
    */
   ignores?: string[];
   /**
-   * Enables verbose logging.
+   * Controls plugin logging.
    *
-   * With `silent: false`, optimized components are logged by default.
-   * When enabled, skipped components and their skip reasons are also logged.
-   * @default false
+   * `warn` logs warnings and forced optimizations. `info` also logs successful optimizations. `debug`
+   * also logs skipped optimizations and their reasons. `silent` disables all logs.
+   * @default 'info'
    */
-  verbose?: boolean;
-  /**
-   * Disables all plugin logs.
-   *
-   * When set to `true`, this overrides `verbose`.
-   * @default false
-   */
-  silent?: boolean;
-  /**
-   * Toggle individual optimizers.
-   *
-   * If omitted, all optimizers are enabled.
-   */
-  optimizations?: PluginOptimizationOptions;
-  /**
-   * Enables "Unistyles mode": keep `react-native-unistyles` reactivity working on optimized elements.
-   *
-   * When enabled, a `Text`/`View` whose `style` resolves to a Unistyles `StyleSheet.create` style is
-   * rewritten to Unistyles' own lean host (so its shadow-tree registration survives and theme/breakpoint/
-   * variant updates keep working) instead of Boost's raw host; a `Text`/`View` with an unresolvable
-   * direct `style` (e.g. `style={props.style}`, a function call) is left untouched, because it could be a
-   * Unistyles style arriving from elsewhere; plain/RN styles still optimize to Boost's host as usual.
-   *
-   * Style origin is resolved within a single file only (cross-file stylesheets count as unresolvable).
-   *
-   * When omitted, the plugin auto-detects whether `react-native-unistyles` is installed and enables this
-   * if so (and logs a one-time hint to set the flag explicitly). Set to `false` to force it off even when
-   * Unistyles is installed.
-   * @default undefined (auto-detected)
-   */
-  unistyles?: boolean;
-  /**
-   * Opt-in flag that allows View optimization when ancestor components cannot be statically resolved.
-   *
-   * This increases optimization coverage, but may introduce behavioral differences
-   * when unresolved ancestors render React Native `Text` wrappers.
-   * Prefer targeted ignores first, and enable this only after verifying affected screens.
-   * @default false
-   */
-  dangerouslyOptimizeViewWithUnknownAncestors?: boolean;
-  /**
-   * Opt-in flag that allows Text optimization when ancestors or runtime parents cannot be statically resolved.
-   *
-   * This increases optimization coverage, but may introduce behavioral differences when an unresolved
-   * ancestor or runtime parent renders a React Native `Text` wrapper: a nested `Text` must render as the
-   * inline `NativeVirtualText` host rather than `NativeText`, and optimizing it would emit the wrong host.
-   * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
-   * @default false
-   */
-  dangerouslyOptimizeTextWithUnknownAncestors?: boolean;
-  /**
-   * Opt-in flag that allows Image optimization when ancestor components cannot be statically resolved.
-   *
-   * This increases optimization coverage, but may introduce behavioral differences when an unresolved
-   * ancestor renders a React Native `Text` wrapper: Android images under text render through the inline
-   * image host rather than the normal image view, and optimizing them would emit the wrong host.
-   * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
-   * @default false
-   */
-  dangerouslyOptimizeImageWithUnknownAncestors?: boolean;
-  /**
-   * Opt-in flag that allows ActivityIndicator optimization when ancestor components cannot be statically resolved.
-   *
-   * This can change Text ancestor context when an unresolved ancestor renders a React Native `Text` wrapper.
-   * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
-   * @default false
-   */
-  dangerouslyOptimizeActivityIndicatorWithUnknownAncestors?: boolean;
+  logLevel?: LogLevel;
 }
 
 export type OptimizableComponent = 'Text' | 'View' | 'Image' | 'ActivityIndicator';
@@ -142,8 +120,8 @@ export type Optimizer = (
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
   platform?: TargetPlatform,
   /**
-   * Whether "Unistyles mode" is active for this build (resolved once at plugin init from the `unistyles`
-   * option + install auto-detection). When `true`, optimizers classify each element's `style` origin and
+   * Whether "Unistyles mode" is active for this build (resolved once at plugin init from the integration
+   * setting and install auto-detection). When `true`, optimizers classify each element's `style` origin and
    * route Unistyles styles to Unistyles' lean host instead of Boost's raw host.
    */
   unistylesEnabled?: boolean

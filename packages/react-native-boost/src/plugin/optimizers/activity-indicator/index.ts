@@ -64,7 +64,7 @@ export const activityIndicatorOptimizer: Optimizer = (path, logger, options, pla
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
     },
-    ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeActivityIndicatorWithUnknownAncestors === true),
+    ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
   const hardSkipReason = getFirstBailoutReason(hardChecks);

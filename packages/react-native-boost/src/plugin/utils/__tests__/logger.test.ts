@@ -7,9 +7,9 @@ describe('logger', () => {
     vi.restoreAllMocks();
   });
 
-  it('logs optimized components by default', () => {
+  it('logs optimized components at the default info level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const logger = createLogger({ verbose: false, silent: false });
+    const logger = createLogger();
     const path = createMockPath('/app/screens/LoginScreen.tsx', 42);
 
     logger.optimized({ component: 'Text', path });
@@ -19,26 +19,39 @@ describe('logger', () => {
     expect(String(consoleSpy.mock.calls[0][0])).toContain('Optimized Text in /app/screens/LoginScreen.tsx:42');
   });
 
-  it('logs skipped components and reasons when verbose is enabled', () => {
+  it('logs skipped components and reasons at the debug level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const logger = createLogger({ verbose: true, silent: false });
+    const logger = createLogger('debug');
     const path = createMockPath('/app/screens/Settings.tsx', 10);
 
     logger.skipped({
       component: 'View',
       path,
-      reason: 'has unresolved ancestor and dangerous optimization is disabled',
+      reason: 'has unresolved ancestor that may render Text',
     });
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     expect(String(consoleSpy.mock.calls[0][0])).toContain(
-      'Skipped View in /app/screens/Settings.tsx:10 (has unresolved ancestor and dangerous optimization is disabled)'
+      'Skipped View in /app/screens/Settings.tsx:10 (has unresolved ancestor that may render Text)'
     );
   });
 
-  it('disables all logs when silent is enabled', () => {
+  it('logs only warnings and forced optimizations at the warn level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const logger = createLogger({ verbose: true, silent: true });
+    const logger = createLogger('warn');
+    const path = createMockPath('/app/screens/Profile.tsx', 7);
+
+    logger.optimized({ component: 'Text', path });
+    logger.skipped({ component: 'View', path, reason: 'line is marked with @boost-ignore' });
+    logger.warning({ component: 'Text', path, message: 'numberOfLines is invalid' });
+    logger.forced({ component: 'View', path, reason: 'contains unsupported props' });
+
+    expect(consoleSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('disables all logs at the silent level', () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logger = createLogger('silent');
     const path = createMockPath('/app/screens/Profile.tsx', 7);
 
     logger.optimized({ component: 'Text', path });

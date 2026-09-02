@@ -9,10 +9,10 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
-| `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled`, `has unresolved runtime parent that may render Text`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
-| `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
-| `Image` | Imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
-| `ActivityIndicator` | Imported from `react-native`, native platform known, direct props only, no children, safe ancestor chain | `target platform is unknown`, `has spread props`, `contains children`, `contains an impure prop expression that cannot be safely reordered`, `has Text ancestor`, `has unresolved ancestor and dangerous optimization is disabled` |
+| `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor that may render Text`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
+| `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
+| `Image` | Imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
+| `ActivityIndicator` | Imported from `react-native`, native platform known, direct props only, no children, safe ancestor chain | `target platform is unknown`, `has spread props`, `contains children`, `contains an impure prop expression that cannot be safely reordered`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
 
 ## Global Bailouts
 
@@ -29,6 +29,8 @@ These skip optimization before component-specific checks:
 ## Overriding Bailouts
 
 Use `@boost-force` to force optimization on a component that would otherwise be skipped. This bypasses all bailout checks except the `react-native` import check. See the [Decorators](/docs/configuration/boost-decorator#boost-force) page for details.
+
+Set `assumptions.unknownAncestorsDoNotRenderText` to `true` to optimize components under unknown ancestors across the project. This can produce the wrong native host if an unknown ancestor renders a `Text` around its children.
 
 ## Text Coverage
 
@@ -56,18 +58,10 @@ Like `View`, `Text` optimization depends on ancestor classification:
 - `text`: skip (`has Text ancestor`) — a `Text` nested in another `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`), not `NativeText` (`RCTText`), so optimizing it would emit the wrong host.
 - `unknown`: skip by default
 
-A root `Text` returned by a component or renderer also skips as `has unresolved runtime parent that may render Text`. Its caller can mount it inside another `Text`, which requires `NativeVirtualText` instead of `NativeText`.
-
-Set `dangerouslyOptimizeTextWithUnknownAncestors: true` to optimize unknown ancestors and runtime parents.
-
-<Callout type="warn" title="Dangerous Mode">
-  Enabling dangerous mode can introduce regressions if an unresolved ancestor or runtime parent renders a `Text`
-  wrapper. For example, `expo-router`'s `Link` wraps its children in a `<Text>` by default. A `Text` under a `Link`
-  must render as `NativeVirtualText`, and optimizing it would be wrong.
-</Callout>
+The project-wide unknown ancestor assumption can optimize this case. A false assumption can introduce regressions. For example, `expo-router`'s `Link` wraps its children in a `Text` by default. A `Text` under that `Link` must render as `NativeVirtualText`.
 
 A `Text` used as a direct child of `expo-router` `Link` with `asChild` is **always** skipped
-(`is a direct child of expo-router Link with asChild`), even under the dangerous flag, because `Link` makes that child
+(`is a direct child of expo-router Link with asChild`), even when the assumption is enabled, because `Link` makes that child
 pressable.
 
 ```tsx
@@ -107,12 +101,7 @@ is passed through unchanged.
 - `text`: skip (`has Text ancestor`)
 - `unknown`: skip by default
 
-Set `dangerouslyOptimizeViewWithUnknownAncestors: true` to optimize `unknown` ancestors too.
-
-<Callout type="warn" title="Dangerous Mode">
-  Enabling dangerous mode can increase optimization coverage, but it can also introduce regressions if unresolved
-  ancestors render Text wrappers.
-</Callout>
+The project-wide unknown ancestor assumption can optimize this case. A false assumption can introduce regressions if an unresolved ancestor renders a `Text` around its children.
 
 ## Image Coverage
 
@@ -127,7 +116,7 @@ The `ActivityIndicator` optimizer replaces the wrapper tree with the same outer 
 
 It skips elements with spreads, children, impure prop expressions, Unistyles styles, or an unsafe ancestor chain. A spread can change the wrapper's prop precedence. An impure expression could run in a different order after one component expands into two hosts. These cases stay on the React Native wrapper.
 
-Set `dangerouslyOptimizeActivityIndicatorWithUnknownAncestors: true` to optimize unknown ancestors too. This has the same Text-ancestor risk as the View option.
+The project-wide unknown ancestor assumption can optimize unknown ancestors. This has the same `Text`-ancestor risk as the other host-component optimizations.
 
 ## Spread Props: Resolvable vs Unresolvable
 

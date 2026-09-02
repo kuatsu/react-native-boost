@@ -3,10 +3,7 @@ import { Optimizer, PluginOptions, TargetPlatform } from '../types';
 import { createLogger } from './logger';
 
 export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions = {}, platform?: TargetPlatform) => {
-  const logger = createLogger({
-    verbose: false,
-    silent: true,
-  });
+  const logger = createLogger('silent');
 
   return declare((api) => {
     api.assertVersion(7);
@@ -15,9 +12,8 @@ export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions 
       name: 'react-native-boost',
       visitor: {
         JSXOpeningElement(path) {
-          // Mirror the real plugin's explicit-flag resolution for Unistyles mode (auto-detection is not
-          // exercised in fixtures); a fixture opts in with `{ unistyles: true }`.
-          optimizer(path, logger, options, platform, options.unistyles === true);
+          // Auto-detection is not exercised in fixtures.
+          optimizer(path, logger, options, platform, options.integrations?.unistyles === 'on');
         },
       },
     };
