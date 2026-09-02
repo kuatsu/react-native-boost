@@ -1,6 +1,6 @@
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { startMarker } from 'react-native-time-to-render';
 import { Benchmark, BenchmarkStep } from '../types';
 import MeasureComponent from '../components/measure-component';
@@ -55,37 +55,35 @@ const benchmarks = [
   },
 ] satisfies Benchmark[];
 
+type RunStatus = 'idle' | 'settling' | 'measuring' | 'complete';
+type ScheduledStep = { benchmarkIndex: number; step: BenchmarkStep };
+
+const SETTLE_DELAY_MS = 500;
+
 export default function BenchmarkScreen() {
   const insets = useSafeAreaInsets();
+  const [selectedBenchmarks, setSelectedBenchmarks] = useState(() => benchmarks.map(() => true));
+  const [schedule, setSchedule] = useState<ScheduledStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [runBenchmark, setRunBenchmark] = useState(false);
+  const [runStatus, setRunStatus] = useState<RunStatus>('idle');
   const [results, setResults] = useState<Record<number, { unoptimized: number | null; optimized: number | null }>>({});
 
-  const totalSteps = benchmarks.length * 2;
-  const currentBenchmark = useMemo(() => Math.floor(currentStepIndex / 2), [currentStepIndex]);
-  const currentStep = useMemo<BenchmarkStep>(
-    () => (currentStepIndex % 2 === 0 ? BenchmarkStep.Unoptimized : BenchmarkStep.Optimized),
-    [currentStepIndex]
-  );
-
-  const progress = useMemo<[number, number]>(() => {
-    return [currentStepIndex, totalSteps];
-  }, [currentStepIndex, totalSteps]);
-
-  const buttonTitle = useMemo(() => {
-    if (currentStepIndex === 0) {
-      return 'Start Benchmark';
-    }
-    if (currentStepIndex === totalSteps - 1) {
-      return 'Last Step';
-    }
-    return 'Next Step';
-  }, [currentStepIndex, totalSteps]);
-
-  const markerName = useMemo(
-    () => getMarkerName(benchmarks[currentBenchmark].title, currentStep),
-    [currentBenchmark, currentStep]
-  );
+  const activeStep = schedule[currentStepIndex];
+  const activeBenchmark = activeStep ? benchmarks[activeStep.benchmarkIndex] : undefined;
+  const isRunning = runStatus === 'settling' || runStatus === 'measuring';
+  const selectedCount = selectedBenchmarks.filter(Boolean).length;
+  const markerName = activeStep ? getMarkerName(benchmarks[activeStep.benchmarkIndex].title, activeStep.step) : '';
+  const subtitle =
+    isRunning && activeStep
+      ? `Step ${currentStepIndex + 1} / ${schedule.length}: ${activeBenchmark?.title} (${activeStep.step})`
+      : runStatus === 'complete'
+        ? 'Benchmark complete'
+        : `${selectedCount} of ${benchmarks.length} benchmarks selected`;
+  const buttonTitle = isRunning
+    ? `Running ${currentStepIndex + 1} / ${schedule.length}`
+    : runStatus === 'complete'
+      ? 'Run Selected Again'
+      : 'Run Selected';
 
   const resultRows = useMemo(() => {
     return benchmarks.map((benchmark, index) => {
@@ -106,28 +104,74 @@ export default function BenchmarkScreen() {
     });
   }, [results]);
 
-  const handleRun = (timestamp: number) => {
-    startMarker(markerName, timestamp);
-    setRunBenchmark(true);
+  // Let cleanup and result UI work finish before the next measurement starts.
+  useEffect(() => {
+    if (runStatus !== 'settling' || !activeStep) return;
+
+    let frame: number | undefined;
+    const timeout = setTimeout(() => {
+      frame = requestAnimationFrame((timestamp) => {
+        startMarker(markerName, timestamp);
+        setRunStatus('measuring');
+      });
+    }, SETTLE_DELAY_MS);
+
+    return () => {
+      clearTimeout(timeout);
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [activeStep, markerName, runStatus]);
+
+  const handleRun = () => {
+    const nextSchedule = selectedBenchmarks.flatMap<ScheduledStep>((selected, benchmarkIndex) =>
+      selected
+        ? [
+            { benchmarkIndex, step: BenchmarkStep.Unoptimized },
+            { benchmarkIndex, step: BenchmarkStep.Optimized },
+          ]
+        : []
+    );
+    if (nextSchedule.length === 0) return;
+
+    setSchedule(nextSchedule);
+    setCurrentStepIndex(0);
+    setResults({});
+    setRunStatus('settling');
+  };
+
+  const handleToggleBenchmark = (benchmarkIndex: number) => {
+    if (isRunning) return;
+    setSelectedBenchmarks((current) =>
+      current.map((selected, index) => (index === benchmarkIndex ? !selected : selected))
+    );
+    if (runStatus === 'complete') setRunStatus('idle');
   };
 
   const handleRenderTimeChange = (renderTime: number) => {
-    setRunBenchmark(false);
+    if (!activeStep) return;
 
     setResults((previousResults) => {
-      const baseResults = currentStepIndex === 0 ? {} : previousResults;
-      const previousBenchmarkResult = baseResults[currentBenchmark] ?? { unoptimized: null, optimized: null };
+      const previousBenchmarkResult = previousResults[activeStep.benchmarkIndex] ?? {
+        unoptimized: null,
+        optimized: null,
+      };
 
       return {
-        ...baseResults,
-        [currentBenchmark]:
-          currentStep === BenchmarkStep.Unoptimized
+        ...previousResults,
+        [activeStep.benchmarkIndex]:
+          activeStep.step === BenchmarkStep.Unoptimized
             ? { unoptimized: renderTime, optimized: null }
             : { ...previousBenchmarkResult, optimized: renderTime },
       };
     });
 
-    setCurrentStepIndex((previousStepIndex) => (previousStepIndex + 1) % totalSteps);
+    const nextStepIndex = currentStepIndex + 1;
+    if (nextStepIndex < schedule.length) {
+      setCurrentStepIndex(nextStepIndex);
+      setRunStatus('settling');
+    } else {
+      setRunStatus('complete');
+    }
   };
 
   return (
@@ -135,10 +179,7 @@ export default function BenchmarkScreen() {
       <View style={styles.content}>
         <View style={styles.headerCard}>
           <Text style={styles.title}>React Native Boost Benchmark</Text>
-          <Text
-            style={
-              styles.subtitle
-            }>{`Step ${progress[0] + 1} / ${progress[1]}: ${benchmarks[currentBenchmark].title} (${currentStep})`}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
         <View style={styles.tableCard}>
@@ -155,9 +196,22 @@ export default function BenchmarkScreen() {
               style={[
                 styles.tableRow,
                 index % 2 === 0 ? styles.tableStripeLight : styles.tableStripeDark,
-                index === currentBenchmark && styles.tableActiveRow,
+                isRunning && index === activeStep?.benchmarkIndex && styles.tableActiveRow,
+                !selectedBenchmarks[index] && styles.tableRowDisabled,
               ]}>
-              <Text style={[styles.tableCell, styles.benchmarkColumn, styles.benchmarkText]}>{row.title}</Text>
+              <Pressable
+                accessibilityLabel={`${row.title} benchmark`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selectedBenchmarks[index], disabled: isRunning }}
+                disabled={isRunning}
+                hitSlop={8}
+                onPress={() => handleToggleBenchmark(index)}
+                style={[styles.tableCell, styles.benchmarkColumn, styles.benchmarkSelector]}>
+                <View style={[styles.checkbox, selectedBenchmarks[index] && styles.checkboxSelected]}>
+                  {selectedBenchmarks[index] && <View style={styles.checkboxMark} />}
+                </View>
+                <Text style={styles.benchmarkText}>{row.title}</Text>
+              </Pressable>
               <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.unoptimizedText}</Text>
               <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.optimizedText}</Text>
               <Text
@@ -181,18 +235,24 @@ export default function BenchmarkScreen() {
       <View style={[styles.footer, { bottom: insets.bottom + 16 }]}>
         <Pressable
           accessibilityRole="button"
-          onPress={(event) => handleRun(event.nativeEvent.timestamp)}
-          style={({ pressed }) => [styles.runButton, pressed && styles.runButtonPressed]}>
+          accessibilityState={{ disabled: isRunning || selectedCount === 0 }}
+          disabled={isRunning || selectedCount === 0}
+          onPress={handleRun}
+          style={({ pressed }) => [
+            styles.runButton,
+            (isRunning || selectedCount === 0) && styles.runButtonDisabled,
+            pressed && styles.runButtonPressed,
+          ]}>
           <Text style={styles.runButtonText}>{buttonTitle}</Text>
         </Pressable>
       </View>
 
-      {runBenchmark && (
+      {runStatus === 'measuring' && activeStep && activeBenchmark && (
         <MeasureComponent
-          key={markerName}
+          key={`${markerName}-${currentStepIndex}`}
           onRenderTimeChange={handleRenderTimeChange}
-          step={currentStep}
-          {...benchmarks[currentBenchmark]}
+          step={activeStep.step}
+          {...activeBenchmark}
           markerName={markerName}
         />
       )}
@@ -245,6 +305,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.985 }],
     opacity: 0.95,
   },
+  runButtonDisabled: {
+    opacity: 0.5,
+  },
   runButtonText: {
     color: '#0b0e11',
     fontSize: 15,
@@ -287,6 +350,9 @@ const styles = StyleSheet.create({
   tableActiveRow: {
     backgroundColor: '#1f2a36',
   },
+  tableRowDisabled: {
+    opacity: 0.45,
+  },
   tableCell: {
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -297,6 +363,30 @@ const styles = StyleSheet.create({
   metricColumn: {
     flex: 1,
     alignItems: 'flex-end',
+  },
+  benchmarkSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#6c7480',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#f0b90b',
+    borderColor: '#f0b90b',
+  },
+  checkboxMark: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: '#0b0e11',
   },
   benchmarkText: {
     fontSize: 14,
