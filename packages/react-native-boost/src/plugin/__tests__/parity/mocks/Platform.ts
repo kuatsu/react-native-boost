@@ -16,12 +16,13 @@ export function setPlatformOS(value: PlatformOS) {
 // suite needing a hand-maintained list of expected divergences.
 const { version } = createRequire(import.meta.url)('react-native/package.json') as { version: string };
 const [major, minor, patch] = version.split('-')[0]!.split('.').map(Number);
+export const reactNativeVersion = { major, minor, patch };
 
 const Platform = {
   get OS() {
     return os;
   },
-  constants: { reactNativeVersion: { major, minor, patch } },
+  constants: { reactNativeVersion },
   select<T>(spec: Record<string, T>): T | undefined {
     return os in spec ? spec[os] : spec.default;
   },

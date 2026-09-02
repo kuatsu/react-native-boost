@@ -16,9 +16,11 @@ vi.mock('../../../runtime/components/native-image', async () => ({
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, boostOptimizes } from './boost';
+import { reactNativeVersion } from './mocks/Platform';
 import { normalize, normalizeImage } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
+const REACT_NATIVE_MINOR = reactNativeVersion.minor;
 
 // `<Text>` cases use a primitive child (string, number, or template literal) so they render to
 // NativeText (not NativeVirtualText).
@@ -218,6 +220,14 @@ const DYNAMIC_IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unk
   ],
 ]);
 
+describe('Image parity normalization', () => {
+  it('ignores duplicate source aliases only on RN 0.85 and earlier', () => {
+    const source = [{ uri: 'logo.png' }];
+    expect(normalizeImage({ src: source, source }, 85)).toEqual({ source });
+    expect(normalizeImage({ src: source, source }, 86)).toEqual({ src: source, source });
+  });
+});
+
 describe('differential parity', () => {
   describe.each(PLATFORMS)('Platform.OS=%s', (os) => {
     it.each(TEXT_CASES)('Text: %s', async (jsx) => {
@@ -235,7 +245,9 @@ describe('differential parity', () => {
       if (!boost.optimized) return; // bailed → defers to the wrapper, equivalent by construction
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which);
-      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      expect(normalizeImage(boost.props, REACT_NATIVE_MINOR)).toEqual(
+        normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
+      );
       IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props, os);
     });
 
@@ -245,7 +257,9 @@ describe('differential parity', () => {
       if (!boost.optimized) throw new Error('expected Image dynamic case to optimize');
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
-      expect(normalizeImage(boost.props)).toEqual(normalizeImage(wrapper.props));
+      expect(normalizeImage(boost.props, REACT_NATIVE_MINOR)).toEqual(
+        normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
+      );
       DYNAMIC_IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props);
     });
 

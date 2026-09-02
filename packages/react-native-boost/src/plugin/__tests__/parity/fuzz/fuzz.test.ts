@@ -17,7 +17,7 @@ vi.mock('../../../../runtime/components/native-image', async () => ({
 import { captureBoost } from '../boost';
 import { captureWrapper } from '../wrapper';
 import { normalize, normalizeImage } from '../normalize';
-import { type PlatformOS } from '../mocks/Platform';
+import { reactNativeVersion, type PlatformOS } from '../mocks/Platform';
 import { elementSpecArb, platformArb, render, type Tag } from './generator';
 import { divergingKeys } from './diff';
 
@@ -53,9 +53,9 @@ async function runCase(os: PlatformOS, jsxBody: string, preamble: string): Promi
   if (!boost.optimized) return { status: 'skipped' };
 
   const wrapper = await captureWrapper(os, jsxBody, preamble);
-  const normalizer = boost.which === 'NativeImage' || wrapper.which === 'NativeImage' ? normalizeImage : normalize;
-  const boostNorm = normalizer(boost.props);
-  const wrapperNorm = normalizer(wrapper.props);
+  const isImage = boost.which === 'NativeImage' || wrapper.which === 'NativeImage';
+  const boostNorm = isImage ? normalizeImage(boost.props, reactNativeVersion.minor) : normalize(boost.props);
+  const wrapperNorm = isImage ? normalizeImage(wrapper.props, reactNativeVersion.minor) : normalize(wrapper.props);
   const keys = divergingKeys(boostNorm, wrapperNorm);
 
   if (boost.which === wrapper.which && keys.length === 0) return { status: 'match' };

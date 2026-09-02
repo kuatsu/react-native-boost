@@ -36,8 +36,12 @@ export const normalize = (props: Record<string, unknown>) => {
   return normalized;
 };
 
-export const normalizeImage = (props: Record<string, unknown>) => {
+export const normalizeImage = (props: Record<string, unknown>, reactNativeMinor: number) => {
+  const srcDuplicatesSource = props.src === props.source;
   const normalized = normalize(props);
+
+  // RN <=0.85 sends the same Android source array through both native aliases.
+  if (reactNativeMinor <= 85 && srcDuplicatesSource) delete normalized.src;
 
   // These are wrapper-level Image inputs. The RN wrapper may still pass the authored prop through to
   // the mock host while Boost translates it into native-facing props (`source`/`headers`/`style`/a11y).
