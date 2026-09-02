@@ -129,6 +129,8 @@ const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} tintColor={null} style={{ tintColor: "red" }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt={null} aria-label="Logo" />',
+  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} accessible={null} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
