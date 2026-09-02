@@ -1,23 +1,34 @@
-# 🚀 react-native-boost
+<a href="https://kuatsu.de/?utm_campaign=generic&utm_source=github&utm_medium=referral&utm_content=react-native-boost" align="center">
+  <picture>
+    <img alt="react-native-boost: The React Native performance compiler" src="apps/docs/app/repo-banner.jpg">
+  </picture>
+</a>
 
-![npm bundle size](https://img.shields.io/bundlephobia/min/react-native-boost?style=flat-square) ![GitHub](https://img.shields.io/github/license/kuatsu/react-native-boost?style=flat-square) ![GitHub last commit](https://img.shields.io/github/last-commit/kuatsu/react-native-boost?style=flat-square)
+# react-native-boost
 
-A powerful Babel plugin that automatically optimizes React Native apps through static source code analysis. It replaces standard React Native components with their native counterparts where possible, leading to significant performance improvements.
+[![npm version](https://img.shields.io/npm/v/react-native-boost.svg)](https://www.npmjs.com/package/react-native-boost)
+[![CI](https://github.com/kuatsu/react-native-boost/actions/workflows/test.yml/badge.svg)](https://github.com/kuatsu/react-native-boost/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
-- ⚡ Automatic performance optimization through source code analysis
-- 🔒 Safe optimizations that don't break your app
-- 🎯 Virtually zero runtime overhead
-- 📱 Cross-platform compatible
-- 🧪 Works seamlessly with Expo
-- 🎨 Configurable optimization strategies
+**The React Native performance compiler.**
+
+React Native Boost analyzes your app at build time and automatically applies safe performance optimizations across your React Native code.
+
+It eliminates unnecessary runtime work, replaces JavaScript abstractions with more efficient native equivalents, and fixes common performance pitfalls without requiring you to rewrite your application code.
+
+- ⚡ **Automatic build-time optimization** — improve performance without manually tuning every component
+- 🧠 **Static source analysis** — detect optimization opportunities before your app even runs
+- 🏗️ **Move runtime work to build time** — precompute and simplify work whenever it can be determined at build time
+- 🛠️ **Automatic performance fixes** — correct common performance mistakes when they can be safely transformed
+- 🔒 **Safe by default** — optimizations are only applied when behavior can be preserved
+- 🪶 **Minimal runtime overhead** — optimizations happen entirely during compilation
+- 🧪 **Use with your favorite tools** — fully compatible with most other ecosystem tools including Expo
 
 ## Documentation
 
 The documentation is available at [react-native-boost.oss.kuatsu.de](https://react-native-boost.oss.kuatsu.de).
 
 ## Benchmark
-
-The app in the `apps/example` directory serves as a benchmark for the performance of the plugin.
 
 <div align="center">
   <picture>
@@ -34,12 +45,13 @@ See the [benchmarks page](https://react-native-boost.oss.kuatsu.de/docs/informat
 | -------------------- | ---------------- |
 | `0.x`                | All versions[^1] |
 | `1.x`                | `>=0.83`         |
+| `2.x`                | `>=0.83`         |
 
 [^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings.
 
 ## Installation
 
-Install the package using your favorite package manager. Please **do not** install the package as a dev dependency. While the Babel plugin itself would work as a dev dependency, it relies on importing the runtime library (`react-native-boost/runtime`) into your code, which requires the package to be installed as a regular dependency. Read more [here](https://react-native-boost.oss.kuatsu.de/docs/runtime-library/).
+Install the package using your favorite package manager. Please **do not** install the package as a development dependency. While the Babel plugin itself would work as a development dependency, it relies on importing the runtime library (`react-native-boost/runtime`) into your code, which requires the package to be installed as a regular dependency. Read more [here](https://react-native-boost.oss.kuatsu.de/docs/runtime-library/).
 
 ```sh
 npm install react-native-boost
@@ -83,6 +95,6 @@ A [short overview of how the plugin works](https://react-native-boost.oss.kuatsu
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
 
-## License
+## Built at Kuatsu
 
-MIT
+Kuatsu is a boutique React Native agency specialized on building highly performant React Native apps. Visit [https://kuatsu.de](kuatsu.de) to learn more about our work.
