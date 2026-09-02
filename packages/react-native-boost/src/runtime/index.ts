@@ -7,10 +7,6 @@ import {
   processColor as rnProcessColor,
 } from 'react-native';
 import type { ColorValue, ProcessedColorValue } from 'react-native';
-// The module exists on the whole supported RN range (>= 0.83); only the individual getters vary by
-// version, so each access is guarded. A namespace import (not a named one) keeps a missing getter a
-// plain `undefined` property access under strict ESM interop.
-import * as ReactNativeFeatureFlags from 'react-native/src/private/featureflags/ReactNativeFeatureFlags';
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
@@ -37,44 +33,6 @@ const objectFitToResizeMode: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-/**
- * Reads RN's `defaultTextToOverflowHidden` feature flag, the switch behind `Text`'s default
- * `overflow: 'hidden'` style (RN ≥ 0.85). The getter does not exist on RN < 0.85, where the wrapper
- * applies no default — so `false` is exact parity there, not a degradation. The try/catch only guards
- * a throwing getter (impossible in a working app: `Text.js` calls it unguarded).
- */
-function readDefaultTextToOverflowHidden(): boolean {
-  try {
-    return (
-      typeof ReactNativeFeatureFlags.defaultTextToOverflowHidden === 'function' &&
-      ReactNativeFeatureFlags.defaultTextToOverflowHidden()
-    );
-  } catch {
-    return false;
-  }
-}
-
-let cachedDefaultTextStyle: TextStyle | false | undefined;
-
-/**
- * The default style `Text` prepends to every element's `style` — `{ overflow: 'hidden' }` when
- * `defaultTextToOverflowHidden` is on (RN ≥ 0.85 default), and `undefined` otherwise. The plugin
- * prepends this as the first `style` array entry of every optimized `Text`, so the user's own
- * `overflow` still wins; an `undefined` is ignored by RN's style flattening, so on RN versions
- * without the flag the resolved props are identical to passing no default at all.
- *
- * @remarks
- * The flag is read lazily on first use and memoized, mirroring `Text.js`'s render-time read rather
- * than locking the flag at import: RN's `ReactNativeFeatureFlags.override` throws once a flag has been
- * accessed, so a module-load read would break apps that legitimately override flags during startup.
- * Memoizing cannot diverge from RN — an override after the first `Text` render throws in stock RN too.
- */
-export function getDefaultTextStyle(): TextStyle | undefined {
-  // `false` (not `undefined`) is the memoized flag-off state so the flag is only ever read once.
-  cachedDefaultTextStyle ??= readDefaultTextToOverflowHidden() ? textDefaultOverflowStyle : false;
-  return cachedDefaultTextStyle || undefined;
-}
-
 let cachedReactNativeMinor: number | null | undefined;
 
 /**
@@ -85,6 +43,9 @@ let cachedReactNativeMinor: number | null | undefined;
  * @remarks
  * `Platform.constants` is a synchronous native-constants read, so it happens lazily on first use and
  * is memoized rather than run at module load.
+ *
+ * Boost intentionally mirrors release defaults by version. Do not import RN's private feature flags:
+ * their paths are unstable, and apps that override private flags must patch Boost or skip optimization.
  */
 function getReactNativeMinor(): number | null {
   if (cachedReactNativeMinor === undefined) {
@@ -99,6 +60,19 @@ function getReactNativeMinor(): number | null {
       version != null && version.major === 0 && typeof version.minor === 'number' ? version.minor : null;
   }
   return cachedReactNativeMinor;
+}
+
+let cachedDefaultTextStyle: TextStyle | false | undefined;
+
+/**
+ * The default style `Text` prepends to every element's `style` — `{ overflow: 'hidden' }` on RN ≥
+ * 0.85, and `undefined` otherwise. The plugin prepends this as the first `style` array entry of every
+ * optimized `Text`, so the user's own `overflow` still wins.
+ */
+export function getDefaultTextStyle(): TextStyle | undefined {
+  const minor = getReactNativeMinor();
+  cachedDefaultTextStyle ??= minor === null || minor >= 85 ? textDefaultOverflowStyle : false;
+  return cachedDefaultTextStyle || undefined;
 }
 
 /**
@@ -118,28 +92,14 @@ function liftsObjectSourceHeaders(): boolean {
   return minor === null || minor <= 84 || minor >= 87;
 }
 
-let cachedPropagatesArraySourceDimensions: boolean | undefined;
-
 /**
  * Whether RN's Android `Image` wrapper propagates a single-entry ARRAY source's intrinsic
- * width/height into the layout style. Introduced in RN 0.85 behind `fixImageSrcDimensionPropagation`
- * (default on) and unconditional since 0.86; absent on RN <= 0.84. The flag getter exists only on
- * 0.85, so it decides there — honoring an override — and the version decides everywhere else.
+ * width/height into the layout style. RN 0.85 introduced this behavior as an enabled-by-default
+ * feature flag, and RN 0.86 made it unconditional. RN <= 0.84 does not propagate the dimensions.
  */
 function propagatesArraySourceDimensions(): boolean {
-  if (cachedPropagatesArraySourceDimensions === undefined) {
-    let fromFlag: boolean | undefined;
-    try {
-      if (typeof ReactNativeFeatureFlags.fixImageSrcDimensionPropagation === 'function') {
-        fromFlag = ReactNativeFeatureFlags.fixImageSrcDimensionPropagation();
-      }
-    } catch {
-      fromFlag = undefined;
-    }
-    const minor = getReactNativeMinor();
-    cachedPropagatesArraySourceDimensions = fromFlag ?? (minor === null || minor >= 85);
-  }
-  return cachedPropagatesArraySourceDimensions;
+  const minor = getReactNativeMinor();
+  return minor === null || minor >= 85;
 }
 
 /**
@@ -170,7 +130,7 @@ export function processImageArraySourceDimensions<T>(dimensions: T): T | undefin
  * - Flattens style arrays via `StyleSheet.flatten`
  * - Converts numeric `fontWeight` values to string values
  * - Maps `userSelect` and `verticalAlign` to native-compatible props
- * - Prepends {@link getDefaultTextStyle} so the flag-gated `overflow: 'hidden'` default applies to
+ * - Prepends {@link getDefaultTextStyle} so the versioned `overflow: 'hidden'` default applies to
  *   dynamically-styled (and falsy-styled) `Text` exactly as the wrapper applies it
  */
 export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<TextProps> {

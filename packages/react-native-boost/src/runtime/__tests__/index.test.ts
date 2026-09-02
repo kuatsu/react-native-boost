@@ -11,7 +11,7 @@ import {
   userSelectToSelectableMap,
   verticalAlignToTextAlignVerticalMap,
 } from '..';
-import { Platform, TextStyle } from 'react-native';
+import { Platform, StyleSheet, TextStyle } from 'react-native';
 
 vi.mock('../components/native-text', () => ({
   NativeText: () => 'MockedNativeText',
@@ -40,7 +40,7 @@ vi.mock('react-native', () => {
   };
   const Platform = {
     OS: 'ios' as 'ios' | 'android',
-    // Backs the runtime's Image wrapper-version gates. Defaults to the RN this repo builds against;
+    // Backs the runtime's wrapper-version gates. Defaults to the RN this repo builds against;
     // the version-dependent tests re-import this mock after `vi.resetModules()` and overwrite it.
     constants: { reactNativeVersion: { major: 0, minor: 86, patch: 0 } },
     select<T>(spec: Record<string, T>): T | undefined {
@@ -95,9 +95,9 @@ const restorePlatformMock = async () => {
 };
 
 describe('processTextStyle', () => {
-  it('returns empty object for falsy style', () => {
-    expect(processTextStyle(null)).toEqual({});
-    expect(processTextStyle()).toEqual({});
+  it('returns the RN 0.86 default style for falsy style', () => {
+    expect(processTextStyle(null)).toEqual({ style: { overflow: 'hidden' } });
+    expect(processTextStyle()).toEqual({ style: { overflow: 'hidden' } });
   });
 
   it('caches computed props', () => {
@@ -109,29 +109,24 @@ describe('processTextStyle', () => {
 
   it('converts numeric fontWeight to string', () => {
     const style = { fontWeight: 400 } as const;
-    const result = processTextStyle(style);
-    expect(result.style).toBeDefined();
-    expect(result.style).toBeInstanceOf(Object);
-    expect((result.style as TextStyle).fontWeight).toBe('400');
+    const result = StyleSheet.flatten(processTextStyle(style).style) as TextStyle;
+    expect(result.fontWeight).toBe('400');
   });
 
   it('maps userSelect to selectable and removes userSelect from style', () => {
     const style = { userSelect: 'none', color: 'blue' } as const;
     const result = processTextStyle(style);
+    const resultStyle = StyleSheet.flatten(result.style) as TextStyle;
     expect(result.selectable).toBe(userSelectToSelectableMap['none']);
-    expect(result.style).toBeDefined();
-    expect(result.style).toBeInstanceOf(Object);
-    expect((result.style as TextStyle).userSelect).toBeUndefined();
-    expect((result.style as TextStyle).color).toBe('blue');
+    expect(resultStyle.userSelect).toBeUndefined();
+    expect(resultStyle.color).toBe('blue');
   });
 
   it('maps verticalAlign to textAlignVertical and removes verticalAlign from style', () => {
     const style = { verticalAlign: 'top', fontSize: 16 } as const;
-    const result = processTextStyle(style);
-    expect(result.style).toBeDefined();
-    expect(result.style).toBeInstanceOf(Object);
-    expect((result.style as TextStyle).textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['top']);
-    expect((result.style as TextStyle).verticalAlign).toBeUndefined();
+    const result = StyleSheet.flatten(processTextStyle(style).style) as TextStyle;
+    expect(result.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['top']);
+    expect(result.verticalAlign).toBeUndefined();
   });
 
   it('handles combination of properties', () => {
@@ -142,14 +137,13 @@ describe('processTextStyle', () => {
       margin: 10,
     } as const;
     const result = processTextStyle(style);
-    expect(result.style).toBeDefined();
-    expect(result.style).toBeInstanceOf(Object);
-    expect((result.style as TextStyle).fontWeight).toBe('700');
+    const resultStyle = StyleSheet.flatten(result.style) as TextStyle;
+    expect(resultStyle.fontWeight).toBe('700');
     expect(result.selectable).toBe(userSelectToSelectableMap['auto']);
-    expect((result.style as TextStyle).textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['middle']);
-    expect((result.style as TextStyle).margin).toBe(10);
-    expect((result.style as TextStyle).userSelect).toBeUndefined();
-    expect((result.style as TextStyle).verticalAlign).toBeUndefined();
+    expect(resultStyle.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['middle']);
+    expect(resultStyle.margin).toBe(10);
+    expect(resultStyle.userSelect).toBeUndefined();
+    expect(resultStyle.verticalAlign).toBeUndefined();
   });
 });
 
@@ -185,57 +179,35 @@ describe('getDefaultTextAccessible', () => {
   });
 });
 
-// The runtime memoizes its first flag read, so each case loads a FRESH runtime instance against a
-// freshly-configured feature-flags mock (`vi.resetModules()`); the aliased mock and the runtime's
-// `react-native/src/private/featureflags/ReactNativeFeatureFlags` import resolve to the same module.
-describe('getDefaultTextStyle', () => {
-  const loadRuntime = async (flagGetter?: () => boolean) => {
-    vi.resetModules();
-    const { setDefaultTextToOverflowHidden } = await import('./mocks/ReactNativeFeatureFlags');
-    setDefaultTextToOverflowHidden(flagGetter);
-    return await import('..');
-  };
+describe('getDefaultTextStyle follows the installed RN version', () => {
+  afterEach(restorePlatformMock);
 
-  afterEach(() => {
-    vi.resetModules();
-  });
-
-  it('returns undefined when the flag getter does not exist (RN < 0.85 has no Text overflow default)', async () => {
-    const runtime = await loadRuntime(undefined);
+  it.each([83, 84])('returns no default on RN 0.%i', async (minor) => {
+    const runtime = await loadRuntime(minor);
     expect(runtime.getDefaultTextStyle()).toBeUndefined();
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({ style: { color: 'red' } });
     expect(runtime.processTextStyle(null)).toEqual({});
   });
 
-  it('returns undefined when the flag reads false (RN >= 0.85 with the default disabled)', async () => {
-    const runtime = await loadRuntime(() => false);
-    expect(runtime.getDefaultTextStyle()).toBeUndefined();
-    expect(runtime.processTextStyle({ color: 'red' })).toEqual({ style: { color: 'red' } });
-  });
-
-  it('returns the overflow default and prepends it to processed styles when the flag reads true', async () => {
-    const runtime = await loadRuntime(() => true);
+  it.each([85, 86, 87])('prepends overflow hidden on RN 0.%i', async (minor) => {
+    const runtime = await loadRuntime(minor);
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({
       style: [{ overflow: 'hidden' }, { color: 'red' }],
     });
     expect(runtime.processTextStyle(null)).toEqual({ style: { overflow: 'hidden' } });
-    // The user's own overflow must win the flatten (the default is the FIRST entry).
-    const flattened = [runtime.getDefaultTextStyle(), { overflow: 'visible' }].reduce(
-      (accumulator, entry) => Object.assign(accumulator, entry || {}),
-      {} as Record<string, unknown>
-    );
-    expect(flattened.overflow).toBe('visible');
   });
 
-  it('reads the flag lazily on first use and memoizes it', async () => {
-    const flagGetter = vi.fn(() => true);
-    const runtime = await loadRuntime(flagGetter);
-    expect(flagGetter).not.toHaveBeenCalled();
-    runtime.getDefaultTextStyle();
-    runtime.getDefaultTextStyle();
-    runtime.processTextStyle({ color: 'red' });
-    expect(flagGetter).toHaveBeenCalledTimes(1);
+  it('uses the current default when the version cannot be read', async () => {
+    const runtime = await loadRuntime(undefined);
+    expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
+  });
+
+  it('keeps the user overflow value', async () => {
+    const runtime = await loadRuntime(86);
+    expect(StyleSheet.flatten([runtime.getDefaultTextStyle(), { overflow: 'visible' }])).toEqual({
+      overflow: 'visible',
+    });
   });
 });
 
@@ -687,8 +659,8 @@ describe('processImageSourceProps', () => {
     });
   });
 
-  // Propagating a single-entry ARRAY source's intrinsic dimensions into the layout style arrived in
-  // RN 0.85 (behind `fixImageSrcDimensionPropagation`) and is unconditional since 0.86.
+  // Propagating a single-entry ARRAY source's intrinsic dimensions into the layout style arrived as
+  // an enabled-by-default behavior in RN 0.85 and is unconditional since 0.86.
   describe('array-source dimension propagation follows the installed RN version', () => {
     afterEach(restorePlatformMock);
 

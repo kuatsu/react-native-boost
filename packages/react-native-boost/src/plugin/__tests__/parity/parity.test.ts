@@ -41,7 +41,7 @@ const TEXT_CASES = [
   '<Text aria-hidden accessibilityElementsHidden={false}>hello</Text>',
   '<Text style={{ color: "red" }}>hello</Text>', // styled, no a11y: `accessible` default must survive the build-time style
   '<Text style={null} adjustsFontSizeToFit={false}>hello</Text>',
-  // The flag-gated `overflow: 'hidden'` default is prepended, so the user's own overflow must win.
+  // RN 0.85+ prepends `overflow: 'hidden'`, so the user's own overflow must win.
   '<Text style={{ overflow: "visible" }}>hello</Text>',
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
   // `selectionColor` runs through `processColor` (a non-identity mock packs "red" → an int), so both

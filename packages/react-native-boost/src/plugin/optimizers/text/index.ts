@@ -328,13 +328,8 @@ function processProps(
   let staticStyleAttribute: t.JSXAttribute | undefined;
   let styleSpread: t.JSXSpreadAttribute | undefined;
 
-  // `Text` prepends a flag-gated `{ overflow: 'hidden' }` default to EVERY element's style (RN ≥ 0.85).
-  // The runtime constant resolves the flag lazily and memoizes — `undefined` (ignored by RN's style
-  // flattening) on RN versions/hosts without the flag — so prepending it as the first array entry is
-  // exact parity per RN version and the user's own `overflow` still wins. Skipped on web (no native
-  // Text host; the web runtime's fallback is the wrapper itself) and for Unistyles routing (raw style
-  // pass-through, see above). The dynamic-style path receives the same prepend inside
-  // `processTextStyle` instead.
+  // RN prepends `{ overflow: 'hidden' }` from 0.85. The runtime returns this release default or
+  // `undefined`, so user styles still win. Web and Unistyles skip it; dynamic styles use `processTextStyle`.
   const emitsDefaultStyle = !passStyleByIdentity && platform !== 'web';
   const buildDefaultTextStyleExpression = (): t.Expression => {
     const defaultStyleIdentifier = addFileImportHint({
