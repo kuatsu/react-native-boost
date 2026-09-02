@@ -544,10 +544,7 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
     result.accessibilityLabelledBy = accessibilityLabelledBy;
   }
 
-  // The two wrappers resolve `accessible` with DIFFERENT nullish semantics: iOS computes
-  // `ariaHidden !== true && (alt !== undefined ? true : accessible)`, while Android (RN >= 0.85)
-  // skips a nullish `alt`/`accessible` entirely (`!= null`), so an `alt={null}` forces `accessible`
-  // on iOS only.
+  // RN 0.85 changed Android from undefined checks to nullish checks.
   if (Platform.OS === 'ios') {
     if (ariaHidden === true) {
       result.accessible = false;
@@ -556,10 +553,14 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
     } else if (accessible !== undefined) {
       result.accessible = accessible;
     }
-  } else if (alt != null) {
-    result.accessible = true;
-  } else if (accessible != null) {
-    result.accessible = accessible;
+  } else {
+    const minor = getReactNativeMinor();
+    const usesUndefinedChecks = minor !== null && minor <= 84;
+    if (usesUndefinedChecks ? alt !== undefined : alt != null) {
+      result.accessible = true;
+    } else if (usesUndefinedChecks ? accessible !== undefined : accessible != null) {
+      result.accessible = accessible;
+    }
   }
 
   if (ariaHidden === true && Platform.OS !== 'ios') {

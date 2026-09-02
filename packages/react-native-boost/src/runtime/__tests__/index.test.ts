@@ -472,6 +472,26 @@ describe('processImageAccessibilityProps', () => {
     expect(processImageAccessibilityProps({ alt: undefined, accessible: false }).accessible).toBe(false);
   });
 
+  describe('Android null handling follows the installed RN version', () => {
+    afterEach(restorePlatformMock);
+
+    it.each([
+      [84, { accessibilityLabel: 'Label', accessible: true }],
+      [85, { accessibilityLabel: 'Label' }],
+    ])('handles a null alt on RN 0.%i', async (minor, expected) => {
+      const runtime = await loadRuntime(minor);
+      expect(runtime.processImageAccessibilityProps({ 'alt': null, 'aria-label': 'Label' })).toEqual(expected);
+    });
+
+    it.each([
+      [84, { accessible: null }],
+      [85, {}],
+    ])('handles a null accessible prop on RN 0.%i', async (minor, expected) => {
+      const runtime = await loadRuntime(minor);
+      expect(runtime.processImageAccessibilityProps({ accessible: null })).toEqual(expected);
+    });
+  });
+
   it('uses aria-hidden to force accessible off on iOS while preserving importantForAccessibility', () => {
     Platform.OS = 'ios';
     expect(
