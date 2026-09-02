@@ -18,10 +18,10 @@ interface BoostOptimized {
 
 /**
  * Transform a JSX body with the full Boost plugin under the given platform (mirroring how Metro builds
- * per platform, so the plugin inlines build-time defaults exactly as in production). The generated
- * component is rendered at the test root, so that runtime parent is safe unless a test says otherwise.
+ * per platform, so the plugin inlines build-time defaults exactly as in production). Returns the
+ * generated code.
  */
-function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runtimeParentIsSafe = true): string {
+function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): string {
   setPlatformOS(os);
   const source =
     `import { ActivityIndicator, Image, Text, View } from 'react-native';\n${preamble}\n` +
@@ -32,7 +32,7 @@ function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runt
     filename: 'boost-case.jsx',
     caller: { name: 'metro', platform: os } as TransformCaller,
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
-    plugins: [[boostPlugin, { silent: true, dangerouslyOptimizeTextWithUnknownAncestors: runtimeParentIsSafe }]],
+    plugins: [[boostPlugin, { logLevel: 'silent' }]],
   });
   return out!.code!;
 }
@@ -42,8 +42,8 @@ function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runt
  * element. A compile-only check (no render), so nested snippets that produce multiple hosts can assert
  * deferral without tripping {@link renderAndCaptureSingle}.
  */
-export function boostOptimizes(os: PlatformOS, jsxBody: string, preamble = '', runtimeParentIsSafe = true): boolean {
-  return transformBoostCase(os, jsxBody, preamble, runtimeParentIsSafe).includes(RUNTIME_MODULE_NAME);
+export function boostOptimizes(os: PlatformOS, jsxBody: string): boolean {
+  return transformBoostCase(os, jsxBody).includes(RUNTIME_MODULE_NAME);
 }
 
 /**

@@ -7,11 +7,11 @@ import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 const transformActivityIndicator = (
   source: string,
   platform?: TargetPlatform,
-  options: { dangerous?: boolean; unistyles?: boolean } = {}
+  options: { unknownAncestorsDoNotRenderText?: boolean; unistylesEnabled?: boolean } = {}
 ): string => {
   const pluginOptions: PluginOptions = {
-    dangerouslyOptimizeActivityIndicatorWithUnknownAncestors: options.dangerous,
-    unistyles: options.unistyles,
+    assumptions: { unknownAncestorsDoNotRenderText: options.unknownAncestorsDoNotRenderText },
+    integrations: { unistyles: options.unistylesEnabled ? 'on' : 'off' },
   };
   return transformSync(source, {
     configFile: false,
@@ -100,7 +100,7 @@ describe('ActivityIndicator optimizer', () => {
     );
   });
 
-  it('bails on Unistyles styles and permits dangerous unknown ancestors', () => {
+  it('bails on Unistyles styles and permits the unknown ancestor assumption', () => {
     const unistyles = transformActivityIndicator(
       `
         import { ActivityIndicator } from 'react-native';
@@ -109,15 +109,15 @@ describe('ActivityIndicator optimizer', () => {
         <ActivityIndicator style={styles.spinner} />;
       `,
       'ios',
-      { unistyles: true }
+      { unistylesEnabled: true }
     );
     expect(unistyles).not.toContain('_NativeActivityIndicator');
 
-    const dangerous = transformActivityIndicator(
+    const assumed = transformActivityIndicator(
       `import { ActivityIndicator } from 'react-native'; import { Wrapper } from './wrapper'; <Wrapper><ActivityIndicator /></Wrapper>;`,
       'ios',
-      { dangerous: true }
+      { unknownAncestorsDoNotRenderText: true }
     );
-    expect(dangerous).toContain('_NativeActivityIndicator');
+    expect(assumed).toContain('_NativeActivityIndicator');
   });
 });

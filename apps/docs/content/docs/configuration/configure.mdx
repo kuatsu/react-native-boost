@@ -1,13 +1,13 @@
 ---
 title: Configure the Babel Plugin
-description: Control logging, ignores, and optimization behavior.
+description: Control logging, ignores, integrations, and optimization behavior.
 ---
 
-The Babel plugin (`react-native-boost/plugin`) is the core of React Native Boost.
-
-Defaults are safe and usable out of the box, but you can tune behavior for your app.
+The Babel plugin (`react-native-boost/plugin`) is the core of React Native Boost. Its defaults enable all stable optimizations.
 
 ## Example Configuration
+
+Only set values that differ from the defaults:
 
 ```js
 // babel.config.js
@@ -16,15 +16,13 @@ module.exports = {
     [
       'react-native-boost/plugin',
       {
-        verbose: false,
-        silent: false,
-        unistyles: false,
+        logLevel: 'debug',
         ignores: ['node_modules/**'],
+        integrations: {
+          unistyles: 'on',
+        },
         optimizations: {
-          text: true,
-          view: true,
-          image: true,
-          activityIndicator: true,
+          'native-activity-indicator': 'off',
         },
       },
     ],
@@ -36,12 +34,40 @@ module.exports = {
 
 <AutoOptionSections path="../../packages/react-native-boost/src/plugin/types/index.ts" name="PluginOptions" idPrefix="plugin-options" />
 
-## Plugin Optimization Options
+## Optimization Options
+
+Set an optimization to `on` or `off`. Omitted entries use their documented defaults.
+
+An optimization with its own options can use the tuple form `[state, options]`.
 
 <AutoOptionSections
   path="../../packages/react-native-boost/src/plugin/types/index.ts"
   name="PluginOptimizationOptions"
   idPrefix="plugin-optimization-options"
+/>
+
+## Assumptions
+
+Assumptions let Boost optimize code that static analysis cannot prove safe.
+
+<Callout type="warn" title="Verify assumptions">
+  A false assumption can change runtime behavior. Be careful and ensure you know what you're doing.
+</Callout>
+
+<AutoOptionSections
+  path="../../packages/react-native-boost/src/plugin/types/index.ts"
+  name="PluginAssumptions"
+  idPrefix="plugin-assumptions"
+/>
+
+## Integration Options
+
+Integrations change Boost behavior for supported third-party libraries.
+
+<AutoOptionSections
+  path="../../packages/react-native-boost/src/plugin/types/index.ts"
+  name="PluginIntegrationOptions"
+  idPrefix="plugin-integration-options"
 />
 
 ## Environment-Specific Enablement

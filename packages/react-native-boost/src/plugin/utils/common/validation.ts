@@ -190,17 +190,13 @@ export const inheritsTextContextFromRuntimeParent = (path: NodePath<t.JSXOpening
 };
 
 /**
- * The ancestor-safety bailout checks shared by the Text and View optimizers. An element nested under a
- * `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`) instead of the block
- * `NativeText`/`NativeView` host, so optimizing it would emit the wrong host; an `'unknown'` ancestor
- * chain cannot be proven free of such a `Text`, so it bails too unless the caller opts into the risk.
- *
- * The ancestor walk is lazy (it runs only if these checks are reached) and memoized across the two
- * checks. Each optimizer passes its own resolved `dangerouslyOptimize*WithUnknownAncestors` flag.
+ * The ancestor-safety bailout checks shared by the host-component optimizers. An element nested under
+ * a `Text` can need a different native host, so optimization would be incorrect. An `'unknown'`
+ * ancestor chain also bails unless the project asserts that unknown ancestors do not render `Text`.
  */
 export const ancestorBailoutChecks = (
   path: NodePath<t.JSXOpeningElement>,
-  dangerousOptimizationEnabled: boolean
+  unknownAncestorsDoNotRenderText: boolean
 ): BailoutCheck[] => {
   let classification: AncestorClassification | undefined;
   const classify = () => (classification ??= getAncestorClassification(path));
@@ -211,8 +207,8 @@ export const ancestorBailoutChecks = (
       shouldBail: () => classify() === 'text',
     },
     {
-      reason: 'has unresolved ancestor and dangerous optimization is disabled',
-      shouldBail: () => classify() === 'unknown' && !dangerousOptimizationEnabled,
+      reason: 'has unresolved ancestor that may render Text',
+      shouldBail: () => classify() === 'unknown' && !unknownAncestorsDoNotRenderText,
     },
   ];
 };

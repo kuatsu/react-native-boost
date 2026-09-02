@@ -6,7 +6,7 @@ module.exports = function (api) {
       [
         'react-native-boost/plugin',
         {
-          unistyles: true,
+          integrations: { unistyles: 'on' },
           ignores: ['node_modules/**', '../../node_modules/**', '**/*.unoptimized.tsx'],
         },
       ],

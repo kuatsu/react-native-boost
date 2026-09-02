@@ -14,10 +14,8 @@ pluginTester({
   formatResult: formatTestResult,
 });
 
-// Fixtures whose `'unknown'` ancestor bail is lifted by the dangerous flag. The expo-router cases also
-// pin that the `asChild` bail is independent of the flag: a Text directly inside `<Link asChild>` still
-// bails (it would be made pressable), while a Text under a plain `<Link>` optimizes.
-const dangerousUnknownAncestorFixtures = [
+// The expo-router cases also pin that the `asChild` bail is independent of the ancestor assumption.
+const unknownAncestorAssumptionFixtures = [
   'text-under-unknown-ancestor',
   'text-with-runtime-parent',
   'expo-router-link-as-child',
@@ -29,14 +27,14 @@ const dangerousUnknownAncestorFixtures = [
 
 pluginTester({
   plugin: generateTestPlugin(textOptimizer, {
-    dangerouslyOptimizeTextWithUnknownAncestors: true,
+    assumptions: { unknownAncestorsDoNotRenderText: true },
   }),
-  title: 'text dangerous unknown ancestors',
+  title: 'text unknown ancestor assumption',
   babelOptions: {
     plugins: ['@babel/plugin-syntax-jsx'],
   },
   formatResult: formatTestResult,
-  tests: dangerousUnknownAncestorFixtures.map((name) => ({
+  tests: unknownAncestorAssumptionFixtures.map((name) => ({
     title: name,
     fixture: path.resolve(import.meta.dirname, `fixtures/${name}/code.js`),
     outputFixture: path.resolve(import.meta.dirname, `fixtures/${name}/dangerous-output.js`),
@@ -44,7 +42,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer, { unistyles: true }),
+  plugin: generateTestPlugin(textOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'text unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
   babelOptions: {
@@ -54,7 +52,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer, { unistyles: true }),
+  plugin: generateTestPlugin(textOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'text unistyles typescript',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles-ts'),
   babelOptions: {
