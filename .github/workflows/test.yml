@@ -52,3 +52,59 @@ jobs:
 
       - name: Build plugin
         run: pnpm package build
+
+  parity-matrix:
+    name: React Native ${{ matrix.react-native }} parity
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        react-native:
+          - '0.83'
+          - '0.84'
+          - '0.85'
+          - '0.86'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Select React Native version
+        env:
+          REACT_NATIVE_VERSION: ${{ matrix.react-native }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'packages/react-native-boost/package.json';
+          const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const version = process.env.REACT_NATIVE_VERSION;
+
+          packageJson.devDependencies['react-native'] = version;
+          packageJson.devDependencies['@react-native/babel-preset'] = version;
+          fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
+
+      - uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            packages/react-native-boost/package.json
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck package
+        run: pnpm package typecheck
+
+      - name: Build package
+        run: pnpm package build
+
+      - name: Test runtime parity
+        run: pnpm package test --run --project parity
