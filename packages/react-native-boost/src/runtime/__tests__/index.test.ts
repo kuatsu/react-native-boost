@@ -129,7 +129,7 @@ describe('processTextStyle', () => {
     expect(result.verticalAlign).toBeUndefined();
   });
 
-  it('handles combination of properties', () => {
+  it('handles combination of properties without mutating the input', () => {
     const style = {
       fontWeight: 700,
       userSelect: 'auto',
@@ -144,6 +144,7 @@ describe('processTextStyle', () => {
     expect(resultStyle.margin).toBe(10);
     expect(resultStyle.userSelect).toBeUndefined();
     expect(resultStyle.verticalAlign).toBeUndefined();
+    expect(style).toEqual({ fontWeight: 700, userSelect: 'auto', verticalAlign: 'middle', margin: 10 });
   });
 });
 

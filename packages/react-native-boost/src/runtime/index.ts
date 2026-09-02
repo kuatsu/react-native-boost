@@ -145,30 +145,32 @@ export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<Te
   props = {};
   propsCache.set(style, props);
 
-  style = StyleSheet.flatten(style) as TextStyle;
+  const flattenedStyle = StyleSheet.flatten(style) as TextStyle;
 
-  if (!style) {
+  if (!flattenedStyle) {
     if (defaultTextStyle) props.style = defaultTextStyle;
     return props;
   }
 
-  if (typeof style?.fontWeight === 'number') {
-    style.fontWeight = style.fontWeight.toString() as TextStyle['fontWeight'];
+  const processedStyle = { ...flattenedStyle };
+
+  if (typeof processedStyle.fontWeight === 'number') {
+    processedStyle.fontWeight = processedStyle.fontWeight.toString() as TextStyle['fontWeight'];
   }
 
-  if (style?.userSelect != null) {
-    props.selectable = userSelectToSelectableMap[style.userSelect];
-    delete style.userSelect;
+  if (processedStyle.userSelect != null) {
+    props.selectable = userSelectToSelectableMap[processedStyle.userSelect];
+    delete processedStyle.userSelect;
   }
 
-  if (style?.verticalAlign != null) {
-    style.textAlignVertical = verticalAlignToTextAlignVerticalMap[
-      style.verticalAlign
+  if (processedStyle.verticalAlign != null) {
+    processedStyle.textAlignVertical = verticalAlignToTextAlignVerticalMap[
+      processedStyle.verticalAlign
     ] as TextStyle['textAlignVertical'];
-    delete style.verticalAlign;
+    delete processedStyle.verticalAlign;
   }
 
-  props.style = defaultTextStyle ? [defaultTextStyle, style] : style;
+  props.style = defaultTextStyle ? [defaultTextStyle, processedStyle] : processedStyle;
   return props;
 }
 
