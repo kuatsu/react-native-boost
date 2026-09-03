@@ -6,7 +6,11 @@ import { validateBabelOptions, validateMetroOptions } from '../options';
 describe('plugin options', () => {
   it('accepts the current configuration', () => {
     const options = {
-      optimizations: { 'native-image': 'off' as const, 'static-animated': 'on' as const },
+      optimizations: {
+        'native-image': 'off' as const,
+        'static-animated': 'on' as const,
+        'stylesheet-operations': 'on' as const,
+      },
       assumptions: { unknownAncestorsDoNotRenderText: true },
       integrations: { unistyles: 'on' as const },
       ignores: ['node_modules/**'],

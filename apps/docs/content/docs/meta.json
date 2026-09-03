@@ -16,6 +16,7 @@
     "optimizers/native-image",
     "optimizers/native-activity-indicator",
     "optimizers/static-animated",
+    "optimizers/stylesheet-operations",
     "---Configuration---",
     "configuration/configure",
     "configuration/non-metro",

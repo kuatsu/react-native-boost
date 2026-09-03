@@ -1,4 +1,5 @@
-import { NodePath, types as t } from '@babel/core';
+import type { NodePath, PluginObj, PluginPass } from '@babel/core';
+import { types as t } from '@babel/core';
 
 export type OptimizationState = 'on' | 'off';
 
@@ -27,6 +28,8 @@ export interface PluginOptimizationOptions {
   'native-activity-indicator'?: OptimizationSetting;
   /** Removes built-in `Animated` wrappers whose props contain no animated values. @default 'on' for RN 0.83–0.86, 'off' otherwise */
   'static-animated'?: OptimizationSetting;
+  /** Evaluates static React Native `StyleSheet` operations at build time. @default 'on' */
+  'stylesheet-operations'?: OptimizationSetting;
 }
 
 export interface PluginAssumptions {
@@ -86,21 +89,13 @@ export interface MetroPluginOptions extends BoostOptions {
   };
 }
 
-export type OptimizableComponent =
-  | 'Text'
-  | 'View'
-  | 'Image'
-  | 'ActivityIndicator'
-  | 'Animated.Text'
-  | 'Animated.View'
-  | 'Animated.Image'
-  | 'Animated.ScrollView';
+export type OptimizationName = keyof PluginOptimizationOptions;
 
 export type TargetPlatform = 'ios' | 'android' | 'web';
 
 export interface OptimizationLogPayload {
-  component: OptimizableComponent;
-  path: NodePath<t.JSXOpeningElement>;
+  target: string;
+  path: NodePath;
 }
 
 export interface SkippedOptimizationLogPayload extends OptimizationLogPayload {
@@ -109,8 +104,8 @@ export interface SkippedOptimizationLogPayload extends OptimizationLogPayload {
 
 export interface WarningLogPayload {
   message: string;
-  component?: OptimizableComponent;
-  path?: NodePath<t.JSXOpeningElement>;
+  target?: string;
+  path?: NodePath;
 }
 
 export interface PluginLogger {
@@ -135,7 +130,18 @@ export interface OptimizerContext {
   reactNativeMinor?: number;
 }
 
-export type Optimizer = (path: NodePath<t.JSXOpeningElement>, context: OptimizerContext) => void;
+export interface OptimizerState extends PluginPass {
+  enabledOptimizations: Set<OptimizationName>;
+  optimizerContext: OptimizerContext;
+}
+
+export interface Optimizer {
+  name: OptimizationName;
+  defaultState?: OptimizationState | ((context: OptimizerContext) => OptimizationState);
+  visitor: PluginObj<OptimizerState>['visitor'];
+}
+
+export type JSXOptimizer = (path: NodePath<t.JSXOpeningElement>, context: OptimizerContext) => void;
 
 export type HubFile = t.File & {
   opts: {

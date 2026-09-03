@@ -1,11 +1,10 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { parseSync, transformSync, traverse, types as t, type PluginObj, type TransformCaller } from '@babel/core';
+import { parseSync, transformSync, traverse, types as t, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
 import { describe, expect, it } from 'vitest';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
-import { createLogger } from '../../../utils/logger';
 import type { TargetPlatform } from '../../../types';
 import boostPlugin from '../../../index';
 import { nativeImageOptimizer } from '..';
@@ -23,21 +22,15 @@ const transformImage = async (
     reactNativeMinor?: number | null;
   } = {}
 ): Promise<string> => {
-  const logger = createLogger('silent');
-  const plugin = (): PluginObj => ({
-    name: `${platform ?? 'unknown'}-image-optimizer-test`,
-    visitor: {
-      JSXOpeningElement(path) {
-        nativeImageOptimizer(path, {
-          logger,
-          options: { assumptions: { unknownAncestorsDoNotRenderText } },
-          platform,
-          unistylesEnabled,
-          reactNativeMinor: reactNativeMinor ?? undefined,
-        });
-      },
+  const plugin = generateTestPlugin(
+    nativeImageOptimizer,
+    {
+      assumptions: { unknownAncestorsDoNotRenderText },
+      integrations: { unistyles: unistylesEnabled ? 'on' : 'off' },
     },
-  });
+    platform,
+    reactNativeMinor ?? undefined
+  );
 
   return formatTestResult(
     transformSync(source, {

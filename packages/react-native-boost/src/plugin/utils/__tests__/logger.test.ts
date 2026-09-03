@@ -1,4 +1,4 @@
-import { NodePath, types as t } from '@babel/core';
+import type { NodePath } from '@babel/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createLogger } from '../logger';
 
@@ -7,25 +7,25 @@ describe('logger', () => {
     vi.restoreAllMocks();
   });
 
-  it('logs optimized components at the default info level', () => {
+  it('logs optimized targets at the default info level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const logger = createLogger();
     const path = createMockPath('/app/screens/LoginScreen.tsx', 42);
 
-    logger.optimized({ component: 'Text', path });
-    logger.skipped({ component: 'Text', path, reason: 'contains non-primitive children' });
+    logger.optimized({ target: 'Text', path });
+    logger.skipped({ target: 'Text', path, reason: 'contains non-primitive children' });
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     expect(String(consoleSpy.mock.calls[0][0])).toContain('Optimized Text in /app/screens/LoginScreen.tsx:42');
   });
 
-  it('logs skipped components and reasons at the debug level', () => {
+  it('logs skipped targets and reasons at the debug level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const logger = createLogger('debug');
     const path = createMockPath('/app/screens/Settings.tsx', 10);
 
     logger.skipped({
-      component: 'View',
+      target: 'View',
       path,
       reason: 'has unresolved ancestor that may render Text',
     });
@@ -41,10 +41,10 @@ describe('logger', () => {
     const logger = createLogger('warn');
     const path = createMockPath('/app/screens/Profile.tsx', 7);
 
-    logger.optimized({ component: 'Text', path });
-    logger.skipped({ component: 'View', path, reason: 'line is marked with @boost-ignore' });
-    logger.warning({ component: 'Text', path, message: 'numberOfLines is invalid' });
-    logger.forced({ component: 'View', path, reason: 'contains unsupported props' });
+    logger.optimized({ target: 'Text', path });
+    logger.skipped({ target: 'View', path, reason: 'line is marked with @boost-ignore' });
+    logger.warning({ target: 'Text', path, message: 'numberOfLines is invalid' });
+    logger.forced({ target: 'View', path, reason: 'contains unsupported props' });
 
     expect(consoleSpy.mock.calls.map(([message]) => String(message))).toEqual([
       expect.stringContaining('numberOfLines is invalid'),
@@ -57,17 +57,17 @@ describe('logger', () => {
     const logger = createLogger('silent');
     const path = createMockPath('/app/screens/Profile.tsx', 7);
 
-    logger.optimized({ component: 'Text', path });
-    logger.skipped({ component: 'View', path, reason: 'line is marked with @boost-ignore' });
-    logger.warning({ component: 'Text', path, message: 'numberOfLines is invalid' });
+    logger.optimized({ target: 'Text', path });
+    logger.skipped({ target: 'View', path, reason: 'line is marked with @boost-ignore' });
+    logger.warning({ target: 'Text', path, message: 'numberOfLines is invalid' });
 
     expect(consoleSpy).not.toHaveBeenCalled();
   });
 });
 
-function createMockPath(filename: string, lineNumber: number): NodePath<t.JSXOpeningElement> {
+function createMockPath(filename: string, lineNumber: number): NodePath {
   return {
     hub: { file: { opts: { filename } } },
     node: { loc: { start: { line: lineNumber } } },
-  } as unknown as NodePath<t.JSXOpeningElement>;
+  } as unknown as NodePath;
 }
