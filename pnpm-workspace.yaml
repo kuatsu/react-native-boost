@@ -3,9 +3,9 @@ packages:
   - packages/*
   - tooling/*
 
-onlyBuiltDependencies:
-  - core-js
-  - core-js-pure
-  - deasync
-  - esbuild
-  - sharp
+pmOnFail: download
+minimumReleaseAgeStrict: true
+
+allowBuilds:
+  core-js: true
+  esbuild: true

@@ -101,6 +101,8 @@ describe('Metro integration', () => {
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'react-native-boost-metro-'));
     temporaryDirectories.push(projectRoot);
     fs.writeFileSync(path.join(projectRoot, 'package.json'), '{}');
+    fs.mkdirSync(path.join(projectRoot, 'node_modules/react-native'), { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, 'node_modules/react-native/package.json'), '{}');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     withBoostConfig({
