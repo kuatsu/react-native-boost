@@ -1,5 +1,12 @@
 import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
 import { Image, Text } from 'react-native';
+const _imageSource = [
+  {
+    uri: 'forced.png',
+    width: 16,
+    height: 16,
+  },
+];
 <Text>
   <Image
     source={{
@@ -19,13 +26,7 @@ import { Image, Text } from 'react-native';
         overflow: 'hidden',
       },
     ]}
-    source={[
-      {
-        uri: 'forced.png',
-        width: 16,
-        height: 16,
-      },
-    ]}
+    source={_imageSource}
     resizeMode="cover"
   />
 </Text>;

@@ -1,5 +1,12 @@
 import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
 import { Image } from 'react-native';
+const _imageSource = [
+  {
+    uri: 'logo.png',
+    width: 24,
+    height: 16,
+  },
+];
 <_NativeImage
   testID="logo"
   style={[
@@ -11,12 +18,6 @@ import { Image } from 'react-native';
       overflow: 'hidden',
     },
   ]}
-  source={[
-    {
-      uri: 'logo.png',
-      width: 24,
-      height: 16,
-    },
-  ]}
+  source={_imageSource}
   resizeMode="cover"
 />;
