@@ -92,7 +92,7 @@ Optional configuration is described in the [documentation](https://react-native-
 
 ## How it works
 
-A [short overview of how the plugin works](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works) as well as [a technical deep dive](https://react-native-boost.oss.kuatsu.de/docs/information/deep-dive) can be found in the documentation.
+A [short overview of how the plugin works](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works) can be found in the documentation.
 
 ## Contributing
 
