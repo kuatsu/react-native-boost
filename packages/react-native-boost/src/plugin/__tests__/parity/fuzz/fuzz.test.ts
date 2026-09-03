@@ -57,8 +57,7 @@ async function runCase(os: PlatformOS, jsxBody: string, preamble: string): Promi
   const wrapper = await captureWrapperHosts(os, jsxBody, preamble);
   const normalizeHost = (host: (typeof boost.hosts)[number]) => ({
     which: host.which,
-    props:
-      host.which === 'NativeImage' ? normalizeImage(host.props, reactNativeVersion.minor) : normalize(host.props),
+    props: host.which === 'NativeImage' ? normalizeImage(host.props, reactNativeVersion.minor) : normalize(host.props),
   });
   const boostProps = { hosts: boost.hosts.map(normalizeHost) };
   const wrapperProps = { hosts: wrapper.map(normalizeHost) };
@@ -133,12 +132,9 @@ describe.skipIf(DISCOVER)('parity fuzzing', () => {
 
       // Anti-vacuous-green guard: a generator drifting into all-bail would pass trivially.
       expect(rate).toBeGreaterThan(0.5);
+      for (const counts of Object.values(byTag)) expect(counts.optimized).toBeGreaterThan(0);
       const imageTotal = byTag.Image.optimized + byTag.Image.skipped;
-      const imageRate = byTag.Image.optimized / imageTotal;
-      expect(imageTotal).toBeGreaterThan(0);
-      expect(imageRate).toBeGreaterThan(0.2);
-      const activityTotal = byTag.ActivityIndicator.optimized + byTag.ActivityIndicator.skipped;
-      expect(activityTotal).toBeGreaterThan(0);
+      expect(byTag.Image.optimized / imageTotal).toBeGreaterThan(0.2);
     },
     Math.max(30_000, NUM_RUNS * 80)
   );
@@ -165,6 +161,7 @@ describe.skipIf(DISCOVER).each(['ios', 'android'] as const)('disabled reconcilia
     const jsx = buildDisabledCase(combo);
     const result = await runCase(os, jsx, '');
     if (result.status === 'divergence') throw new Error(formatDivergence(os, jsx, '', result));
+    expect(result.status).toBe('match');
   });
 });
 

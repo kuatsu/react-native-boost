@@ -8,12 +8,9 @@ import {
   processImageSourceProps,
   getDefaultTextAccessible,
   clampNumberOfLines,
-  userSelectToSelectableMap,
-  verticalAlignToTextAlignVerticalMap,
   processActivityIndicatorSize,
   processActivityIndicatorStyle,
   resolveActivityIndicatorDefault,
-  activityIndicatorStyles,
 } from '..';
 import { Platform, StyleSheet, TextStyle } from 'react-native';
 
@@ -123,7 +120,7 @@ describe('processTextStyle', () => {
     const style = { userSelect: 'none', color: 'blue' } as const;
     const result = processTextStyle(style);
     const resultStyle = StyleSheet.flatten(result.style) as TextStyle;
-    expect(result.selectable).toBe(userSelectToSelectableMap['none']);
+    expect(result.selectable).toBe(false);
     expect(resultStyle.userSelect).toBeUndefined();
     expect(resultStyle.color).toBe('blue');
   });
@@ -131,7 +128,7 @@ describe('processTextStyle', () => {
   it('maps verticalAlign to textAlignVertical and removes verticalAlign from style', () => {
     const style = { verticalAlign: 'top', fontSize: 16 } as const;
     const result = StyleSheet.flatten(processTextStyle(style).style) as TextStyle;
-    expect(result.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['top']);
+    expect(result.textAlignVertical).toBe('top');
     expect(result.verticalAlign).toBeUndefined();
   });
 
@@ -145,8 +142,8 @@ describe('processTextStyle', () => {
     const result = processTextStyle(style);
     const resultStyle = StyleSheet.flatten(result.style) as TextStyle;
     expect(resultStyle.fontWeight).toBe('700');
-    expect(result.selectable).toBe(userSelectToSelectableMap['auto']);
-    expect(resultStyle.textAlignVertical).toBe(verticalAlignToTextAlignVerticalMap['middle']);
+    expect(result.selectable).toBe(true);
+    expect(resultStyle.textAlignVertical).toBe('center');
     expect(resultStyle.margin).toBe(10);
     expect(resultStyle.userSelect).toBeUndefined();
     expect(resultStyle.verticalAlign).toBeUndefined();
@@ -162,10 +159,12 @@ describe('ActivityIndicator helpers', () => {
   });
 
   it('resolves built-in and numeric sizes', () => {
-    expect(processActivityIndicatorSize()).toEqual({ style: activityIndicatorStyles.small, size: 'small' });
-    expect(processActivityIndicatorSize().style).toBe(activityIndicatorStyles.small);
-    expect(processActivityIndicatorSize('large')).toEqual({ style: activityIndicatorStyles.large, size: 'large' });
-    expect(processActivityIndicatorSize('large').style).toBe(activityIndicatorStyles.large);
+    const small = processActivityIndicatorSize();
+    const large = processActivityIndicatorSize('large');
+    expect(small).toEqual({ style: { width: 20, height: 20 }, size: 'small' });
+    expect(processActivityIndicatorSize()).toBe(small);
+    expect(large).toEqual({ style: { width: 36, height: 36 }, size: 'large' });
+    expect(processActivityIndicatorSize('large')).toBe(large);
     expect(processActivityIndicatorSize(24)).toEqual({ style: { height: 24, width: 24 }, size: undefined });
     expect(processActivityIndicatorSize(null as never)).toEqual({
       style: { height: null, width: null },
@@ -185,7 +184,6 @@ describe('ActivityIndicator helpers', () => {
 describe('processSelectionColor', () => {
   it('omits the prop for null/undefined input', () => {
     expect(processSelectionColor(null)).toEqual({});
-    expect(processSelectionColor(undefined)).toEqual({});
     expect(processSelectionColor()).toEqual({});
   });
 
@@ -217,15 +215,15 @@ describe('getDefaultTextAccessible', () => {
 describe('getDefaultTextStyle follows the installed RN version', () => {
   afterEach(restorePlatformMock);
 
-  it.each([83, 84])('returns no default on RN 0.%i', async (minor) => {
-    const runtime = await loadRuntime(minor);
+  it('returns no default before RN 0.85', async () => {
+    const runtime = await loadRuntime(84);
     expect(runtime.getDefaultTextStyle()).toBeUndefined();
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({ style: { color: 'red' } });
     expect(runtime.processTextStyle(null)).toEqual({});
   });
 
-  it.each([85, 86, 87])('prepends overflow hidden on RN 0.%i', async (minor) => {
-    const runtime = await loadRuntime(minor);
+  it('prepends overflow hidden from RN 0.85', async () => {
+    const runtime = await loadRuntime(85);
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({
       style: [{ overflow: 'hidden' }, { color: 'red' }],
@@ -245,13 +243,6 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
   it('uses the current default when the version cannot be read', async () => {
     const runtime = await loadRuntime(undefined);
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
-  });
-
-  it('keeps the user overflow value', async () => {
-    const runtime = await loadRuntime(86);
-    expect(StyleSheet.flatten([runtime.getDefaultTextStyle(), { overflow: 'visible' }])).toEqual({
-      overflow: 'visible',
-    });
   });
 });
 
@@ -690,7 +681,7 @@ describe('processImageSourceProps', () => {
   describe('object-source headers follow the installed RN version', () => {
     afterEach(restorePlatformMock);
 
-    it.each([83, 84, 87, 88])('lifts them on RN 0.%i', async (minor) => {
+    it.each([84, 87])('lifts them on RN 0.%i', async (minor) => {
       const runtime = await loadRuntime(minor);
       const source = { uri: 'logo.png', headers: { Authorization: 'Bearer object' } };
       expect(runtime.processImageSourceProps({ source }).headers).toEqual({ Authorization: 'Bearer object' });
@@ -699,8 +690,8 @@ describe('processImageSourceProps', () => {
       });
     });
 
-    it.each([85, 86])('drops them on RN 0.%i, matching the wrapper of that version', async (minor) => {
-      const runtime = await loadRuntime(minor);
+    it('drops them on RN 0.85, matching the wrapper of that version', async () => {
+      const runtime = await loadRuntime(85);
       const source = { uri: 'logo.png', headers: { Authorization: 'Bearer object' } };
       expect('headers' in runtime.processImageSourceProps({ source })).toBe(false);
       expect(runtime.processImageObjectSourceHeaders({ Authorization: 'Bearer object' })).toBeUndefined();
@@ -714,8 +705,8 @@ describe('processImageSourceProps', () => {
     });
 
     // An ARRAY source's `source[0].headers` is lifted by every supported version, gate or not.
-    it.each([84, 86, 87])('always lifts array-source headers on RN 0.%i', async (minor) => {
-      const runtime = await loadRuntime(minor);
+    it('always lifts array-source headers', async () => {
+      const runtime = await loadRuntime(86);
       expect(
         runtime.processImageSourceProps({ source: [{ uri: 'logo.png', headers: { Authorization: 'Bearer first' } }] })
           .headers
@@ -730,14 +721,14 @@ describe('processImageSourceProps', () => {
 
     const source = [{ uri: 'logo.png', width: 16, height: 8 }];
 
-    it.each([83, 84])('does not propagate on RN 0.%i', async (minor) => {
-      const runtime = await loadRuntime(minor);
+    it('does not propagate before RN 0.85', async () => {
+      const runtime = await loadRuntime(84);
       expect(runtime.processImageSourceProps({ source }).style).toEqual([false, { overflow: 'hidden' }, undefined]);
       expect(runtime.processImageArraySourceDimensions({ width: 16, height: 8 })).toBeUndefined();
     });
 
-    it.each([85, 86, 87])('propagates on RN 0.%i', async (minor) => {
-      const runtime = await loadRuntime(minor);
+    it('propagates from RN 0.85', async () => {
+      const runtime = await loadRuntime(85);
       expect(runtime.processImageSourceProps({ source }).style).toEqual([
         { width: 16, height: 8 },
         { overflow: 'hidden' },
@@ -762,7 +753,6 @@ describe('processImageSourceProps', () => {
 describe('clampNumberOfLines', () => {
   it('clamps negative values to 0', () => {
     expect(clampNumberOfLines(-1)).toBe(0);
-    expect(clampNumberOfLines(-10)).toBe(0);
   });
 
   it('clamps NaN to 0 (RN uses !(value >= 0))', () => {

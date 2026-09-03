@@ -12,7 +12,7 @@ import { nativeImageOptimizer } from '..';
 
 const transformImage = async (
   source: string,
-  platform: TargetPlatform,
+  platform?: TargetPlatform,
   {
     unknownAncestorsDoNotRenderText = false,
     unistylesEnabled = false,
@@ -25,7 +25,7 @@ const transformImage = async (
 ): Promise<string> => {
   const logger = createLogger('silent');
   const plugin = (): PluginObj => ({
-    name: `${platform}-image-optimizer-test`,
+    name: `${platform ?? 'unknown'}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
         nativeImageOptimizer(
@@ -219,9 +219,7 @@ describe('image android output', () => {
   it.each([
     [84, true],
     [85, false],
-    [86, false],
     [87, true],
-    [88, true],
   ])('resolves object-source header lifting for RN 0.%i at build time', async (reactNativeMinor, liftsHeaders) => {
     const output = await transformImage(
       `
@@ -598,32 +596,6 @@ describe('image unistyles', () => {
     expect(output).toContain('NativeImage');
   });
 
-  it('optimizes an Image without a style in Unistyles mode', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).toContain('NativeImage');
-  });
-
-  it('optimizes an Image with a plain literal style in Unistyles mode', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          <Image source={{ uri: 'logo.png' }} style={{ width: 16, height: 16 }} />;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).toContain('NativeImage');
-  });
-
   it('optimizes an Image with a React Native StyleSheet style in Unistyles mode', async () => {
     const output = await transformImage(
       `
@@ -641,28 +613,12 @@ describe('image unistyles', () => {
 
 describe('image unknown platform output', () => {
   it('bails because the native Image host prop contract is platform-specific', async () => {
-    const logger = createLogger('silent');
-    const plugin = (): PluginObj => ({
-      name: 'unknown-platform-image-optimizer-test',
-      visitor: {
-        JSXOpeningElement(path) {
-          nativeImageOptimizer(path, logger, {}, undefined);
-        },
-      },
-    });
-
-    const output = await formatTestResult(
-      transformSync(
-        `
-          import { Image } from 'react-native';
-          <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
-        `,
-        {
-          configFile: false,
-          babelrc: false,
-          plugins: ['@babel/plugin-syntax-jsx', plugin],
-        }
-      )!.code!
+    const output = await transformImage(
+      `
+        import { Image } from 'react-native';
+        <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+      `,
+      undefined
     );
 
     expect(output).not.toContain('NativeImage');

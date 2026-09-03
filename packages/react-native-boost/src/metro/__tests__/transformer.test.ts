@@ -22,16 +22,20 @@ describe('Metro transformer', () => {
     );
     fs.writeFileSync(pluginPath, 'module.exports = () => ({ visitor: {} });\n');
     const injectionId = 'test-injection';
-    const transformer = createTransformer({
+    const manifest = {
       babelTransformerPath: delegatePath,
       pluginPath,
-      pluginOptions: { logLevel: 'silent' },
+      pluginOptions: { logLevel: 'silent' as const },
       injectionId,
-    });
+    };
+    const transformer = createTransformer(manifest);
 
     const result = await transformer.transform({ filename: 'case.js', src: '', options: {}, plugins: [] });
 
     expect(result.metadata?.reactNativeBoost).toEqual({ injectionId });
-    expect(transformer.getCacheKey()).toHaveLength(64);
+    expect(transformer.getCacheKey()).toBe(transformer.getCacheKey());
+    expect(transformer.getCacheKey()).not.toBe(
+      createTransformer({ ...manifest, injectionId: 'different-injection' }).getCacheKey()
+    );
   });
 });

@@ -110,6 +110,8 @@ const VIEW_CASES = [
   '<View aria-valuenow={5} aria-valuemax={10} aria-valuemin={0} aria-valuetext="50%" />',
   '<View accessibilityValue={{ now: 1 }} aria-valuenow={5} />',
   '<View aria-hidden={true} aria-label="hello" tabIndex={0} aria-valuenow={5} aria-live="polite" />',
+  '<View {...{ id: "x" }} />',
+  '<View id={dynamicId} nativeID="y" />',
 ];
 
 // View cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
@@ -332,7 +334,6 @@ describe('differential parity', () => {
 
     it.each(DYNAMIC_IMAGE_CASES)('Image dynamic: %s', async (jsx, preamble) => {
       const boost = await captureBoost(os, jsx, preamble);
-      expect(boost.optimized).toBe(true);
       if (!boost.optimized) throw new Error('expected Image dynamic case to optimize');
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
@@ -346,7 +347,6 @@ describe('differential parity', () => {
       const jsx = '<Text style={[dynamicStyle, { userSelect: "text" }]} selectable={true}>hello</Text>';
       const preamble = 'const dynamicStyle = { userSelect: "none" };';
       const boost = await captureBoost(os, jsx, preamble);
-      expect(boost.optimized).toBe(true);
       if (!boost.optimized) throw new Error('expected Text mixed style case to optimize');
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
@@ -357,7 +357,6 @@ describe('differential parity', () => {
       const jsx = '<Text style={{ userSelect: "xyz" }} selectable={true}>hello</Text>';
       const preamble = 'const undefined = true;';
       const boost = await captureBoost(os, jsx, preamble);
-      expect(boost.optimized).toBe(true);
       if (!boost.optimized) throw new Error('expected Text shadowed undefined case to optimize');
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);
@@ -369,7 +368,6 @@ describe('differential parity', () => {
         '<Text aria-disabled={_b0} style={{ verticalAlign: "middle", fontWeight: 400, userSelect: "none", width: 10 }} selectionColor={"blue"} {..._s0}>hello</Text>';
       const preamble = 'const _b0 = false;\nconst _s0 = { selectable: true };';
       const boost = await captureBoost(os, jsx, preamble);
-      expect(boost.optimized).toBe(true);
       if (!boost.optimized) throw new Error('expected Text static userSelect spread case to optimize');
       const wrapper = await captureWrapper(os, jsx, preamble);
       expect(boost.which).toEqual(wrapper.which);

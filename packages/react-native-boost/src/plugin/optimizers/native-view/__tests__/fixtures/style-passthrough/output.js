@@ -11,4 +11,7 @@ import { View } from 'react-native';
   ]}
   testID="v"
   pointerEvents="none"
+  accessible
+  accessibilityLabel="box"
+  nativeID="box"
 />;
