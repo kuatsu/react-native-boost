@@ -133,6 +133,7 @@ export type HubFile = t.File & {
   };
   __hasImports?: Record<string, t.Identifier>;
   __optimized?: boolean;
+  __staticImageSourceDeclaration?: t.VariableDeclaration;
 };
 
 /**

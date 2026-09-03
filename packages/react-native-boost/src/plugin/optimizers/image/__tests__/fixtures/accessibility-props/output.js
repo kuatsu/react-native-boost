@@ -3,6 +3,34 @@ import {
   NativeImage as _NativeImage,
 } from 'react-native-boost/runtime';
 import { Image } from 'react-native';
+const _imageSource = [
+    {
+      uri: 'logo.png',
+      width: 16,
+      height: 16,
+    },
+  ],
+  _imageSource2 = [
+    {
+      uri: 'logo.png',
+      width: 16,
+      height: 16,
+    },
+  ],
+  _imageSource3 = [
+    {
+      uri: 'logo.png',
+      width: 16,
+      height: 16,
+    },
+  ],
+  _imageSource4 = [
+    {
+      uri: 'logo.png',
+      width: 16,
+      height: 16,
+    },
+  ];
 const label = getLabel();
 const labelledBy = getLabelledBy();
 <_NativeImage
@@ -20,13 +48,7 @@ const labelledBy = getLabelledBy();
       overflow: 'hidden',
     },
   ]}
-  source={[
-    {
-      uri: 'logo.png',
-      width: 16,
-      height: 16,
-    },
-  ]}
+  source={_imageSource}
   resizeMode="cover"
 />;
 <_NativeImage
@@ -44,13 +66,7 @@ const labelledBy = getLabelledBy();
       overflow: 'hidden',
     },
   ]}
-  source={[
-    {
-      uri: 'logo.png',
-      width: 16,
-      height: 16,
-    },
-  ]}
+  source={_imageSource2}
   resizeMode="cover"
 />;
 <_NativeImage
@@ -71,13 +87,7 @@ const labelledBy = getLabelledBy();
       overflow: 'hidden',
     },
   ]}
-  source={[
-    {
-      uri: 'logo.png',
-      width: 16,
-      height: 16,
-    },
-  ]}
+  source={_imageSource3}
   resizeMode="cover"
 />;
 <_NativeImage
@@ -97,12 +107,6 @@ const labelledBy = getLabelledBy();
       overflow: 'hidden',
     },
   ]}
-  source={[
-    {
-      uri: 'logo.png',
-      width: 16,
-      height: 16,
-    },
-  ]}
+  source={_imageSource4}
   resizeMode="cover"
 />;

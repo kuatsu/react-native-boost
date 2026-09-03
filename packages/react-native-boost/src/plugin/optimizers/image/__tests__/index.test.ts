@@ -57,6 +57,29 @@ const getNativeImageAttributes = (source: string): t.JSXAttribute[][] => {
   return images;
 };
 
+const getHoistedImageSources = (source: string): t.ArrayExpression[] => {
+  const ast = parseSync(source, {
+    configFile: false,
+    babelrc: false,
+    parserOpts: { sourceType: 'module', plugins: ['jsx'] },
+  });
+  const sources: t.ArrayExpression[] = [];
+
+  traverse(ast!, {
+    VariableDeclarator(path) {
+      if (
+        t.isIdentifier(path.node.id) &&
+        path.node.id.name.startsWith('_imageSource') &&
+        t.isArrayExpression(path.node.init)
+      ) {
+        sources.push(path.node.init);
+      }
+    },
+  });
+
+  return sources;
+};
+
 const getAttributeExpression = (attributes: t.JSXAttribute[], name: string): t.Expression | undefined => {
   const attribute = attributes.find((item) => t.isJSXIdentifier(item.name, { name }));
   if (!attribute?.value) return undefined;
@@ -166,11 +189,12 @@ describe('image android output', () => {
     const images = getNativeImageAttributes(output);
     expect(images).toHaveLength(1);
     const image = images[0]!;
-    const source = getAttributeExpression(image, 'source');
+    const [source] = getHoistedImageSources(output);
     const headers = getAttributeExpression(image, 'headers');
 
     expect(getAttributeNames(image).has('src')).toBe(false);
-    expect(t.isArrayExpression(source)).toBe(true);
+    expect(getAttributeExpression(image, 'source')).toMatchObject({ name: '_imageSource' });
+    expect(source).toBeDefined();
     expect(t.isObjectExpression(headers)).toBe(true);
     expect(getStringPropertyValue(headers as t.ObjectExpression, 'Access-Control-Allow-Credentials')).toBe('true');
     expect(getStringPropertyValue(headers as t.ObjectExpression, 'Referrer-Policy')).toBe('origin');
@@ -210,13 +234,12 @@ describe('image android output', () => {
     expect(t.isObjectExpression(arrayHeaders)).toBe(true);
     expect(getStringPropertyValue(arrayHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer first');
 
-    const objectSource = getAttributeExpression(objectSourceImage, 'source');
-    const arraySource = getAttributeExpression(arraySourceImage, 'source');
-    expect(t.isArrayExpression(objectSource)).toBe(true);
-    expect(t.isArrayExpression(arraySource)).toBe(true);
+    const [objectSource, arraySource] = getHoistedImageSources(output);
+    expect(objectSource).toBeDefined();
+    expect(arraySource).toBeDefined();
 
-    const objectSourceEntry = (objectSource as t.ArrayExpression).elements[0];
-    const arraySourceEntry = (arraySource as t.ArrayExpression).elements[0];
+    const objectSourceEntry = objectSource!.elements[0];
+    const arraySourceEntry = arraySource!.elements[0];
     expect(t.isObjectExpression(objectSourceEntry)).toBe(true);
     expect(t.isObjectExpression(arraySourceEntry)).toBe(true);
 
@@ -276,6 +299,7 @@ describe('image android output', () => {
     // iOS emits the dimensions only once (in the source entry), so it can stay static.
     const iosOutput = await transformImage(source, 'ios');
     expect(iosOutput).not.toContain('processImageSourceProps');
+    expect(iosOutput).not.toContain('const _imageSource');
     expect(iosOutput).toContain('<_NativeImage');
   });
 

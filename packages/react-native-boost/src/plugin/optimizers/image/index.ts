@@ -268,11 +268,37 @@ function processImageProps(
     ...remaining,
     accessibilityInfo?.spreadAttribute,
     makeAttribute('style', buildStyle(nativeSource, styleInfo, arrayDimensionsGate)),
-    makeAttribute('source', nativeSource.sourceArray),
+    makeAttribute('source', hoistStaticImageSource(path, file, nativeSource.sourceArray)),
     androidHeaders ? makeAttribute('headers', androidHeaders) : undefined,
     makeAttribute('resizeMode', buildResizeMode(explicitResizeMode, styleInfo)),
     tintColor ? makeAttribute('tintColor', tintColor) : undefined,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
+}
+
+function hoistStaticImageSource(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  source: t.ArrayExpression
+): t.Expression {
+  if (!isStaticLiteralTree(source)) return source;
+
+  const identifier = path.scope.getProgramParent().generateUidIdentifier('imageSource');
+  const declarator = t.variableDeclarator(identifier, source);
+
+  if (file.__staticImageSourceDeclaration) {
+    file.__staticImageSourceDeclaration.declarations.push(declarator);
+  } else {
+    const programPath = path.findParent((ancestor) => ancestor.isProgram());
+    if (!programPath?.isProgram()) throw new PluginError('No program found for static Image source');
+
+    const declaration = t.variableDeclaration('const', [declarator]);
+    const firstStatement = programPath.get('body').find((statement) => !statement.isImportDeclaration());
+    if (firstStatement) firstStatement.insertBefore(declaration);
+    else programPath.pushContainer('body', declaration);
+    file.__staticImageSourceDeclaration = declaration;
+  }
+
+  return t.cloneNode(identifier);
 }
 
 function addRuntimeHelper(path: NodePath<t.JSXOpeningElement>, file: HubFile, importName: string): t.Identifier {

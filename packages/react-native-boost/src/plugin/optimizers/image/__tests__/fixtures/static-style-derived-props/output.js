@@ -1,5 +1,10 @@
 import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
 import { Image } from 'react-native';
+const _imageSource = [
+  {
+    uri: 'hero.png',
+  },
+];
 <_NativeImage
   style={[
     {},
@@ -16,11 +21,7 @@ import { Image } from 'react-native';
       },
     ],
   ]}
-  source={[
-    {
-      uri: 'hero.png',
-    },
-  ]}
+  source={_imageSource}
   resizeMode="stretch"
   tintColor="red"
 />;
