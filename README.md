@@ -43,11 +43,13 @@ See the [benchmarks page](https://react-native-boost.oss.kuatsu.de/docs/informat
 
 | `react-native-boost` | React Native     |
 | -------------------- | ---------------- |
-| `0.x`                | All versions[^1] |
+| `0.x`                | All versions     |
 | `1.x`                | `>=0.83`         |
 | `2.x`                | `>=0.83`         |
 
-[^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings.
+Current versions of React Native Boost are compatible with **all React Native versions since 0.83**. We test runtime behavior against all of these versions.
+
+For older React Native versions, you can install `react-native-boost@^0`. Please note that we do not support this version anymore and, starting from React Native `0.80`, it prints import deprecation warnings from React Native.
 
 ## Installation
 
