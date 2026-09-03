@@ -18,10 +18,10 @@ interface BoostOptimized {
 
 /**
  * Transform a JSX body with the full Boost plugin under the given platform (mirroring how Metro builds
- * per platform, so the plugin inlines build-time defaults exactly as in production). Returns the
- * generated code.
+ * per platform, so the plugin inlines build-time defaults exactly as in production). The generated
+ * component is rendered at the test root, so that runtime parent is safe unless a test says otherwise.
  */
-function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): string {
+function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runtimeParentIsSafe = true): string {
   setPlatformOS(os);
   const source =
     `import { ActivityIndicator, Image, Text, View } from 'react-native';\n${preamble}\n` +
@@ -32,7 +32,15 @@ function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = ''): str
     filename: 'boost-case.jsx',
     caller: { name: 'metro', platform: os } as TransformCaller,
     presets: [['@babel/preset-react', { runtime: 'automatic' }]],
-    plugins: [[boostPlugin, { logLevel: 'silent' }]],
+    plugins: [
+      [
+        boostPlugin,
+        {
+          logLevel: 'silent',
+          assumptions: { unknownAncestorsDoNotRenderText: runtimeParentIsSafe },
+        },
+      ],
+    ],
   });
   return out!.code!;
 }
@@ -66,9 +74,10 @@ export async function captureBoost(
 export async function captureBoostHosts(
   os: PlatformOS,
   jsxBody: string,
-  preamble = ''
+  preamble = '',
+  runtimeParentIsSafe = true
 ): Promise<BoostBailed | { optimized: true; hosts: Capture[] }> {
-  const code = transformBoostCase(os, jsxBody, preamble);
+  const code = transformBoostCase(os, jsxBody, preamble, runtimeParentIsSafe);
   if (!code.includes(RUNTIME_MODULE_NAME)) return { optimized: false };
 
   const mod = await writeAndImportFresh('boost', code);
