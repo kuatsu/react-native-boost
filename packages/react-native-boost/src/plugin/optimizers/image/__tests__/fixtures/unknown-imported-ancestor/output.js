@@ -1,6 +1,13 @@
 import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
 import { Image } from 'react-native';
 import { ExternalWrapper } from './ExternalWrapper';
+const _imageSource = [
+  {
+    uri: 'safe.png',
+    width: 16,
+    height: 16,
+  },
+];
 <>
   <_NativeImage
     style={[
@@ -12,13 +19,7 @@ import { ExternalWrapper } from './ExternalWrapper';
         overflow: 'hidden',
       },
     ]}
-    source={[
-      {
-        uri: 'safe.png',
-        width: 16,
-        height: 16,
-      },
-    ]}
+    source={_imageSource}
     resizeMode="cover"
   />
   <ExternalWrapper>
