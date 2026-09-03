@@ -28,14 +28,13 @@ const transformImage = async (
     name: `${platform ?? 'unknown'}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
-        nativeImageOptimizer(
-          path,
+        nativeImageOptimizer(path, {
           logger,
-          { assumptions: { unknownAncestorsDoNotRenderText } },
+          options: { assumptions: { unknownAncestorsDoNotRenderText } },
           platform,
           unistylesEnabled,
-          reactNativeMinor ?? undefined
-        );
+          reactNativeMinor: reactNativeMinor ?? undefined,
+        });
       },
     },
   });

@@ -26,7 +26,7 @@ const CONSUMED_PROPS = new Set([
   'style',
 ]);
 
-export const nativeActivityIndicatorOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
+export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, options, platform, unistylesEnabled }) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
