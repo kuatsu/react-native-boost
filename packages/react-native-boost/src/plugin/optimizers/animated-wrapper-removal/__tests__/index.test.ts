@@ -1,7 +1,7 @@
 import { transformSync, type TransformCaller } from '@babel/core';
 import { describe, expect, it } from 'vitest';
 import boostPlugin from '../../../index';
-import { staticAnimatedOptimizer } from '..';
+import { animatedWrapperRemovalOptimizer } from '..';
 import type { TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 
@@ -9,11 +9,11 @@ function transformAnimated(source: string, platform: TargetPlatform = 'ios'): st
   return transformSync(source, {
     configFile: false,
     babelrc: false,
-    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(staticAnimatedOptimizer, {}, platform)],
+    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(animatedWrapperRemovalOptimizer, {}, platform)],
   })!.code!;
 }
 
-function transformWithBoost(source: string, reactNativeMinor = 86, staticAnimated?: 'on' | 'off'): string {
+function transformWithBoost(source: string, reactNativeMinor = 86, animatedWrapperRemoval?: 'on' | 'off'): string {
   return transformSync(source, {
     configFile: false,
     babelrc: false,
@@ -26,7 +26,7 @@ function transformWithBoost(source: string, reactNativeMinor = 86, staticAnimate
           logLevel: 'silent',
           target: { reactNative: { version: `0.${reactNativeMinor}.0` } },
           assumptions: { unknownAncestorsDoNotRenderText: true },
-          optimizations: staticAnimated ? { 'static-animated': staticAnimated } : undefined,
+          optimizations: animatedWrapperRemoval ? { 'animated-wrapper-removal': animatedWrapperRemoval } : undefined,
         },
       ],
     ],
@@ -44,8 +44,8 @@ const bailoutCases = [
   ['ScrollView refresh control', '<Animated.ScrollView refreshControl={<RefreshControl />} />'],
 ];
 
-describe('static Animated optimizer', () => {
-  it('lowers static Animated.View and reproduces Animated style flattening', () => {
+describe('animated wrapper removal optimizer', () => {
+  it('removes the Animated wrapper from Animated.View and reproduces style flattening', () => {
     const output = transformAnimated(
       source(
         '<Animated.View collapsable={true} testID="card" style={[{ width: 12, opacity: 1 }, null, false, [{ opacity: 0.5 }]]} />'
@@ -53,7 +53,7 @@ describe('static Animated optimizer', () => {
     );
 
     expect(output).not.toContain('<Animated.View');
-    expect(output).toContain('<_StaticAnimatedView testID="card" collapsable={false}');
+    expect(output).toContain('<_AnimatedWrapperRemovalView testID="card" collapsable={false}');
     expect(output).toMatch(/style=\{\{\s*width: 12,\s*opacity: 0\.5\s*\}\}/);
   });
 
@@ -79,7 +79,7 @@ describe('static Animated optimizer', () => {
       </Motion.View>;
     `);
 
-    expect(output).toContain('<_StaticAnimatedView accessibilityState={{');
+    expect(output).toContain('<_AnimatedWrapperRemovalView accessibilityState={{');
     expect(output).toContain('onLayout={onLayout}');
     expect(output).toContain('<Child />');
     expect(output).not.toContain('<Motion.View');
@@ -114,7 +114,7 @@ describe('static Animated optimizer', () => {
 
     expect(output).not.toContain('NativeText');
     expect(output).not.toContain('NativeVirtualText');
-    expect(output).toContain('<_StaticAnimatedText collapsable={false} style={undefined}>');
+    expect(output).toContain('<_AnimatedWrapperRemovalText collapsable={false} style={undefined}>');
     expect(output).toContain('<Text>nested</Text>');
   });
 

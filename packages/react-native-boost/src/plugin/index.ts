@@ -17,7 +17,7 @@ import { nativeViewOptimizer } from './optimizers/native-view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
-import { staticAnimatedOptimizer } from './optimizers/static-animated';
+import { animatedWrapperRemovalOptimizer } from './optimizers/animated-wrapper-removal';
 import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operations';
 import { platformFoldingOptimizer } from './optimizers/platform-folding';
 import { validateBabelOptions } from './utils/options';
@@ -45,7 +45,7 @@ const warnings = new Set<string>();
 
 const optimizers: Optimizer[] = [
   platformFoldingOptimizer,
-  staticAnimatedOptimizer,
+  animatedWrapperRemovalOptimizer,
   nativeTextOptimizer,
   nativeViewOptimizer,
   nativeImageOptimizer,
