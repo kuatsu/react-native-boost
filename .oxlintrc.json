@@ -7,7 +7,13 @@
   "env": {
     "node": true
   },
-  "ignorePatterns": ["**/fixtures", "**/*.config.{js,mjs,cjs}", "**/scripts", "**/plugins", "**/__tests__"],
+  "ignorePatterns": [
+    "**/fixtures",
+    "**/*.config.{js,mjs,cjs}",
+    "**/scripts",
+    "**/plugins",
+    "**/__tests__/**/fixtures-*/**/{code,output}.{js,jsx,ts,tsx}"
+  ],
   "rules": {
     "no-unused-vars": [
       "error",
@@ -35,7 +41,7 @@
     "unicorn/error-message": "error",
     "unicorn/escape-case": "error",
     "unicorn/explicit-length-check": "error",
-    "unicorn/filename-case": "error",
+    "unicorn/filename-case": ["error", { "case": "kebabCase" }],
     "unicorn/new-for-builtins": "error",
     "unicorn/no-accessor-recursion": "error",
     "unicorn/no-anonymous-default-export": "error",
@@ -121,5 +127,13 @@
     "unicorn/switch-case-braces": "error",
     "unicorn/text-encoding-identifier-case": "error",
     "unicorn/throw-new-error": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["packages/react-native-boost/src/plugin/__tests__/parity/mocks/*"],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
+    }
+  ]
 }

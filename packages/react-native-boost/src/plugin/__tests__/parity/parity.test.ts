@@ -4,18 +4,22 @@ import { describe, it, expect, vi } from 'vitest';
 // (`processTextAccessibilityProps` / `processTextStyle`) under test. This is also what stops
 // native-text.tsx / native-view.tsx from running their CJS `require('react-native')` (see §4.5 of
 // the implementation plan), which would otherwise pull raw Flow source into node.
-vi.mock('../../../runtime/components/native-text', async () => ({
-  NativeText: (await import('./capture')).NativeTextCapturer,
-}));
-vi.mock('../../../runtime/components/native-view', async () => ({
-  NativeView: (await import('./capture')).NativeViewCapturer,
-}));
-vi.mock('../../../runtime/components/native-image', async () => ({
-  NativeImage: (await import('./capture')).NativeImageCapturer,
-}));
-vi.mock('../../../runtime/components/native-activity-indicator', async () => ({
-  NativeActivityIndicator: (await import('./capture')).NativeActivityIndicatorCapturer,
-}));
+vi.mock('../../../runtime/components/native-text', async () => {
+  const { NativeTextCapturer } = await import('./capture');
+  return { NativeText: NativeTextCapturer };
+});
+vi.mock('../../../runtime/components/native-view', async () => {
+  const { NativeViewCapturer } = await import('./capture');
+  return { NativeView: NativeViewCapturer };
+});
+vi.mock('../../../runtime/components/native-image', async () => {
+  const { NativeImageCapturer } = await import('./capture');
+  return { NativeImage: NativeImageCapturer };
+});
+vi.mock('../../../runtime/components/native-activity-indicator', async () => {
+  const { NativeActivityIndicatorCapturer } = await import('./capture');
+  return { NativeActivityIndicator: NativeActivityIndicatorCapturer };
+});
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
 import { captureBoost, captureBoostHosts, boostOptimizes } from './boost';
@@ -410,7 +414,7 @@ describe('differential parity', () => {
 
     it('Text returned by a renderer defers when mounted under Text', async () => {
       const jsx = '<Text>{renderBreak()}</Text>';
-      const preamble = "const renderBreak = () => <Text>{'\\n'}</Text>;";
+      const preamble = String.raw`const renderBreak = () => <Text>{'\n'}</Text>;`;
       const hosts = await captureWrapperHosts(os, jsx, preamble);
       expect(hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
 

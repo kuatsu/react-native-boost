@@ -8,7 +8,7 @@
 // import (`import processColor from '.../processColor'`, redirected by basename), the Boost side via the
 // named re-export in `mocks/react-native.ts` (which backs the runtime index's `import { processColor }`).
 export function processColor(color: unknown): unknown {
-  return color === 'red' ? 0xffff0000 : color;
+  return color === 'red' ? 0xff_ff_00_00 : color;
 }
 
 export default processColor;
