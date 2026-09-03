@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
 import boostPlugin from '../../../index';
-import { textOptimizer } from '..';
+import { nativeTextOptimizer } from '..';
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer),
+  plugin: generateTestPlugin(nativeTextOptimizer),
   title: 'text',
   fixtures: path.resolve(import.meta.dirname, 'fixtures'),
   babelOptions: {
@@ -29,7 +29,7 @@ const unknownAncestorAssumptionFixtures = [
 ];
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer, {
+  plugin: generateTestPlugin(nativeTextOptimizer, {
     assumptions: { unknownAncestorsDoNotRenderText: true },
   }),
   title: 'text unknown ancestor assumption',
@@ -45,7 +45,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer, { integrations: { unistyles: 'on' } }),
+  plugin: generateTestPlugin(nativeTextOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'text unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
   babelOptions: {
@@ -55,7 +55,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(textOptimizer, { integrations: { unistyles: 'on' } }),
+  plugin: generateTestPlugin(nativeTextOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'text unistyles typescript',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles-ts'),
   babelOptions: {

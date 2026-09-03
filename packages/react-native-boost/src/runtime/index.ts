@@ -24,8 +24,7 @@ let activityIndicatorSmallProps: { style: (typeof activityIndicatorStyles)['smal
 let activityIndicatorLargeProps: { style: (typeof activityIndicatorStyles)['large']; size: 'large' } | undefined;
 
 // Resolve RN's `processColor` once. The `typeof` guard degrades to a passthrough on
-// a non-RN host that lacks it (see {@link processSelectionColor}); the web build never reaches this — it
-// uses the separate `index.web.ts` shim.
+// a non-RN host that lacks it (see {@link processSelectionColor}).
 const processColor: ((color?: ColorValue | number) => ProcessedColorValue | null | undefined) | undefined =
   typeof rnProcessColor === 'function' ? rnProcessColor : undefined;
 const resolveImageAssetSource =

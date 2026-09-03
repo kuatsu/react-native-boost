@@ -9,19 +9,16 @@ export default defineConfig({
   test: {
     projects: [
       {
-        // Unit suite: aliases `react-native` to a lightweight mock for the whole project.
         resolve: {
           alias: [{ find: /^react-native$/, replacement: resolve(runtimeMockPath) }],
         },
         test: {
           name: 'unit',
-          // babel-plugin-tester requires `it` and `describe` to be set globally
           globals: true,
           // The differential parity suite needs the REAL react-native and runs under its own config.
           exclude: [...configDefaults.exclude, '**/__tests__/parity/**'],
         },
       },
-      // Parity suite: dedicated config (real RN transform + redirects + react dedup).
       parityConfig,
     ],
   },

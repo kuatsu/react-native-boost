@@ -2,10 +2,10 @@ import path from 'node:path';
 import { pluginTester } from 'babel-plugin-tester';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
-import { viewOptimizer } from '..';
+import { nativeViewOptimizer } from '..';
 
 pluginTester({
-  plugin: generateTestPlugin(viewOptimizer),
+  plugin: generateTestPlugin(nativeViewOptimizer),
   title: 'view',
   fixtures: path.resolve(import.meta.dirname, 'fixtures'),
   babelOptions: {
@@ -15,7 +15,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(viewOptimizer, {
+  plugin: generateTestPlugin(nativeViewOptimizer, {
     assumptions: { unknownAncestorsDoNotRenderText: true },
   }),
   title: 'view unknown ancestor assumption',
@@ -33,7 +33,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(viewOptimizer, { integrations: { unistyles: 'on' } }),
+  plugin: generateTestPlugin(nativeViewOptimizer, { integrations: { unistyles: 'on' } }),
   title: 'view unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
   babelOptions: {
