@@ -74,7 +74,6 @@
     "unicorn/no-nested-ternary": "off",
     "unicorn/no-abusive-eslint-disable": "off",
     "unicorn/no-zero-fractions": "error",
-    "unicorn/number-literal-case": "error",
     "unicorn/numeric-separators-style": "error",
     "unicorn/prefer-add-event-listener": "error",
     "unicorn/prefer-array-find": "error",

@@ -98,9 +98,6 @@ jobs:
             pnpm-lock.yaml
             packages/react-native-boost/package.json
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
