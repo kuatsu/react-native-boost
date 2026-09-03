@@ -216,7 +216,13 @@ describe('image android output', () => {
     expect(getStringPropertyValue(headers as t.ObjectExpression, 'Referrer-Policy')).toBe('origin');
   });
 
-  it('routes object-source headers through the RN version gate and lifts array-source headers directly', async () => {
+  it.each([
+    [84, true],
+    [85, false],
+    [86, false],
+    [87, true],
+    [88, true],
+  ])('resolves object-source header lifting for RN 0.%i at build time', async (reactNativeMinor, liftsHeaders) => {
     const output = await transformImage(
       `
           import { Image } from 'react-native';
@@ -228,46 +234,41 @@ describe('image android output', () => {
             ]}
           />;
         `,
-      'android'
+      'android',
+      { reactNativeMinor }
     );
 
+    expect(output).not.toContain('processImageObjectSourceHeaders');
     const images = getNativeImageAttributes(output);
-    expect(images).toHaveLength(2);
-    const objectSourceImage = images[0]!;
-    const arraySourceImage = images[1]!;
-    const arrayHeaders = getAttributeExpression(arraySourceImage, 'headers');
+    const objectHeaders = getAttributeExpression(images[0]!, 'headers');
+    if (liftsHeaders) {
+      expect(t.isObjectExpression(objectHeaders)).toBe(true);
+      expect(getStringPropertyValue(objectHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer object');
+    } else {
+      expect(objectHeaders).toBeUndefined();
+    }
 
-    // Only some RN versions lift a plain OBJECT source's inline headers onto the top-level prop, so
-    // the value is resolved by the runtime gate instead of being baked in either way.
-    const gatedHeaders = unwrapRuntimeGate(
-      getAttributeExpression(objectSourceImage, 'headers'),
-      'processImageObjectSourceHeaders'
-    );
-    expect(t.isObjectExpression(gatedHeaders)).toBe(true);
-    expect(getStringPropertyValue(gatedHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer object');
-
-    // Every supported version lifts an ARRAY source's `source[0].headers`, so that stays static.
+    const arrayHeaders = getAttributeExpression(images[1]!, 'headers');
     expect(t.isObjectExpression(arrayHeaders)).toBe(true);
     expect(getStringPropertyValue(arrayHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer first');
-
-    const [objectSource, arraySource] = getHoistedImageSources(output);
-    expect(objectSource).toBeDefined();
-    expect(arraySource).toBeDefined();
-
-    const objectSourceEntry = objectSource!.elements[0];
-    const arraySourceEntry = arraySource!.elements[0];
-    expect(t.isObjectExpression(objectSourceEntry)).toBe(true);
-    expect(t.isObjectExpression(arraySourceEntry)).toBe(true);
-
-    const objectSourceHeaders = getObjectExpressionProperty(objectSourceEntry as t.ObjectExpression, 'headers');
-    const arraySourceHeaders = getObjectExpressionProperty(arraySourceEntry as t.ObjectExpression, 'headers');
-    expect(t.isObjectExpression(objectSourceHeaders)).toBe(true);
-    expect(t.isObjectExpression(arraySourceHeaders)).toBe(true);
-    expect(getStringPropertyValue(objectSourceHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer object');
-    expect(getStringPropertyValue(arraySourceHeaders as t.ObjectExpression, 'Authorization')).toBe('Bearer first');
   });
 
-  it('emits single-entry array source dimensions through the RN version gate on Android only', async () => {
+  it('keeps the object-source header runtime gate when the RN version is unknown', async () => {
+    const output = await transformImage(
+      `import { Image } from 'react-native';
+       <Image source={{ uri: 'logo.png', headers: { Authorization: 'Bearer object' } }} />;`,
+      'android',
+      { reactNativeMinor: null }
+    );
+    const headers = unwrapRuntimeGate(
+      getAttributeExpression(getNativeImageAttributes(output)[0]!, 'headers'),
+      'processImageObjectSourceHeaders'
+    );
+
+    expect(t.isObjectExpression(headers)).toBe(true);
+  });
+
+  it('resolves single-entry array source dimensions at build time on Android only', async () => {
     const source = `
         import { Image } from 'react-native';
         <Image src="https://example.com/logo.png" width={16} height={8} />;
@@ -275,31 +276,42 @@ describe('image android output', () => {
         <Image source={[{ uri: 'logo.png', width: 16, height: 8 }, { uri: 'logo@2x.png', width: 32, height: 16, scale: 2 }]} />;
       `;
 
-    const getStyleDimensionEntries = (image: t.JSXAttribute[], gated: boolean): t.ObjectExpression => {
+    const getStyleDimensionEntries = (image: t.JSXAttribute[]): t.ObjectExpression => {
       const style = getAttributeExpression(image, 'style');
       expect(t.isArrayExpression(style)).toBe(true);
-      const first = (style as t.ArrayExpression).elements[0] as t.Expression;
-      const dimensions = gated ? unwrapRuntimeGate(first, 'processImageArraySourceDimensions') : first;
+      const dimensions = (style as t.ArrayExpression).elements[0];
       expect(t.isObjectExpression(dimensions)).toBe(true);
       return dimensions as t.ObjectExpression;
     };
 
-    const androidImages = getNativeImageAttributes(await transformImage(source, 'android'));
-    expect(androidImages).toHaveLength(3);
-    for (const image of androidImages.slice(0, 2)) {
-      const dimensions = getStyleDimensionEntries(image, true);
+    const legacyOutput = await transformImage(source, 'android', { reactNativeMinor: 84 });
+    expect(legacyOutput).not.toContain('processImageArraySourceDimensions');
+    const legacyImages = getNativeImageAttributes(legacyOutput);
+    for (const image of legacyImages) {
+      expect(getStyleDimensionEntries(image).properties).toHaveLength(0);
+    }
+
+    const modernOutput = await transformImage(source, 'android', { reactNativeMinor: 85 });
+    expect(modernOutput).not.toContain('processImageArraySourceDimensions');
+    const modernImages = getNativeImageAttributes(modernOutput);
+    for (const image of modernImages.slice(0, 2)) {
+      const dimensions = getStyleDimensionEntries(image);
       expect(getObjectExpressionProperty(dimensions, 'width')).toMatchObject({ value: 16 });
       expect(getObjectExpressionProperty(dimensions, 'height')).toMatchObject({ value: 8 });
     }
-    // Multi-entry array: no dimension propagation on any version, mirroring the wrapper's
-    // `source_.length === 1` gate — so there is nothing to resolve at runtime either.
-    expect(getStyleDimensionEntries(androidImages[2]!, false).properties).toHaveLength(0);
+    expect(getStyleDimensionEntries(modernImages[2]!).properties).toHaveLength(0);
 
-    // iOS never propagates array-source dimensions into style, on any version.
+    const unknownOutput = await transformImage(source, 'android', { reactNativeMinor: null });
+    const unknownStyle = getAttributeExpression(getNativeImageAttributes(unknownOutput)[0]!, 'style');
+    const unknownDimensions = unwrapRuntimeGate(
+      (unknownStyle as t.ArrayExpression).elements[0] as t.Expression,
+      'processImageArraySourceDimensions'
+    );
+    expect(t.isObjectExpression(unknownDimensions)).toBe(true);
+
     const iosImages = getNativeImageAttributes(await transformImage(source, 'ios'));
-    expect(iosImages).toHaveLength(3);
     for (const image of iosImages) {
-      expect(getStyleDimensionEntries(image, false).properties).toHaveLength(0);
+      expect(getStyleDimensionEntries(image).properties).toHaveLength(0);
     }
   });
 
@@ -496,10 +508,11 @@ describe('image srcSet output', () => {
     expect(getObjectExpressionProperty(entry, 'width')).toMatchObject({ value: 24 });
     expect(getObjectExpressionProperty(entry, 'height')).toMatchObject({ value: 12 });
 
+    expect(output).not.toContain('processImageArraySourceDimensions');
     const style = getAttributeExpression(image, 'style') as t.ArrayExpression;
-    const dimensions = unwrapRuntimeGate(style.elements[0] as t.Expression, 'processImageArraySourceDimensions');
-    expect(getObjectExpressionProperty(dimensions as t.ObjectExpression, 'width')).toMatchObject({ value: 24 });
-    expect(getObjectExpressionProperty(dimensions as t.ObjectExpression, 'height')).toMatchObject({ value: 12 });
+    const dimensions = style.elements[0] as t.ObjectExpression;
+    expect(getObjectExpressionProperty(dimensions, 'width')).toMatchObject({ value: 24 });
+    expect(getObjectExpressionProperty(dimensions, 'height')).toMatchObject({ value: 12 });
   });
 
   it.each([

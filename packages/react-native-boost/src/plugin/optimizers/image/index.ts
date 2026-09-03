@@ -182,7 +182,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
   logger.optimized({ component: 'Image', path });
 
   if (nativeSource && styleInfo !== null) {
-    processImageProps(path, file, nativeSource, styleInfo, platform);
+    processImageProps(path, file, nativeSource, styleInfo, platform, reactNativeMinor);
   } else {
     processRuntimeImageProps(path, file, platform);
   }
@@ -197,17 +197,9 @@ type NativeSource = {
   androidHeaders?: t.Expression;
   width?: t.Expression;
   height?: t.Expression;
-  /**
-   * `width`/`height` came from an ARRAY source's single entry, which only the wrapper of some RN
-   * versions propagates into the layout style — so they are emitted through the runtime gate
-   * `processImageArraySourceDimensions` instead of inline.
-   */
+  /** `width`/`height` came from an ARRAY source whose dimension propagation varies by RN version. */
   arraySourceDimensions?: boolean;
-  /**
-   * `androidHeaders` came from a plain OBJECT source's inline `headers`, which only the wrapper of
-   * some RN versions lifts to the top-level prop — so they are emitted through the runtime gate
-   * `processImageObjectSourceHeaders` instead of inline.
-   */
+  /** `androidHeaders` came from a plain OBJECT source whose header lift varies by RN version. */
   objectSourceHeaders?: boolean;
 };
 
@@ -234,7 +226,8 @@ function processImageProps(
   file: HubFile,
   nativeSource: NativeSource,
   styleInfo: StyleInfo,
-  platform?: string
+  platform?: string,
+  reactNativeMinor?: number
 ) {
   const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform);
   const consumed = new Set<t.JSXAttribute>([
@@ -257,29 +250,33 @@ function processImageProps(
   const tintColor = buildTintColor(explicitTintColor, styleInfo?.tintColor, platform);
   const emitsAndroidProps = platform === 'android';
 
-  // Both gates are Android-only and are wired up only when there is something to gate, so an Image
-  // that hits neither case keeps a fully static prop bag.
-  const gatesArrayDimensions =
-    emitsAndroidProps &&
+  const hasArrayDimensions =
     nativeSource.arraySourceDimensions === true &&
     (nativeSource.width !== undefined || nativeSource.height !== undefined);
-  const arrayDimensionsGate = gatesArrayDimensions
+  const resolvesArrayDimensionsAtRuntime = emitsAndroidProps && hasArrayDimensions && reactNativeMinor === undefined;
+  const includesDimensions =
+    nativeSource.arraySourceDimensions !== true || reactNativeMinor === undefined || reactNativeMinor >= 85;
+  const arrayDimensionsGate = resolvesArrayDimensionsAtRuntime
     ? addRuntimeHelper(path, file, 'processImageArraySourceDimensions')
     : undefined;
 
-  const androidHeaders =
-    emitsAndroidProps && nativeSource.androidHeaders
-      ? nativeSource.objectSourceHeaders
-        ? t.callExpression(addRuntimeHelper(path, file, 'processImageObjectSourceHeaders'), [
-            t.cloneNode(nativeSource.androidHeaders, true),
-          ])
-        : t.cloneNode(nativeSource.androidHeaders, true)
-      : undefined;
+  let androidHeaders: t.Expression | undefined;
+  if (emitsAndroidProps && nativeSource.androidHeaders) {
+    if (!nativeSource.objectSourceHeaders) {
+      androidHeaders = t.cloneNode(nativeSource.androidHeaders, true);
+    } else if (reactNativeMinor === undefined) {
+      androidHeaders = t.callExpression(addRuntimeHelper(path, file, 'processImageObjectSourceHeaders'), [
+        t.cloneNode(nativeSource.androidHeaders, true),
+      ]);
+    } else if (reactNativeMinor <= 84 || reactNativeMinor >= 87) {
+      androidHeaders = t.cloneNode(nativeSource.androidHeaders, true);
+    }
+  }
 
   path.node.attributes = [
     ...remaining,
     accessibilityInfo?.spreadAttribute,
-    makeAttribute('style', buildStyle(nativeSource, styleInfo, arrayDimensionsGate)),
+    makeAttribute('style', buildStyle(nativeSource, styleInfo, includesDimensions, arrayDimensionsGate)),
     makeAttribute('source', hoistStaticImageSource(path, file, nativeSource.sourceArray)),
     androidHeaders ? makeAttribute('headers', androidHeaders) : undefined,
     makeAttribute('resizeMode', buildResizeMode(explicitResizeMode, styleInfo)),
@@ -549,9 +546,7 @@ function buildStaticNativeSource(
 
   // Two Android-only wrapper behaviors vary across the supported RN range: propagating a single-entry
   // ARRAY source's intrinsic dimensions into the layout style, and lifting a plain OBJECT source's
-  // inline headers to the top-level `headers` prop. iOS does neither on any version. Both are emitted
-  // through runtime gates (see the `arraySourceDimensions` / `objectSourceHeaders` flags) so the
-  // build-time output tracks the installed RN exactly instead of picking one version's semantics.
+  // inline headers to the top-level `headers` prop. The runtime gates remain only as an unknown-target fallback.
   const emitsAndroidProps = platform === 'android';
 
   const src = findAttribute(attributes, 'src');
@@ -693,11 +688,16 @@ function buildSourceObject(sourceObject: t.ObjectExpression, requestHeaders: Req
 function buildStyle(
   nativeSource: NativeSource,
   styleInfo: StyleInfo,
+  includesDimensions: boolean,
   arrayDimensionsGate?: t.Identifier
 ): t.ArrayExpression {
   const dimensions = t.objectExpression([
-    ...(nativeSource.width ? [t.objectProperty(t.identifier('width'), t.cloneNode(nativeSource.width, true))] : []),
-    ...(nativeSource.height ? [t.objectProperty(t.identifier('height'), t.cloneNode(nativeSource.height, true))] : []),
+    ...(includesDimensions && nativeSource.width
+      ? [t.objectProperty(t.identifier('width'), t.cloneNode(nativeSource.width, true))]
+      : []),
+    ...(includesDimensions && nativeSource.height
+      ? [t.objectProperty(t.identifier('height'), t.cloneNode(nativeSource.height, true))]
+      : []),
   ]);
 
   return t.arrayExpression([
