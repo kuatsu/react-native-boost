@@ -79,7 +79,7 @@ const BAILED_TEXT_CASES = new Set([
   '<Text id={dynamicId} nativeID="y">hello</Text>',
 ]);
 
-const STATIC_ANIMATED_CASES = [
+const ANIMATED_WRAPPER_REMOVAL_CASES = [
   '<Animated.View testID="card" style={[{ width: 12, opacity: 1 }, null, { opacity: 0.5 }]} />',
   '<Animated.Text style={[{ fontWeight: 700 }, { verticalAlign: "middle" }]}>hello</Animated.Text>',
 ];
@@ -312,9 +312,9 @@ describe('differential parity', () => {
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
-    it.each(STATIC_ANIMATED_CASES)('Animated static: %s', async (jsx) => {
+    it.each(ANIMATED_WRAPPER_REMOVAL_CASES)('Animated wrapper removal: %s', async (jsx) => {
       const boost = await captureBoost(os, jsx);
-      if (!boost.optimized) throw new Error('expected static Animated case to optimize');
+      if (!boost.optimized) throw new Error('expected animated wrapper removal case to optimize');
       const wrapper = await captureWrapper(os, jsx);
       expect(boost.which).toEqual(wrapper.which);
       expect(normalize(boost.props)).toEqual(normalize(wrapper.props));

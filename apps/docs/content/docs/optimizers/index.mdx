@@ -10,7 +10,7 @@ React Native Boost includes different optimizers that optimize different parts o
   <Card title="Native View" href="/docs/optimizers/native-view" description="Removes the React Native View wrapper." />
   <Card title="Native Image" href="/docs/optimizers/native-image" description="Moves Image wrapper work to build time." />
   <Card title="Native Activity Indicator" href="/docs/optimizers/native-activity-indicator" description="Builds the native spinner tree ahead of time." />
-  <Card title="Static Animated" href="/docs/optimizers/static-animated" description="Removes Animated wrappers that contain no animation." />
+  <Card title="Animated Wrapper Removal" href="/docs/optimizers/animated-wrapper-removal" description="Removes Animated wrappers that contain no animation." />
   <Card title="StyleSheet Operations" href="/docs/optimizers/stylesheet-operations" description="Evaluates static StyleSheet operations during the build." />
   <Card title="Platform Folding" href="/docs/optimizers/platform-folding" description="Resolves static React Native platform branches." />
 </Cards>
@@ -31,7 +31,7 @@ Set `logLevel: 'debug'` to see why a component was skipped.
 
 Most optimizers are enabled by default. Exceptions are:
 
-- The [Static Animated optimizer](./static-animated) is enabled by default only for React Native 0.83 through 0.86.
+- The [Animated Wrapper Removal optimizer](./animated-wrapper-removal) is enabled by default only for React Native 0.83 through 0.86.
 
 You can turn each optimizer on or off in `metro.config.js`:
 
@@ -39,7 +39,7 @@ You can turn each optimizer on or off in `metro.config.js`:
 module.exports = withBoostConfig(config, {
   optimizations: {
     'native-image': 'off',
-    'static-animated': 'on',
+    'animated-wrapper-removal': 'on',
   },
 });
 ```

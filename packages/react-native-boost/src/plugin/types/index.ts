@@ -27,7 +27,7 @@ export interface PluginOptimizationOptions {
    */
   'native-activity-indicator'?: OptimizationSetting;
   /** Removes built-in `Animated` wrappers whose props contain no animated values. @default 'on' for RN 0.83–0.86, 'off' otherwise */
-  'static-animated'?: OptimizationSetting;
+  'animated-wrapper-removal'?: OptimizationSetting;
   /** Evaluates static React Native `StyleSheet` operations at build time. @default 'on' */
   'stylesheet-operations'?: OptimizationSetting;
   /** Folds React Native `Platform.select` calls and `Platform.OS` branches at build time. @default 'on' */

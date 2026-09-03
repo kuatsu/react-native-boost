@@ -9,7 +9,7 @@ const optimizationKeys = [
   'native-view',
   'native-image',
   'native-activity-indicator',
-  'static-animated',
+  'animated-wrapper-removal',
   'stylesheet-operations',
   'platform-folding',
 ];

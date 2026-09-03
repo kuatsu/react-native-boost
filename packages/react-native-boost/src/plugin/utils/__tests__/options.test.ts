@@ -8,7 +8,7 @@ describe('plugin options', () => {
     const options = {
       optimizations: {
         'native-image': 'off' as const,
-        'static-animated': 'on' as const,
+        'animated-wrapper-removal': 'on' as const,
         'stylesheet-operations': 'on' as const,
         'platform-folding': 'on' as const,
       },
