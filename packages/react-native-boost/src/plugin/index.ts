@@ -1,17 +1,24 @@
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { declare } from '@babel/helper-plugin-utils';
 import { textOptimizer } from './optimizers/text';
 import { imageOptimizer } from './optimizers/image';
-import type { PluginOptions, TargetPlatform } from './types';
+import type { BabelPluginOptions, HubFile, TargetPlatform } from './types';
 import { createLogger } from './utils/logger';
 import { viewOptimizer } from './optimizers/view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { activityIndicatorOptimizer } from './optimizers/activity-indicator';
-import { validatePluginOptions } from './utils/options';
+import { validateBabelOptions } from './utils/options';
+import PluginError from './utils/plugin-error';
+import {
+  getReactNativeMinor,
+  resolveReactNativeTarget,
+  type ReactNativeTargetResolution,
+} from './utils/react-native-target';
 
 export type {
+  BabelPluginOptions,
+  BoostOptions,
   IntegrationState,
   LogLevel,
   OptimizationSetting,
@@ -19,24 +26,45 @@ export type {
   PluginAssumptions,
   PluginIntegrationOptions,
   PluginOptimizationOptions,
-  PluginOptions,
+  ReactNativeTargetOption,
 } from './types';
+
+const warnings = new Set<string>();
 
 export default declare((api, rawOptions, dirname?: string) => {
   api.assertVersion(7);
 
-  const options = validatePluginOptions(rawOptions ?? {});
+  const injectionId = readInternalInjectionId(rawOptions);
+  const callerData = api.caller((caller) =>
+    JSON.stringify({
+      bundler: (caller as { bundler?: unknown } | undefined)?.bundler,
+      platform: (caller as { platform?: unknown } | undefined)?.platform,
+    })
+  ) as string;
+  const caller = JSON.parse(callerData) as { bundler?: unknown; platform?: unknown };
+  if (!injectionId && caller.bundler === 'metro') {
+    warnOnce(
+      createLogger('warn'),
+      'React Native Boost 2 must be configured through Metro. Move your options to withBoostConfig in metro.config.js and remove react-native-boost/plugin from babel.config.js.'
+    );
+    return { name: 'react-native-boost', visitor: {} };
+  }
+
+  const options = validateBabelOptions(stripInternalOptions(rawOptions ?? {}));
   const logger = createLogger(options.logLevel ?? 'info');
-  const reactNativeMinor = resolveReactNativeMinor(dirname);
+  const platform = normalizeTargetPlatform(caller.platform);
+  const configuredTarget = options.target?.reactNative;
+  let targetResolution: ReactNativeTargetResolution | undefined = configuredTarget
+    ? resolveReactNativeTarget(configuredTarget, getRequireOrigins(dirname))
+    : injectionId
+      ? { versions: [] }
+      : undefined;
+  if (targetResolution?.target?.packageJson) {
+    (api as typeof api & { addExternalDependency?: (file: string) => void }).addExternalDependency?.(
+      targetResolution.target.packageJson
+    );
+  }
 
-  // Target platform, resolved at build time. Metro sets this on the Babel caller per platform bundle,
-  // letting optimizers inline platform-specific defaults instead of deferring them to the runtime.
-  const platform = api.caller((caller) =>
-    normalizeTargetPlatform((caller as { platform?: string } | undefined)?.platform)
-  );
-
-  // A detected package does not prove its Babel plugin is active, so auto-detection still asks users
-  // to configure the integration explicitly.
   const unistylesMode = options.integrations?.unistyles ?? 'auto';
   const autoDetectedUnistyles = unistylesMode === 'auto' && isUnistylesInstalled(dirname);
   const unistylesEnabled = unistylesMode === 'on' || autoDetectedUnistyles;
@@ -45,16 +73,44 @@ export default declare((api, rawOptions, dirname?: string) => {
     logger.warning({
       message:
         'react-native-unistyles was detected, so Unistyles mode was enabled automatically. Set ' +
-        "`integrations: { unistyles: 'on' }` in the react-native-boost plugin options to make this explicit, or " +
-        "`integrations: { unistyles: 'off' }` to opt out.",
+        "`integrations: { unistyles: 'on' }` to make this explicit, or set it to `off` to opt out.",
     });
   }
 
+  const resolveReactNativeMinor = (file: HubFile): number | undefined => {
+    if (!targetResolution) {
+      const fileOptions = file.opts as HubFile['opts'] & { cwd?: string };
+      targetResolution = resolveReactNativeTarget(undefined, [
+        fileOptions.filename,
+        fileOptions.cwd ? path.join(fileOptions.cwd, 'package.json') : undefined,
+        ...getRequireOrigins(dirname),
+      ]);
+      const versions = targetResolution.versions.join(', ');
+      if (targetResolution.target && !injectionId) {
+        warnOnce(
+          logger,
+          `Using best-effort React Native ${targetResolution.target.version} detection${versions.includes(',') ? ` from versions ${versions}` : ''}.`
+        );
+      }
+    }
+
+    if (!targetResolution.target && !injectionId) {
+      warnOnce(logger, 'React Native could not be detected. Version-dependent optimizations will be skipped.');
+    }
+
+    return getReactNativeMinor(targetResolution.target?.version);
+  };
+
   return {
     name: 'react-native-boost',
+    pre(file) {
+      if (injectionId) (file.metadata as Record<string, unknown>).reactNativeBoost = { injectionId };
+    },
     visitor: {
       JSXOpeningElement(path) {
         if (isIgnoredFile(path, options.ignores ?? [])) return;
+        const file = (path.hub as unknown as { file: HubFile }).file;
+        const reactNativeMinor = resolveReactNativeMinor(file);
         if (isOptimizationEnabled(options, 'native-text'))
           textOptimizer(path, logger, options, platform, unistylesEnabled);
         if (isOptimizationEnabled(options, 'native-view'))
@@ -69,25 +125,42 @@ export default declare((api, rawOptions, dirname?: string) => {
 });
 
 function isOptimizationEnabled(
-  options: PluginOptions,
-  name: keyof NonNullable<PluginOptions['optimizations']>
+  options: BabelPluginOptions,
+  name: keyof NonNullable<BabelPluginOptions['optimizations']>
 ): boolean {
   const setting = options.optimizations?.[name];
   return (Array.isArray(setting) ? setting[0] : setting) !== 'off';
 }
 
-function normalizeTargetPlatform(platform?: string): TargetPlatform | undefined {
+function normalizeTargetPlatform(platform: unknown): TargetPlatform | undefined {
   return platform === 'ios' || platform === 'android' || platform === 'web' ? platform : undefined;
 }
 
-function resolveReactNativeMinor(dirname?: string): number | undefined {
-  try {
-    const requireFromProject = createRequire(path.resolve(dirname ?? process.cwd(), 'package.json'));
-    const { version } = requireFromProject('react-native/package.json') as { version?: unknown };
-    const match = typeof version === 'string' ? /^0\.(\d+)\./.exec(version) : null;
-    const minor = match ? Number(match[1]) : undefined;
-    return minor !== undefined && minor >= 83 && minor <= 87 ? minor : undefined;
-  } catch {
-    return undefined;
+function getRequireOrigins(dirname?: string): Array<string | undefined> {
+  return [dirname ? path.join(dirname, 'package.json') : undefined, path.join(process.cwd(), 'package.json')];
+}
+
+function readInternalInjectionId(rawOptions: unknown): string | undefined {
+  const value =
+    typeof rawOptions === 'object' && rawOptions !== null && !Array.isArray(rawOptions)
+      ? (rawOptions as Record<string, unknown>).__reactNativeBoost
+      : undefined;
+  if (value === undefined) return;
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new PluginError('The Metro integration ID is invalid.');
   }
+  return value;
+}
+
+function stripInternalOptions(rawOptions: unknown): unknown {
+  if (typeof rawOptions !== 'object' || rawOptions === null || Array.isArray(rawOptions)) return rawOptions;
+  const { __reactNativeBoost, ...options } = rawOptions as Record<string, unknown>;
+  void __reactNativeBoost;
+  return options;
+}
+
+function warnOnce(logger: ReturnType<typeof createLogger>, message: string): void {
+  if (warnings.has(message)) return;
+  warnings.add(message);
+  logger.warning({ message });
 }

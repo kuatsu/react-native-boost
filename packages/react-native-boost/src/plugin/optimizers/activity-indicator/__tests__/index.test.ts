@@ -1,7 +1,7 @@
 import { transformSync } from '@babel/core';
 import { describe, expect, it } from 'vitest';
 import { activityIndicatorOptimizer } from '..';
-import type { PluginOptions, TargetPlatform } from '../../../types';
+import type { BoostOptions, TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 
 const transformActivityIndicator = (
@@ -9,7 +9,7 @@ const transformActivityIndicator = (
   platform?: TargetPlatform,
   options: { unknownAncestorsDoNotRenderText?: boolean; unistylesEnabled?: boolean } = {}
 ): string => {
-  const pluginOptions: PluginOptions = {
+  const pluginOptions: BoostOptions = {
     assumptions: { unknownAncestorsDoNotRenderText: options.unknownAncestorsDoNotRenderText },
     integrations: { unistyles: options.unistylesEnabled ? 'on' : 'off' },
   };

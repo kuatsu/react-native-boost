@@ -5,7 +5,7 @@ description: Common setup and optimization issues, plus fast ways to diagnose th
 
 ## Quick Diagnostic Flow
 
-1. Set `logLevel: 'debug'` in the plugin configuration.
+1. Set `logLevel: 'debug'` in the Metro configuration.
 2. Restart Metro with cache clear.
 3. Check skip reasons in logs.
 4. Compare with the coverage rules in [Optimization Coverage](/docs/information/optimization-coverage).
@@ -16,23 +16,16 @@ description: Common setup and optimization issues, plus fast ways to diagnose th
 
 Likely causes:
 
-- Plugin not loaded in `babel.config.js`
+- `withBoostConfig` is missing from `metro.config.js`
 - `logLevel: 'silent'`
 - File matched by `ignores`
 
-Quick checks:
+Quick check:
 
 ```js
-module.exports = {
-  plugins: [
-    [
-      'react-native-boost/plugin',
-      {
-        logLevel: 'debug',
-      },
-    ],
-  ],
-};
+module.exports = withBoostConfig(config, {
+  logLevel: 'debug',
+});
 ```
 
 ```bash

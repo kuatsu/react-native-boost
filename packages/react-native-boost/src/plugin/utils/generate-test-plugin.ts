@@ -1,8 +1,8 @@
 import { declare } from '@babel/helper-plugin-utils';
-import { Optimizer, PluginOptions, TargetPlatform } from '../types';
+import { BoostOptions, Optimizer, TargetPlatform } from '../types';
 import { createLogger } from './logger';
 
-export const generateTestPlugin = (optimizer: Optimizer, options: PluginOptions = {}, platform?: TargetPlatform) => {
+export const generateTestPlugin = (optimizer: Optimizer, options: BoostOptions = {}, platform?: TargetPlatform) => {
   const logger = createLogger('silent');
 
   return declare((api) => {
