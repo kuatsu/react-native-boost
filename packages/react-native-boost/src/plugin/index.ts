@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { declare } from '@babel/helper-plugin-utils';
 import { textOptimizer } from './optimizers/text';
 import { imageOptimizer } from './optimizers/image';
@@ -25,6 +27,7 @@ export default declare((api, rawOptions, dirname?: string) => {
 
   const options = validatePluginOptions(rawOptions ?? {});
   const logger = createLogger(options.logLevel ?? 'info');
+  const reactNativeMinor = resolveReactNativeMinor(dirname);
 
   // Target platform, resolved at build time. Metro sets this on the Babel caller per platform bundle,
   // letting optimizers inline platform-specific defaults instead of deferring them to the runtime.
@@ -57,7 +60,7 @@ export default declare((api, rawOptions, dirname?: string) => {
         if (isOptimizationEnabled(options, 'native-view'))
           viewOptimizer(path, logger, options, platform, unistylesEnabled);
         if (isOptimizationEnabled(options, 'native-image'))
-          imageOptimizer(path, logger, options, platform, unistylesEnabled);
+          imageOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
         if (isOptimizationEnabled(options, 'native-activity-indicator'))
           activityIndicatorOptimizer(path, logger, options, platform, unistylesEnabled);
       },
@@ -75,4 +78,16 @@ function isOptimizationEnabled(
 
 function normalizeTargetPlatform(platform?: string): TargetPlatform | undefined {
   return platform === 'ios' || platform === 'android' || platform === 'web' ? platform : undefined;
+}
+
+function resolveReactNativeMinor(dirname?: string): number | undefined {
+  try {
+    const requireFromProject = createRequire(path.resolve(dirname ?? process.cwd(), 'package.json'));
+    const { version } = requireFromProject('react-native/package.json') as { version?: unknown };
+    const match = typeof version === 'string' ? /^0\.(\d+)\./.exec(version) : null;
+    const minor = match ? Number(match[1]) : undefined;
+    return minor !== undefined && minor >= 83 && minor <= 87 ? minor : undefined;
+  } catch {
+    return undefined;
+  }
 }

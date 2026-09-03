@@ -148,6 +148,10 @@ const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png" }} width={16} height={16} />',
   '<Image src="https://example.com/logo.png" width={16} height={16} />',
   '<Image src="https://example.com/src.png" source={{ uri: "source.png", width: 16, height: 16 }} width={20} />',
+  '<Image srcSet="logo.png 1x, logo@2x.png 2x" />',
+  '<Image src="logo.png" srcSet="logo@2x.png 2x, logo@3x.png 3x" width={16} height={8} />',
+  '<Image srcSet="logo.png, logo@1.5x.png 1.5x" crossOrigin="use-credentials" referrerPolicy="origin" />',
+  '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />',
   '<Image source={[{ uri: "logo.png", width: 16, height: 16 }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2 }]} style={{ width: 16, height: 16 }} />',
   '<Image source={[{ uri: "logo.png", width: 16, height: 16, headers: { Authorization: "Bearer first" } }, { uri: "logo@2x.png", width: 32, height: 32, scale: 2, headers: { Authorization: "Bearer second" } }]} style={{ width: 16, height: 16 }} />',
   '<Image source={{ uri: "logo.png", width: null, height: 16 }} width={20} />',
@@ -168,6 +172,7 @@ const IMAGE_CASES = [
 ];
 
 const BAILED_IMAGE_CASES = new Set([
+  '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
   '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
@@ -201,6 +206,33 @@ const IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>, o
     [
       '<Image src="https://example.com/logo.png" width={16} height={16} />',
       (props) => expect(getFirstImageSource(props)).toMatchObject({ width: 16, height: 16 }),
+    ],
+    [
+      '<Image srcSet="logo.png 1x, logo@2x.png 2x" />',
+      (props) =>
+        expect(props.source).toMatchObject([
+          { uri: 'logo.png', scale: 1 },
+          { uri: 'logo@2x.png', scale: 2 },
+        ]),
+    ],
+    [
+      '<Image src="logo.png" srcSet="logo@2x.png 2x, logo@3x.png 3x" width={16} height={8} />',
+      (props) =>
+        expect(props.source).toMatchObject([
+          { uri: 'logo@2x.png', scale: 2, width: 16, height: 8 },
+          { uri: 'logo@3x.png', scale: 3, width: 16, height: 8 },
+          { uri: 'logo.png', scale: 1, width: 16, height: 8 },
+        ]),
+    ],
+    [
+      '<Image srcSet="logo.png, logo@1.5x.png 1.5x" crossOrigin="use-credentials" referrerPolicy="origin" />',
+      (props) => {
+        expect(getFirstImageSource(props)).toMatchObject({ uri: 'logo.png', scale: 1 });
+        expect(getFirstImageSource(props).headers).toEqual({
+          'Access-Control-Allow-Credentials': 'true',
+          'Referrer-Policy': 'origin',
+        });
+      },
     ],
     [
       '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',

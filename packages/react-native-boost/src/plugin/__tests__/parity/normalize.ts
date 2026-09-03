@@ -58,6 +58,7 @@ export const normalizeImage = (props: Record<string, unknown>, reactNativeMinor:
     'aria-selected',
     'crossOrigin',
     'referrerPolicy',
+    'srcSet',
     'width',
     'height',
   ]) {
