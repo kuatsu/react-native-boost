@@ -124,7 +124,9 @@ export type Optimizer = (
    * setting and install auto-detection). When `true`, optimizers classify each element's `style` origin and
    * route Unistyles styles to Unistyles' lean host instead of Boost's raw host.
    */
-  unistylesEnabled?: boolean
+  unistylesEnabled?: boolean,
+  /** Installed React Native minor version, when it can be resolved at build time. */
+  reactNativeMinor?: number
 ) => void;
 
 export type HubFile = t.File & {

@@ -108,6 +108,10 @@ The project-wide unknown ancestor assumption can optimize this case. A false ass
 The `Image` optimizer rewrites supported `Image` elements when the target platform is known (`ios` or `android`) and the
 source/style/accessibility props can be reproduced safely.
 
+A static `srcSet` is parsed at build time for the installed React Native version. An optional static `src` supplies the
+1x fallback. Boost skips this optimization when it cannot detect React Native. Dynamic or malformed sets, sets used with `source`, spreads, dynamic dimensions,
+and sets with dynamic styles stay on the React Native wrapper path.
+
 In Unistyles mode, an Image is skipped when its `style` is (or may be) a Unistyles style.
 
 ## ActivityIndicator Coverage
