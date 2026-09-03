@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { HubFile, Optimizer, PluginLogger } from '../../types';
+import type { HubFile, JSXOptimizer, PluginLogger } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
@@ -27,6 +27,7 @@ import {
   UNISTYLES_TEXT_HOST,
 } from '../../utils/common';
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { createJSXOptimizer } from '../../utils/optimizer';
 
 export const textBlacklistedProperties = new Set([
   'onLongPress',
@@ -84,10 +85,7 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const nativeTextOptimizer: Optimizer = (
-  path,
-  { logger, options, platform, unistylesEnabled, reactNativeMinor }
-) => {
+const optimizeNativeText: JSXOptimizer = (path, { logger, options, platform, unistylesEnabled, reactNativeMinor }) => {
   if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
@@ -136,7 +134,7 @@ export const nativeTextOptimizer: Optimizer = (
     const overriddenReason = getFirstBailoutReason(overridableChecks);
 
     if (overriddenReason) {
-      logger.forced({ component: 'Text', path, reason: overriddenReason });
+      logger.forced({ target: 'Text', path, reason: overriddenReason });
     }
   } else {
     const skipReason = getFirstBailoutReason([
@@ -148,7 +146,7 @@ export const nativeTextOptimizer: Optimizer = (
     ]);
 
     if (skipReason) {
-      logger.skipped({ component: 'Text', path, reason: skipReason });
+      logger.skipped({ target: 'Text', path, reason: skipReason });
       return;
     }
   }
@@ -161,7 +159,7 @@ export const nativeTextOptimizer: Optimizer = (
   }
 
   logger.optimized({
-    component: 'Text',
+    target: 'Text',
     path,
   });
 
@@ -179,6 +177,8 @@ export const nativeTextOptimizer: Optimizer = (
   // shadow-tree registration — survives. Plain text optimizes to Boost's own raw host as usual.
   replaceWithNativeComponent(path, parent, file, 'NativeText', routeToUnistyles ? UNISTYLES_TEXT_HOST : undefined);
 };
+
+export const nativeTextOptimizer = createJSXOptimizer('native-text', optimizeNativeText);
 
 /**
  * Checks if the Text component has any invalid children or blacklisted properties.
@@ -239,7 +239,7 @@ function fixNegativeNumberOfLines({
     if (literalValue !== undefined) {
       if (literalValue < 0) {
         logger.warning({
-          component: 'Text',
+          target: 'Text',
           path,
           message: `'numberOfLines' must be a non-negative number, received: ${literalValue}. The value will be set to 0.`,
         });

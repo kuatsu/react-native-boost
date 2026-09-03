@@ -1,7 +1,8 @@
 import { NodePath, types as t } from '@babel/core';
-import type { HubFile, OptimizableComponent, Optimizer } from '../../types';
+import type { HubFile, JSXOptimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { getFirstBailoutReason } from '../../utils/helpers';
+import { createJSXOptimizer } from '../../utils/optimizer';
 import {
   addFileImportHint,
   isForcedLine,
@@ -17,13 +18,13 @@ type AnimatedComponent = 'Image' | 'ScrollView' | 'Text' | 'View';
 const COMPONENTS = new Set<AnimatedComponent>(['Image', 'ScrollView', 'Text', 'View']);
 const REF_PROPS = new Set(['innerViewRef', 'ref', 'scrollViewRef']);
 
-export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) => {
+const optimizeStaticAnimated: JSXOptimizer = (path, { logger, platform }) => {
   const component = getAnimatedComponent(path);
   if (!component) return;
 
-  const logComponent: OptimizableComponent = `Animated.${component}`;
+  const target = `Animated.${component}`;
   if (platform !== 'ios' && platform !== 'android') {
-    logger.skipped({ component: logComponent, path, reason: 'target platform is unknown' });
+    logger.skipped({ target, path, reason: 'target platform is unknown' });
     return;
   }
 
@@ -47,14 +48,14 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
 
   const overriddenReason = forced ? getFirstBailoutReason(bailoutChecks) : undefined;
   if (forced) {
-    if (overriddenReason) logger.forced({ component: logComponent, path, reason: overriddenReason });
+    if (overriddenReason) logger.forced({ target, path, reason: overriddenReason });
   } else {
     const skipReason = getFirstBailoutReason([
       { reason: 'line is marked with @boost-ignore', shouldBail: () => isIgnoredLine(path) },
       ...bailoutChecks,
     ]);
     if (skipReason) {
-      logger.skipped({ component: logComponent, path, reason: skipReason });
+      logger.skipped({ target, path, reason: skipReason });
       return;
     }
   }
@@ -97,8 +98,15 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
   if (parent.closingElement) parent.closingElement.name = t.jsxIdentifier(replacement.name);
 
   markReactNativeComponent(path.node, component);
-  logger.optimized({ component: logComponent, path });
+  logger.optimized({ target, path });
 };
+
+export const staticAnimatedOptimizer = createJSXOptimizer(
+  'static-animated',
+  optimizeStaticAnimated,
+  ({ reactNativeMinor }) =>
+    reactNativeMinor !== undefined && reactNativeMinor >= 83 && reactNativeMinor <= 86 ? 'on' : 'off'
+);
 
 function getAnimatedComponent(path: NodePath<t.JSXOpeningElement>): AnimatedComponent | undefined {
   const name = path.node.name;
