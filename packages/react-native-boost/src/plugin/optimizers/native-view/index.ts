@@ -56,7 +56,7 @@ const VIEW_SPREAD_GUARD_KEYS_UNISTYLES = new Set([...VIEW_SPREAD_GUARD_KEYS, 'st
 const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected']);
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
-export const nativeViewOptimizer: Optimizer = (path, logger, options, _platform, unistylesEnabled) => {
+export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistylesEnabled }) => {
   if (!isReactNativeComponent(path, 'View')) return;
 
   const forced = isForcedLine(path);

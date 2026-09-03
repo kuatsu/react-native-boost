@@ -110,21 +110,22 @@ export interface PluginLogger {
   warning: (payload: WarningLogPayload) => void;
 }
 
-export type Optimizer = (
-  path: NodePath<t.JSXOpeningElement>,
-  logger: PluginLogger,
-  options?: BoostOptions,
+export interface OptimizerContext {
+  logger: PluginLogger;
+  options: BoostOptions;
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
-  platform?: TargetPlatform,
+  platform?: TargetPlatform;
   /**
    * Whether "Unistyles mode" is active for this build (resolved once at plugin init from the integration
    * setting and install auto-detection). When `true`, optimizers classify each element's `style` origin and
    * route Unistyles styles to Unistyles' lean host instead of Boost's raw host.
    */
-  unistylesEnabled?: boolean,
+  unistylesEnabled: boolean;
   /** Installed React Native minor version, when it can be resolved at build time. */
-  reactNativeMinor?: number
-) => void;
+  reactNativeMinor?: number;
+}
+
+export type Optimizer = (path: NodePath<t.JSXOpeningElement>, context: OptimizerContext) => void;
 
 export type HubFile = t.File & {
   opts: {
