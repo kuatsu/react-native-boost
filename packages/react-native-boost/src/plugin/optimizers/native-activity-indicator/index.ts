@@ -30,15 +30,16 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
+  if (platform !== 'ios' && platform !== 'android') {
+    logger.skipped({ component: 'ActivityIndicator', path, reason: 'target platform is unknown' });
+    return;
+  }
+
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
   const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
 
-  const hardChecks: BailoutCheck[] = [
-    {
-      reason: 'target platform is unknown',
-      shouldBail: () => platform !== 'ios' && platform !== 'android',
-    },
+  const bailoutChecks: BailoutCheck[] = [
     {
       reason: 'has a Unistyles style that cannot be moved to the generated outer host',
       shouldBail: () => getStyleOrigin() === 'unistyles',
@@ -57,9 +58,6 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
       reason: 'contains an impure prop expression that cannot be safely reordered',
       shouldBail: () => hasImpureAttributeValue(path),
     },
-  ];
-
-  const overridableChecks: BailoutCheck[] = [
     {
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
@@ -67,14 +65,8 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
     ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
-  const hardSkipReason = getFirstBailoutReason(hardChecks);
-  if (hardSkipReason) {
-    logger.skipped({ component: 'ActivityIndicator', path, reason: hardSkipReason });
-    return;
-  }
-
   if (forced) {
-    const overriddenReason = getFirstBailoutReason(overridableChecks);
+    const overriddenReason = getFirstBailoutReason(bailoutChecks);
     if (overriddenReason) logger.forced({ component: 'ActivityIndicator', path, reason: overriddenReason });
   } else {
     const skipReason = getFirstBailoutReason([
@@ -82,7 +74,7 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
         reason: 'line is marked with @boost-ignore',
         shouldBail: () => isIgnoredLine(path),
       },
-      ...overridableChecks,
+      ...bailoutChecks,
     ]);
     if (skipReason) {
       logger.skipped({ component: 'ActivityIndicator', path, reason: skipReason });

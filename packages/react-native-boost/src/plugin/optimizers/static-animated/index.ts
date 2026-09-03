@@ -4,6 +4,7 @@ import PluginError from '../../utils/plugin-error';
 import { getFirstBailoutReason } from '../../utils/helpers';
 import {
   addFileImportHint,
+  isForcedLine,
   isIgnoredLine,
   isStaticLiteralTree,
   makeAttribute,
@@ -21,9 +22,14 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
   if (!component) return;
 
   const logComponent: OptimizableComponent = `Animated.${component}`;
-  const skipReason = getFirstBailoutReason([
-    { reason: 'target platform is unknown', shouldBail: () => platform !== 'ios' && platform !== 'android' },
-    { reason: 'line is marked with @boost-ignore', shouldBail: () => isIgnoredLine(path) },
+  if (platform !== 'ios' && platform !== 'android') {
+    logger.skipped({ component: logComponent, path, reason: 'target platform is unknown' });
+    return;
+  }
+
+  const forced = isForcedLine(path);
+  const style = buildStaticStyle(path);
+  const bailoutChecks = [
     {
       reason: 'has spread props',
       shouldBail: () => path.node.attributes.some((attribute) => t.isJSXSpreadAttribute(attribute)),
@@ -36,16 +42,21 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
       reason: 'has children that may contain an Animated value',
       shouldBail: () => !hasStaticChildren(path.parent as t.JSXElement, path),
     },
-  ]);
-  if (skipReason) {
-    logger.skipped({ component: logComponent, path, reason: skipReason });
-    return;
-  }
+    { reason: 'has a dynamic style', shouldBail: () => style === undefined },
+  ];
 
-  const style = buildStaticStyle(path);
-  if (!style) {
-    logger.skipped({ component: logComponent, path, reason: 'has a dynamic style' });
-    return;
+  const overriddenReason = forced ? getFirstBailoutReason(bailoutChecks) : undefined;
+  if (forced) {
+    if (overriddenReason) logger.forced({ component: logComponent, path, reason: overriddenReason });
+  } else {
+    const skipReason = getFirstBailoutReason([
+      { reason: 'line is marked with @boost-ignore', shouldBail: () => isIgnoredLine(path) },
+      ...bailoutChecks,
+    ]);
+    if (skipReason) {
+      logger.skipped({ component: logComponent, path, reason: skipReason });
+      return;
+    }
   }
 
   const file = (path.hub as unknown as { file?: HubFile }).file;
@@ -59,11 +70,12 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
     moduleName: 'react-native',
   });
 
+  const preserveAuthoredStyle = overriddenReason !== undefined;
   const attributes = path.node.attributes.filter(
     (attribute) =>
       !t.isJSXAttribute(attribute) ||
       !t.isJSXIdentifier(attribute.name) ||
-      (attribute.name.name !== 'style' && attribute.name.name !== 'collapsable')
+      (attribute.name.name !== 'collapsable' && (preserveAuthoredStyle || attribute.name.name !== 'style'))
   );
 
   if (
@@ -76,7 +88,8 @@ export const staticAnimatedOptimizer: Optimizer = (path, { logger, platform }) =
   }
 
   // Native Animated cannot target flattened views, so its wrapper always forces this value.
-  attributes.push(makeAttribute('collapsable', t.booleanLiteral(false)), makeAttribute('style', style));
+  attributes.push(makeAttribute('collapsable', t.booleanLiteral(false)));
+  if (!preserveAuthoredStyle && style) attributes.push(makeAttribute('style', style));
   path.node.attributes = attributes;
   path.node.name = t.jsxIdentifier(replacement.name);
 

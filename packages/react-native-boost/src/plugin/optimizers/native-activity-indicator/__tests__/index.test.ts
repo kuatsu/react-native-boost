@@ -96,9 +96,24 @@ describe('ActivityIndicator optimizer', () => {
     expect(output).not.toContain('_NativeActivityIndicator');
   });
 
+  it.each([
+    ['spread props', '<ActivityIndicator {...props} />'],
+    ['children', '<ActivityIndicator><View /></ActivityIndicator>'],
+    ['impure props', '<ActivityIndicator color={getColor()} />'],
+  ])('lets @boost-force override the %s bailout', (_, element) => {
+    const output = transformActivityIndicator(
+      `import { ActivityIndicator, View } from 'react-native';\n<>{/* @boost-force */}${element}</>;`,
+      'ios'
+    );
+    expect(output).toContain('_NativeActivityIndicator');
+  });
+
   it('bails when the target platform is unknown or web', () => {
     expect(transformActivityIndicator(source('<ActivityIndicator />'))).not.toContain('_NativeActivityIndicator');
     expect(transformActivityIndicator(source('<ActivityIndicator />'), 'web')).not.toContain(
+      '_NativeActivityIndicator'
+    );
+    expect(transformActivityIndicator(source('<>{/* @boost-force */}<ActivityIndicator /></>'))).not.toContain(
       '_NativeActivityIndicator'
     );
   });
@@ -115,6 +130,18 @@ describe('ActivityIndicator optimizer', () => {
       { unistylesEnabled: true }
     );
     expect(unistyles).not.toContain('_NativeActivityIndicator');
+
+    const forcedUnistyles = transformActivityIndicator(
+      `
+        import { ActivityIndicator } from 'react-native';
+        import { StyleSheet } from 'react-native-unistyles';
+        const styles = StyleSheet.create({ spinner: { margin: 4 } });
+        <>{/* @boost-force */}<ActivityIndicator style={styles.spinner} /></>;
+      `,
+      'ios',
+      { unistylesEnabled: true }
+    );
+    expect(forcedUnistyles).toContain('_NativeActivityIndicator');
 
     const assumed = transformActivityIndicator(
       `import { ActivityIndicator } from 'react-native'; import { Wrapper } from './wrapper'; <Wrapper><ActivityIndicator /></Wrapper>;`,
