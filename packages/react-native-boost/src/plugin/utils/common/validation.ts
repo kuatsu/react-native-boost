@@ -10,7 +10,7 @@ import {
   UNISTYLES_NATIVE_VIEW_MODULE,
   RUNTIME_MODULE_NAME,
 } from '../constants';
-import { getOptimizedHostKind } from './optimized-host';
+import { getMarkedReactNativeComponent } from './optimized-host';
 import { extractStyleAttribute } from './attributes';
 
 /**
@@ -118,6 +118,7 @@ function hasDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: str
 }
 
 export const isReactNativeComponent = (path: NodePath<t.JSXOpeningElement>, expectedImportedName: string): boolean => {
+  if (getMarkedReactNativeComponent(path.node) === expectedImportedName) return true;
   if (!t.isJSXIdentifier(path.node.name) || !t.isJSXElement(path.parent)) return false;
 
   const localName = path.node.name.name;
@@ -240,11 +241,8 @@ function classifyJSXElementAsAncestor(
 ): AncestorClassification {
   if (isReactFragmentElement(path)) return 'safe';
 
-  // An ancestor Boost already rewrote earlier in this same traversal: classify it by the host it
-  // became (Text → inline-text context, View → normal context). This is checked before the import-based
-  // paths because the freshly-injected host import is not yet resolvable via scope.
-  const optimizedHostKind = getOptimizedHostKind(path.node.openingElement);
-  if (optimizedHostKind) return optimizedHostKind === 'text' ? 'text' : 'safe';
+  const markedComponent = getMarkedReactNativeComponent(path.node.openingElement);
+  if (markedComponent) return markedComponent === 'Text' ? 'text' : 'safe';
 
   const openingElementName = path.node.openingElement.name;
 

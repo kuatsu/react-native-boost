@@ -5,6 +5,15 @@ const withMDX = createMDX();
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/docs/information/optimization-coverage',
+        destination: '/docs/optimizers',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

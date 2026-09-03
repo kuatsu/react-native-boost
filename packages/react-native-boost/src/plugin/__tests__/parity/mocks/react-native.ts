@@ -20,6 +20,7 @@ export const unstable_NativeText = NativeTextCapturer;
 export const unstable_NativeView = NativeViewCapturer;
 export const Text = NativeTextCapturer;
 export const View = NativeViewCapturer;
+export const Animated = { Text, View };
 export const Image = Object.assign(NativeImageCapturer, {
   resolveAssetSource: <T>(source: T): T => source,
 });

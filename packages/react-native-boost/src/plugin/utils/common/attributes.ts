@@ -524,11 +524,37 @@ const staticPropertyName = (property: t.ObjectProperty): string =>
  * literal forms that provably flatten to falsy (`null` / `false` / `undefined` / `0`); any other
  * primitive literal element is left for the caller to bail on rather than guessing.
  */
-const isSkippableFalsyElement = (element: t.Expression | t.SpreadElement): boolean =>
+const isSkippableFalsyElement = (element: t.Expression | t.SpreadElement, allowUndefined = true): boolean =>
   t.isNullLiteral(element) ||
   (t.isBooleanLiteral(element) && element.value === false) ||
-  t.isIdentifier(element, { name: 'undefined' }) ||
+  (allowUndefined && t.isIdentifier(element, { name: 'undefined' })) ||
   (t.isNumericLiteral(element) && element.value === 0);
+
+/** Flattens a static object or array style with last-key-wins semantics. */
+export function tryFlattenStaticStyle(
+  styleExpression: t.Expression,
+  allowUndefined = true
+): Map<string, t.Expression> | undefined {
+  if (!t.isObjectExpression(styleExpression) && !t.isArrayExpression(styleExpression)) return undefined;
+
+  const flattened = new Map<string, t.Expression>();
+  const collect = (expression: t.Expression | t.SpreadElement | null): boolean => {
+    if (expression === null) return true;
+    if (t.isArrayExpression(expression)) return expression.elements.every(collect);
+    if (isSkippableFalsyElement(expression, allowUndefined)) return true;
+    if (!t.isObjectExpression(expression) || !isStaticLiteralTree(expression)) return false;
+
+    for (const property of expression.properties) {
+      if (!t.isObjectProperty(property) || !t.isExpression(property.value)) return false;
+      const name = staticPropertyName(property);
+      if (name === '__proto__') return false;
+      flattened.set(name, t.cloneNode(property.value, true));
+    }
+    return true;
+  };
+
+  return collect(styleExpression) ? flattened : undefined;
+}
 
 /**
  * Attempts to reproduce, at build time, exactly what the runtime `processTextStyle` helper would
@@ -545,44 +571,8 @@ const isSkippableFalsyElement = (element: t.Expression | t.SpreadElement): boole
  * fresh nodes), so a late bail still hands the original expression to the helper.
  */
 export function tryBuildStaticTextStyle(styleExpr: t.Expression): t.ObjectExpression | undefined {
-  const collected: t.ObjectExpression[] = [];
-
-  // Flatten the top-level style into an ordered list of fully-static object literals, replicating
-  // `StyleSheet.flatten`'s recursion. Returns false to bail the whole style.
-  const collect = (expr: t.Expression | t.SpreadElement): boolean => {
-    if (t.isObjectExpression(expr)) {
-      if (!isStaticLiteralTree(expr)) return false;
-      collected.push(expr);
-      return true;
-    }
-
-    if (t.isArrayExpression(expr)) {
-      for (const element of expr.elements) {
-        if (element == null) continue; // hole → flattens to falsy → skipped
-        if (t.isObjectExpression(element) || t.isArrayExpression(element)) {
-          if (!collect(element)) return false;
-        } else if (isSkippableFalsyElement(element)) {
-          continue;
-        } else {
-          return false; // identifier, logical, member, call, non-falsy literal, spread → bail
-        }
-      }
-      return true;
-    }
-
-    return false; // top-level identifier / member / call / conditional / etc. → bail
-  };
-
-  if (!collect(styleExpr)) return undefined;
-
-  // Merge left-to-right (last key wins), exactly as `flattenStyle` does.
-  const merged = new Map<string, t.Expression>();
-  for (const object of collected) {
-    for (const property of object.properties) {
-      const objectProperty = property as t.ObjectProperty;
-      merged.set(staticPropertyName(objectProperty), t.cloneNode(objectProperty.value as t.Expression, true));
-    }
-  }
+  const merged = tryFlattenStaticStyle(styleExpr);
+  if (!merged) return undefined;
 
   // `userSelect` is removed from literals by `extractSelectableAndUpdateStyle` before this runs. If a
   // key remains, the extractor could not resolve its value, so the style is not fully static — bail.

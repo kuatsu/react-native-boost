@@ -1,0 +1,43 @@
+---
+title: Native View
+description: How Boost removes the React Native View wrapper and when it keeps it.
+---
+
+The Native View optimizer replaces React Native's `View` component, which is a JavaScript-based wrapper component, with its native host component.
+
+Before it removes the wrapper, Boost converts the convenience props that React Native normally handles during every render. This includes accessibility props, `tabIndex`, and `id`.
+
+```tsx
+// Before
+<View aria-label="Profile" id="profile" />
+
+// After, simplified
+<NativeView accessibilityLabel="Profile" nativeID="profile" />
+```
+
+Static values are converted at build time. Dynamic direct values use minimal runtime helpers.
+
+## When it runs
+
+The optimizer can usually replace a `View` when:
+
+- It is imported from `react-native`.
+- It is not inside a `Text`.
+- Boost can determine its ancestor context.
+- Any props that need conversion are written directly on the element.
+
+## When it skips
+
+Boost keeps the `View` wrapper when it finds:
+
+- A spread that might contain accessibility props, `tabIndex`, or `id`.
+- A dynamic `id` together with `nativeID`, where their precedence is unclear.
+- A parent `Text`.
+- An unknown ancestor that might render a `Text` around its children.
+- An unknown style source while Unistyles support is active.
+
+If your project guarantees that unknown ancestors never add a text context, you can use [`unknownAncestorsDoNotRenderText`](/docs/configuration/configure#plugin-assumptions-unknownancestorsdonotrendertext) to increase optimization coverage.
+
+## Configuration
+
+The optimizer is enabled by default. Set `native-view` to `off` to disable it.
