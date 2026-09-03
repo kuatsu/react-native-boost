@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.1](https://github.com/kuatsu/react-native-boost/compare/v1.7.0...v1.7.1) (2026-09-03)
+
+### Bug Fixes
+
+* **native-text:** bail when runtime text context is unknown ([8fe5af9](https://github.com/kuatsu/react-native-boost/commit/8fe5af9c3a4769e42badac39d7fd18f8f869f3bd))
+
 # [1.7.0](https://github.com/kuatsu/react-native-boost/compare/v1.6.0...v1.7.0) (2026-09-03)
 
 
