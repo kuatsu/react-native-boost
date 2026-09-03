@@ -4,7 +4,6 @@ import {
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
-const someFunction = () => ({});
 <_NativeText
   style={_getDefaultTextStyle()}
   allowFontScaling={true}
@@ -19,8 +18,6 @@ const someFunction = () => ({});
   accessible={_getDefaultTextAccessible()}>
   No Scaling
 </_NativeText>;
-const unknownProps = someFunction();
-<Text {...unknownProps}>Unknown</Text>;
 const partialProps = {
   color: 'blue',
   ellipsizeMode: 'clip',

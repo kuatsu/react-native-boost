@@ -91,6 +91,8 @@ describe('Metro integration', () => {
     });
 
     expect(first.transformer.babelTransformerPath).not.toBe(second.transformer.babelTransformerPath);
+    expect(fs.readFileSync(first.transformer.babelTransformerPath, 'utf8')).toContain('"version":"0.86.0"');
+    expect(fs.readFileSync(second.transformer.babelTransformerPath, 'utf8')).toContain('"version":"0.87.1"');
   });
 
   it('warns when React Native cannot be resolved', () => {
@@ -105,6 +107,7 @@ describe('Metro integration', () => {
     });
 
     expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('React Native could not be detected'));
   });
 });
 

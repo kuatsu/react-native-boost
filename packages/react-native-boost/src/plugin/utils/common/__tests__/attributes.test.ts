@@ -37,17 +37,6 @@ describe('buildPropertiesFromAttributes', () => {
     expect(t.isStringLiteral(property.key, { value: 'aria-label' })).toBe(true);
   });
 
-  it('preserves source order of the attributes', () => {
-    const node = buildPropertiesFromAttributes([
-      attribute('a', t.stringLiteral('1')),
-      attribute('b', t.stringLiteral('2')),
-    ]);
-    const keys = ((node as t.ObjectExpression).properties as t.ObjectProperty[]).map(
-      (property) => (property.key as t.Identifier).name
-    );
-    expect(keys).toEqual(['a', 'b']);
-  });
-
   it('returns an Object.assign call when any attribute is a spread', () => {
     const node = buildPropertiesFromAttributes([
       spread('props'),

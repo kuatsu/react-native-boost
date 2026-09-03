@@ -46,7 +46,10 @@ describe('logger', () => {
     logger.warning({ component: 'Text', path, message: 'numberOfLines is invalid' });
     logger.forced({ component: 'View', path, reason: 'contains unsupported props' });
 
-    expect(consoleSpy).toHaveBeenCalledTimes(2);
+    expect(consoleSpy.mock.calls.map(([message]) => String(message))).toEqual([
+      expect.stringContaining('numberOfLines is invalid'),
+      expect.stringContaining('Force-optimized View'),
+    ]);
   });
 
   it('disables all logs at the silent level', () => {

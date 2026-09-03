@@ -1,2 +1,9 @@
 import { View } from 'react-native';
-<View style={[{ width: 1 }, { height: 2 }]} testID="v" pointerEvents="none" />;
+<View
+  style={[{ width: 1 }, { height: 2 }]}
+  testID="v"
+  pointerEvents="none"
+  accessible
+  accessibilityLabel="box"
+  nativeID="box"
+/>;
