@@ -1,10 +1,12 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import type { ConfigT } from 'metro-config';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { withBoostConfig } from '..';
 
+const requireFromProject = createRequire(import.meta.url);
 const temporaryDirectories: string[] = [];
 const acceptsMetroConfig = (config: ConfigT) => withBoostConfig(config);
 void acceptsMetroConfig;
@@ -19,15 +21,15 @@ describe('Metro integration', () => {
     const config = withBoostConfig(
       {
         projectRoot: process.cwd(),
-        transformer: { babelTransformerPath: require.resolve('metro-babel-transformer') },
+        transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
       },
       { logLevel: 'silent', optimizations: { 'native-text': 'off' } }
     );
     const wrapper = fs.readFileSync(config.transformer.babelTransformerPath, 'utf8');
-    const { version } = require('react-native/package.json') as { version: string };
+    const { version } = requireFromProject('react-native/package.json') as { version: string };
 
     expect(wrapper).toContain('createTransformer');
-    expect(wrapper).toContain(JSON.stringify(require.resolve('metro-babel-transformer')));
+    expect(wrapper).toContain(JSON.stringify(requireFromProject.resolve('metro-babel-transformer')));
     expect(wrapper).not.toContain('module.parent');
     expect(wrapper).toContain(`"version":"${version}"`);
     expect(wrapper).toContain('"native-text":"off"');
@@ -67,7 +69,7 @@ describe('Metro integration', () => {
   it('rejects duplicate Metro configuration', () => {
     const config = withBoostConfig({
       projectRoot: process.cwd(),
-      transformer: { babelTransformerPath: require.resolve('metro-babel-transformer') },
+      transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
     });
 
     expect(() => withBoostConfig(config)).toThrow('applied more than once');
@@ -78,7 +80,7 @@ describe('Metro integration', () => {
     const secondPackage = createPackage('0.87.1');
     const baseConfig = {
       projectRoot: process.cwd(),
-      transformer: { babelTransformerPath: require.resolve('metro-babel-transformer') },
+      transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
     };
 
     const first = withBoostConfig(baseConfig, {
@@ -99,11 +101,11 @@ describe('Metro integration', () => {
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'react-native-boost-metro-'));
     temporaryDirectories.push(projectRoot);
     fs.writeFileSync(path.join(projectRoot, 'package.json'), '{}');
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     withBoostConfig({
       projectRoot,
-      transformer: { babelTransformerPath: require.resolve('metro-babel-transformer') },
+      transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
     });
 
     expect(warn).toHaveBeenCalledOnce();

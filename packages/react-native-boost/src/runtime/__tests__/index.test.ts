@@ -14,6 +14,16 @@ import {
 } from '..';
 import { Platform, StyleSheet, TextStyle } from 'react-native';
 
+function flattenStyle(style: unknown): unknown {
+  if (!Array.isArray(style)) return style;
+  const result: Record<string, unknown> = {};
+  for (const entry of style) {
+    const flat = flattenStyle(entry);
+    if (flat && typeof flat === 'object') Object.assign(result, flat);
+  }
+  return result;
+}
+
 vi.mock('../components/native-text', () => ({
   NativeText: () => 'MockedNativeText',
 }));
@@ -30,15 +40,6 @@ vi.mock('../components/native-image', () => ({
 // reads the live `OS`, mirroring react-native's own implementation; tests flip `Platform.OS` and the
 // shared `afterEach` resets it.
 vi.mock('react-native', () => {
-  const flattenStyle = (style: unknown): unknown => {
-    if (!Array.isArray(style)) return style;
-    const result: Record<string, unknown> = {};
-    for (const entry of style) {
-      const flat = flattenStyle(entry);
-      if (flat && typeof flat === 'object') Object.assign(result, flat);
-    }
-    return result;
-  };
   const Platform = {
     OS: 'ios' as 'ios' | 'android',
     // Backs the runtime's wrapper-version gates. Defaults to the RN this repo builds against;
@@ -63,7 +64,7 @@ vi.mock('react-native', () => {
     // Distinguishable stand-in for RN's `processColor` so `processSelectionColor` can be asserted to
     // actually call it (a named color → packed int) rather than passing the value through unchanged.
     // `'invalid'` → `undefined` models RN rejecting an unparseable color.
-    processColor: (color: unknown) => (color === 'red' ? 0xffff0000 : color === 'invalid' ? undefined : color),
+    processColor: (color: unknown) => (color === 'red' ? 0xff_ff_00_00 : color === 'invalid' ? undefined : color),
   };
 });
 
@@ -82,7 +83,7 @@ const DEFAULT_MOCK_RN_VERSION = { major: 0, minor: 86, patch: 0 };
  * is mutated in place and restored by {@link restorePlatformMock}. Pass `undefined` to model a host
  * that exposes no version at all.
  */
-const loadRuntime = async (minor: number | undefined, os: 'ios' | 'android' = 'android') => {
+const loadRuntime = async (minor?: number, os: 'ios' | 'android' = 'android') => {
   vi.resetModules();
   const { Platform: platformMock } = (await import('react-native')) as unknown as { Platform: PlatformMock };
   platformMock.OS = os;
@@ -173,7 +174,7 @@ describe('ActivityIndicator helpers', () => {
   });
 
   it('composes the container and user styles', () => {
-    expect(processActivityIndicatorStyle(undefined)).toEqual({ alignItems: 'center', justifyContent: 'center' });
+    expect(processActivityIndicatorStyle(null)).toEqual({ alignItems: 'center', justifyContent: 'center' });
     expect(processActivityIndicatorStyle({ margin: 4 })).toEqual([
       { alignItems: 'center', justifyContent: 'center' },
       { margin: 4 },
@@ -188,11 +189,11 @@ describe('processSelectionColor', () => {
   });
 
   it('runs the value through processColor', () => {
-    expect(processSelectionColor('red')).toEqual({ selectionColor: 0xffff0000 });
+    expect(processSelectionColor('red')).toEqual({ selectionColor: 0xff_ff_00_00 });
   });
 
   it('forwards the processColor result for an already-processed value', () => {
-    expect(processSelectionColor(0x12345678)).toEqual({ selectionColor: 0x12345678 });
+    expect(processSelectionColor(0x12_34_56_78)).toEqual({ selectionColor: 0x12_34_56_78 });
   });
 
   it('omits the prop when processColor rejects the value', () => {
@@ -241,7 +242,7 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
   });
 
   it('uses the current default when the version cannot be read', async () => {
-    const runtime = await loadRuntime(undefined);
+    const runtime = await loadRuntime();
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
   });
 });
@@ -698,7 +699,7 @@ describe('processImageSourceProps', () => {
     });
 
     it('lifts them when the version cannot be read (the safe direction)', async () => {
-      const runtime = await loadRuntime(undefined);
+      const runtime = await loadRuntime();
       expect(
         runtime.processImageSourceProps({ source: { uri: 'logo.png', headers: { Authorization: 'x' } } }).headers
       ).toEqual({ Authorization: 'x' });
@@ -766,6 +767,6 @@ describe('clampNumberOfLines', () => {
 
   it('passes null/undefined through untouched (RN guards with != null)', () => {
     expect(clampNumberOfLines(null)).toBeNull();
-    expect(clampNumberOfLines(undefined)).toBeUndefined();
+    expect(clampNumberOfLines()).toBeUndefined();
   });
 });

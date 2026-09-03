@@ -24,5 +24,5 @@ export const verticalAlignToTextAlignVerticalMap = {
  * `0`, while `null`/`undefined` pass through untouched (`!(value >= 0)` is `true` for negatives and `NaN`,
  * `false` otherwise).
  */
-export const clampNumberOfLines = (value: number | null | undefined): number | null | undefined =>
+export const clampNumberOfLines = (value?: number | null): number | null | undefined =>
   value != null && !(value >= 0) ? 0 : value;
