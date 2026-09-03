@@ -89,6 +89,11 @@ export const nativeImageOptimizer: Optimizer = (
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'Image')) return;
 
+  if (platform !== 'ios' && platform !== 'android') {
+    logger.skipped({ component: 'Image', path, reason: 'target platform is unknown' });
+    return;
+  }
+
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
 
@@ -101,14 +106,8 @@ export const nativeImageOptimizer: Optimizer = (
     ? buildStaticSrcSetSource(path.node.attributes, platform, reactNativeMinor)
     : undefined;
 
-  const hardChecks: BailoutCheck[] = [
+  const bailoutChecks: BailoutCheck[] = [
     {
-      reason: 'target platform is unknown',
-      shouldBail: () => platform !== 'ios' && platform !== 'android',
-    },
-    {
-      // Unlike Text/View, a provably Unistyles-styled Image cannot be routed: Unistyles ships no lean
-      // Image host, so optimizing it would drop the shadow-tree registration and freeze theme updates.
       reason: 'has a Unistyles style and there is no lean Image host to route to',
       shouldBail: () => getStyleOrigin() === 'unistyles',
     },
@@ -136,9 +135,6 @@ export const nativeImageOptimizer: Optimizer = (
       reason: 'has an unsupported or dynamic source',
       shouldBail: () => !hasImageSourceInput(path.node.attributes),
     },
-  ];
-
-  const overridableChecks: BailoutCheck[] = [
     {
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
@@ -146,14 +142,8 @@ export const nativeImageOptimizer: Optimizer = (
     ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
-  const hardSkipReason = getFirstBailoutReason(hardChecks);
-  if (hardSkipReason) {
-    logger.skipped({ component: 'Image', path, reason: hardSkipReason });
-    return;
-  }
-
   if (forced) {
-    const overriddenReason = getFirstBailoutReason(overridableChecks);
+    const overriddenReason = getFirstBailoutReason(bailoutChecks);
     if (overriddenReason) {
       logger.forced({ component: 'Image', path, reason: overriddenReason });
     }
@@ -163,7 +153,7 @@ export const nativeImageOptimizer: Optimizer = (
         reason: 'line is marked with @boost-ignore',
         shouldBail: () => isIgnoredLine(path),
       },
-      ...overridableChecks,
+      ...bailoutChecks,
     ]);
 
     if (skipReason) {

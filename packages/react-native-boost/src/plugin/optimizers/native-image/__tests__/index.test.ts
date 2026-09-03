@@ -527,6 +527,22 @@ describe('image srcSet output', () => {
     expect(output).not.toContain('_NativeImage');
     expect(output).toContain('<Image');
   });
+
+  it.each([
+    ['unsupported props', '<Image source={{ uri: "logo.png" }} onLoad={handleLoad} />'],
+    ['spread props', '<Image source={{ uri: "logo.png" }} {...props} />'],
+    ['children', '<Image source={{ uri: "logo.png" }}><Child /></Image>'],
+    ['dynamic srcSet', '<Image srcSet={sources} />'],
+    ['dynamic srcSet style', '<Image srcSet="logo.png 1x" style={styles.image} />'],
+    ['missing source', '<Image />'],
+  ])('lets @boost-force override the %s bailout', async (_reason, element) => {
+    const output = await transformImage(
+      `import { Image } from 'react-native';\n<>{/* @boost-force */}${element}</>;`,
+      'ios'
+    );
+
+    expect(output).toContain('_NativeImage');
+  });
 });
 
 describe('image unistyles', () => {
@@ -546,7 +562,7 @@ describe('image unistyles', () => {
     expect(output).toContain('<Image');
   });
 
-  it('does not lift the Unistyles style bail with @boost-force', async () => {
+  it('lifts the Unistyles style bail with @boost-force', async () => {
     const output = await transformImage(
       `
           import { Image } from 'react-native';
@@ -561,8 +577,7 @@ describe('image unistyles', () => {
       { unistylesEnabled: true }
     );
 
-    expect(output).not.toContain('NativeImage');
-    expect(output).toContain('<Image');
+    expect(output).toContain('NativeImage');
   });
 
   it('bails on an unresolved style source that may be a Unistyles style', async () => {
@@ -616,12 +631,13 @@ describe('image unknown platform output', () => {
       `
         import { Image } from 'react-native';
         <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+        <>{/* @boost-force */}<Image source={{ uri: 'logo.png' }} /></>;
       `,
       undefined
     );
 
     expect(output).not.toContain('NativeImage');
-    expect(output).toContain('<Image');
+    expect(output.match(/<Image/g)).toHaveLength(2);
   });
 });
 
