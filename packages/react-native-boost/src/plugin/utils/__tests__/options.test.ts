@@ -23,7 +23,7 @@ describe('plugin options', () => {
   });
 
   it('ignores an unmigrated Metro plugin and asks the user to move its old options', () => {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const output = transformSync(`import { Text } from 'react-native'; <Text>Hello</Text>;`, {
       configFile: false,
       babelrc: false,

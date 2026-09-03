@@ -14,7 +14,7 @@ let counter = 0;
  * reused file is race-free.
  */
 export async function writeAndImportFresh(label: string, code: string): Promise<{ default: ComponentType }> {
-  const file = fileURLToPath(new URL(`./__generated__/${label}-fuzz-${process.pid}.js`, import.meta.url));
+  const file = fileURLToPath(new URL(`__generated__/${label}-fuzz-${process.pid}.js`, import.meta.url));
   writeFileSync(file, code);
   return import(/* @vite-ignore */ `${pathToFileURL(file).href}?v=${counter++}`);
 }

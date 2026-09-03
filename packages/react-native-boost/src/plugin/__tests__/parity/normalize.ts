@@ -26,6 +26,8 @@ export const flattenStyle = (style: unknown): unknown => {
  * override (then get dropped here) rather than being dropped inside its own element first.
  */
 export const normalize = (props: Record<string, unknown>) => {
+  // JSON serialization intentionally drops undefined and function values.
+  // eslint-disable-next-line unicorn/prefer-structured-clone
   const normalized = JSON.parse(
     JSON.stringify('style' in props ? { ...props, style: flattenStyle(props.style) } : props)
   );

@@ -4,30 +4,42 @@ import fc from 'fast-check';
 // Same as parity.test.ts: mock the runtime's host COMPONENTS to the shared capturers while keeping the
 // real runtime HELPERS (processTextAccessibilityProps / processTextStyle / processViewAccessibilityProps)
 // under test. vi.mock is per-file, so the fuzz file repeats the block.
-vi.mock('../../../../runtime/components/native-text', async () => ({
-  NativeText: (await import('../capture')).NativeTextCapturer,
-}));
-vi.mock('../../../../runtime/components/native-view', async () => ({
-  NativeView: (await import('../capture')).NativeViewCapturer,
-}));
-vi.mock('../../../../runtime/components/native-image', async () => ({
-  NativeImage: (await import('../capture')).NativeImageCapturer,
-}));
-vi.mock('../../../../runtime/components/native-activity-indicator', async () => ({
-  NativeActivityIndicator: (await import('../capture')).NativeActivityIndicatorCapturer,
-}));
+vi.mock('../../../../runtime/components/native-text', async () => {
+  const { NativeTextCapturer } = await import('../capture');
+  return { NativeText: NativeTextCapturer };
+});
+vi.mock('../../../../runtime/components/native-view', async () => {
+  const { NativeViewCapturer } = await import('../capture');
+  return { NativeView: NativeViewCapturer };
+});
+vi.mock('../../../../runtime/components/native-image', async () => {
+  const { NativeImageCapturer } = await import('../capture');
+  return { NativeImage: NativeImageCapturer };
+});
+vi.mock('../../../../runtime/components/native-activity-indicator', async () => {
+  const { NativeActivityIndicatorCapturer } = await import('../capture');
+  return { NativeActivityIndicator: NativeActivityIndicatorCapturer };
+});
 
 import { captureBoostHosts } from '../boost';
 import { captureWrapperHosts } from '../wrapper';
 import { normalize, normalizeImage } from '../normalize';
+import type { Capture } from '../capture';
 import { reactNativeVersion, type PlatformOS } from '../mocks/Platform';
 import { elementSpecArb, platformArb, render, type Tag } from './generator';
 import { divergingKeys } from './diff';
 
-const SEED = Number(process.env.FUZZ_SEED ?? 0xb0051);
+const SEED = Number(process.env.FUZZ_SEED ?? 0xb_00_51);
 const NUM_RUNS = Number(process.env.FUZZ_RUNS ?? 500);
 const DISCOVER = process.env.FUZZ_DISCOVER === '1';
 const DISCOVER_SAMPLES = Number(process.env.FUZZ_DISCOVER_SAMPLES ?? 3000);
+
+function normalizeHost(host: Capture) {
+  return {
+    which: host.which,
+    props: host.which === 'NativeImage' ? normalizeImage(host.props, reactNativeVersion.minor) : normalize(host.props),
+  };
+}
 
 interface Skipped {
   status: 'skipped';
@@ -55,12 +67,8 @@ async function runCase(os: PlatformOS, jsxBody: string, preamble: string): Promi
   if (!boost.optimized) return { status: 'skipped' };
 
   const wrapper = await captureWrapperHosts(os, jsxBody, preamble);
-  const normalizeHost = (host: (typeof boost.hosts)[number]) => ({
-    which: host.which,
-    props: host.which === 'NativeImage' ? normalizeImage(host.props, reactNativeVersion.minor) : normalize(host.props),
-  });
-  const boostProps = { hosts: boost.hosts.map(normalizeHost) };
-  const wrapperProps = { hosts: wrapper.map(normalizeHost) };
+  const boostProps = { hosts: boost.hosts.map((host) => normalizeHost(host)) };
+  const wrapperProps = { hosts: wrapper.map((host) => normalizeHost(host)) };
   const keys = divergingKeys(boostProps, wrapperProps);
   if (keys.length === 0) return { status: 'match' };
 
@@ -80,7 +88,7 @@ function formatDivergence(os: PlatformOS, jsxBody: string, preamble: string, res
   return (
     `parity divergence [${os}] on keys [${result.keys.join(', ')}]\n` +
     `  jsx:      ${jsxBody}\n` +
-    `  preamble: ${preamble.replace(/\n/g, ' ⏎ ') || '(none)'}\n` +
+    `  preamble: ${preamble.replaceAll('\n', ' ⏎ ') || '(none)'}\n` +
     whichNote +
     `  boost:    ${JSON.stringify(result.boost)}\n` +
     `  wrapper:  ${JSON.stringify(result.wrapper)}`

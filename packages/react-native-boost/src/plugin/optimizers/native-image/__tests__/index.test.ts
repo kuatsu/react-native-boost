@@ -460,7 +460,7 @@ describe('image srcSet output', () => {
       'ios'
     );
 
-    const [withFallback, withDefault] = getHoistedImageSources(output).map(getSourceObjects);
+    const [withFallback, withDefault] = getHoistedImageSources(output).map((source) => getSourceObjects(source));
     expect(withFallback!.map((entry) => getStringPropertyValue(entry, 'uri'))).toEqual([
       'logo@2x.png',
       'logo@3x.png',
@@ -625,8 +625,7 @@ describe('image unknown platform output', () => {
         import { Image } from 'react-native';
         <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
         <>{/* @boost-force */}<Image source={{ uri: 'logo.png' }} /></>;
-      `,
-      undefined
+      `
     );
 
     expect(output).not.toContain('NativeImage');
@@ -634,16 +633,16 @@ describe('image unknown platform output', () => {
   });
 });
 
-describe('image nullable accessible', () => {
-  const source = (value: string) => `
+const imageSource = (value: string) => `
     import { Image } from 'react-native';
     <Image source={{ uri: 'logo.png', width: 16, height: 16 }} accessible={${value}} />;
   `;
 
+describe('image nullable accessible', () => {
   it.each(['maybeAccessible', 'null'])(
     'routes accessible={%s} through the runtime helper on Android',
     async (value) => {
-      const output = await transformImage(source(value), 'android');
+      const output = await transformImage(imageSource(value), 'android');
 
       expect(output).toContain('processImageAccessibilityProps');
       expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(false);
@@ -651,14 +650,14 @@ describe('image nullable accessible', () => {
   );
 
   it('keeps a provably non-nullish accessible inline on Android', async () => {
-    const output = await transformImage(source('false'), 'android');
+    const output = await transformImage(imageSource('false'), 'android');
 
     expect(output).not.toContain('processImageAccessibilityProps');
     expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(true);
   });
 
   it('passes accessible straight through on iOS, which forwards it unchanged', async () => {
-    const output = await transformImage(source('maybeAccessible'), 'ios');
+    const output = await transformImage(imageSource('maybeAccessible'), 'ios');
 
     expect(output).not.toContain('processImageAccessibilityProps');
     expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(true);

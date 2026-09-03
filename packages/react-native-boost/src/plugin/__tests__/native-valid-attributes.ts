@@ -45,7 +45,7 @@ const hermesParser = (() => {
       parse(source: string, options: Record<string, unknown>): t.File;
     };
   } catch {
-    return undefined;
+    return;
   }
 })();
 
@@ -92,6 +92,21 @@ function parseReactNativeSource(subpath: string): t.File {
  * file `...spread` references (an object literal, or a call wrapping one such as
  * `ConditionallyIgnoredEventHandlers({ ... })`) and peeling `as const` casts.
  */
+function unwrap(node: t.Node | undefined | null): t.Node | undefined | null {
+  let current = node;
+  while (
+    current &&
+    (t.isTSAsExpression(current) ||
+      t.isTSSatisfiesExpression(current) ||
+      t.isTSTypeAssertion(current) ||
+      t.isTypeCastExpression(current) ||
+      t.isParenthesizedExpression(current))
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
 function extractValidAttributeKeys(subpath: string): Set<string> {
   const ast = parseReactNativeSource(subpath);
 
@@ -109,22 +124,6 @@ function extractValidAttributeKeys(subpath: string): Set<string> {
   }
 
   const keys = new Set<string>();
-
-  // Peel type-cast / parenthesized wrappers (e.g. `{ ... } as const`) to reach the underlying object.
-  const unwrap = (node: t.Node | undefined | null): t.Node | undefined | null => {
-    let current = node;
-    while (
-      current &&
-      (t.isTSAsExpression(current) ||
-        t.isTSSatisfiesExpression(current) ||
-        t.isTSTypeAssertion(current) ||
-        t.isTypeCastExpression(current) ||
-        t.isParenthesizedExpression(current))
-    ) {
-      current = current.expression;
-    }
-    return current;
-  };
 
   const collectFromExpression = (node: t.Node | undefined | null, seen: Set<t.Node>): void => {
     const expression = unwrap(node);

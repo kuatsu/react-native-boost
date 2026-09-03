@@ -72,7 +72,7 @@ export default defineConfig({
       },
       transform(code, id) {
         if (!RN_SRC.test(id)) return null;
-        if (/\/ActivityIndicator\/ActivityIndicator\.js$/.test(id)) {
+        if (id.endsWith('/ActivityIndicator/ActivityIndicator.js')) {
           // The real wrapper binds its platform host at module load. The parity suite changes platforms
           // in one process, so select at render time while leaving the wrapper's prop logic unchanged.
           code = code.replace(
