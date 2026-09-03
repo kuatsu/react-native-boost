@@ -17,9 +17,9 @@ If a line containing `@boost-ignore` appears immediately before a JSX opening ta
 
 ## @boost-force
 
-Use `@boost-force` to force optimization on a specific element, even if it would normally be skipped by a bailout rule (e.g. blacklisted props, unresolvable spreads, or ancestor checks).
+Use `@boost-force` to override supported bailout rules on a specific element, such as an unknown ancestor or an unresolved spread.
 
-The only check that `@boost-force` does **not** override is the `react-native` import check — the component must still be imported from `react-native`.
+It does not override the `react-native` import check or hard checks that would always change behavior.
 
 ```jsx
 const Component = ({ props }) => {
@@ -31,6 +31,5 @@ const Component = ({ props }) => {
 ```
 
 <Callout type="warn" title="Use with caution">
-  `@boost-force` bypasses safety checks that exist to prevent behavioral changes.
-  Only use it when you are confident that the optimization is safe for your specific use case.
+  `@boost-force` can bypass safety checks that prevent behavioral changes. Only use it when you have verified that the optimization is safe.
 </Callout>

@@ -8,7 +8,7 @@ description: Common setup and optimization issues, plus fast ways to diagnose th
 1. Set `logLevel: 'debug'` in the Metro configuration.
 2. Restart Metro with cache clear.
 3. Check skip reasons in logs.
-4. Compare with the coverage rules in [Optimization Coverage](/docs/information/optimization-coverage).
+4. Compare the message with the relevant [optimizer page](/docs/optimizers).
 
 ## Common Issues
 
@@ -34,9 +34,7 @@ npm start -- --clear
 
 ### Skip reason: `contains blacklisted props`
 
-This is expected for unsupported prop sets, e.g. a `Text` with press/responder props, `selectionColor`, or
-`aria-hidden`. (`View` translates accessibility props, `tabIndex`, and `id` instead of skipping; see
-[Optimization Coverage](/docs/information/optimization-coverage#view-coverage).)
+This is expected for a `Text` with press or responder props. The native text host does not provide the wrapper behavior these props need. `View` can translate its accessibility props, `tabIndex`, and `id`; see the [Native View optimizer](/docs/optimizers/native-view).
 
 Fix options:
 
