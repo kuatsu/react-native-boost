@@ -112,7 +112,7 @@ export default declare((api, rawOptions, dirname?: string) => {
         const file = (path.hub as unknown as { file: HubFile }).file;
         const reactNativeMinor = resolveReactNativeMinor(file);
         if (isOptimizationEnabled(options, 'native-text'))
-          textOptimizer(path, logger, options, platform, unistylesEnabled);
+          textOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
         if (isOptimizationEnabled(options, 'native-view'))
           viewOptimizer(path, logger, options, platform, unistylesEnabled);
         if (isOptimizationEnabled(options, 'native-image'))

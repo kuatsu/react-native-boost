@@ -1,7 +1,10 @@
 import path from 'node:path';
+import { transformSync, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
+import { describe, expect, it } from 'vitest';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
+import boostPlugin from '../../../index';
 import { textOptimizer } from '..';
 
 pluginTester({
@@ -59,4 +62,53 @@ pluginTester({
     plugins: ['@babel/plugin-syntax-jsx', ['@babel/plugin-syntax-typescript', { isTSX: true }]],
   },
   formatResult: formatTestResult,
+});
+
+const transformText = async (reactNativeMinor: number, platform?: 'ios'): Promise<string> =>
+  formatTestResult(
+    transformSync(
+      `
+        import { Text } from 'react-native';
+        <Text>plain</Text>;
+        <Text style={{ color: 'red' }}>static</Text>;
+        <Text style={dynamicStyle}>dynamic</Text>;
+      `,
+      {
+        configFile: false,
+        babelrc: false,
+        caller: { name: 'test', platform } as TransformCaller,
+        plugins: [
+          '@babel/plugin-syntax-jsx',
+          [boostPlugin, { logLevel: 'silent', target: { reactNative: { version: `0.${reactNativeMinor}.0` } } }],
+        ],
+      }
+    )!.code!
+  );
+
+describe('text version defaults', () => {
+  it('omits the default overflow style before RN 0.85', async () => {
+    const output = await transformText(84, 'ios');
+
+    expect(output).not.toContain('getDefaultTextStyle');
+    expect(output).not.toContain('textDefaultOverflowStyle');
+    expect(output).not.toContain("overflow: 'hidden'");
+    expect(output).toContain('processTextStyle(dynamicStyle, false)');
+  });
+
+  it('uses the default overflow style from RN 0.85', async () => {
+    const output = await transformText(85, 'ios');
+
+    expect(output).not.toContain('getDefaultTextStyle');
+    expect(output).toContain('textDefaultOverflowStyle as _textDefaultOverflowStyle');
+    expect(output).toContain('style={_textDefaultOverflowStyle}');
+    expect(output).toContain('processTextStyle(dynamicStyle, true)');
+  });
+
+  it('keeps the runtime fallback when the platform is unknown', async () => {
+    const output = await transformText(85);
+
+    expect(output).toContain('getDefaultTextStyle');
+    expect(output).not.toContain('textDefaultOverflowStyle');
+    expect(output).toContain('processTextStyle(dynamicStyle)');
+  });
 });

@@ -4,7 +4,10 @@ import { ActivityIndicator as NativeActivityIndicator } from 'react-native';
 import type { ActivityIndicatorProps, TextProps, TextStyle } from 'react-native';
 import { GenericStyleProp } from './types';
 
-export const processTextStyle = (style: GenericStyleProp<TextStyle>) => ({ style }) as Partial<TextProps>;
+export const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
+
+export const processTextStyle = (style: GenericStyleProp<TextStyle>, _includesDefaultStyle?: boolean) =>
+  ({ style }) as Partial<TextProps>;
 
 // react-native-web's `Text` accepts `selectionColor` and resolves colors itself, so there is no native
 // int to pack — pass the value through untouched (mirroring the other web shims). Keeping the

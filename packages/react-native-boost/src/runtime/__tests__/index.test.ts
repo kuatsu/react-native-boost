@@ -233,6 +233,15 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
     expect(runtime.processTextStyle(null)).toEqual({ style: { overflow: 'hidden' } });
   });
 
+  it('uses a build-time default when provided', async () => {
+    const runtime = await loadRuntime(86);
+    const style = { color: 'red' } as const;
+    expect(runtime.processTextStyle(style, false)).toEqual({ style });
+    expect(runtime.processTextStyle(style, true)).toEqual({
+      style: [{ overflow: 'hidden' }, style],
+    });
+  });
+
   it('uses the current default when the version cannot be read', async () => {
     const runtime = await loadRuntime(undefined);
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
