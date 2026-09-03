@@ -41,11 +41,11 @@ See the [benchmarks page](https://react-native-boost.oss.kuatsu.de/docs/informat
 
 ## Compatibility
 
-| `react-native-boost` | React Native     |
-| -------------------- | ---------------- |
-| `0.x`                | All versions     |
-| `1.x`                | `>=0.83`         |
-| `2.x`                | `>=0.83`         |
+| `react-native-boost` | React Native |
+| -------------------- | ------------ |
+| `0.x`                | All versions |
+| `1.x`                | `>=0.83`     |
+| `2.x`                | `>=0.83`     |
 
 Current versions of React Native Boost are compatible with **all React Native versions since 0.83**. We test runtime behavior against all of these versions.
 

@@ -13,10 +13,6 @@ runs:
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
 
-    - name: Enable Corepack
-      run: corepack enable
-      shell: bash
-
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
       shell: bash
