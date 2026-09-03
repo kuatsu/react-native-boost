@@ -75,11 +75,11 @@ export interface PluginOptions {
    */
   dangerouslyOptimizeViewWithUnknownAncestors?: boolean;
   /**
-   * Opt-in flag that allows Text optimization when ancestor components cannot be statically resolved.
+   * Opt-in flag that allows Text optimization when ancestors or runtime parents cannot be statically resolved.
    *
    * This increases optimization coverage, but may introduce behavioral differences when an unresolved
-   * ancestor renders a React Native `Text` wrapper: a nested `Text` must render as the inline
-   * `NativeVirtualText` host rather than `NativeText`, and optimizing it would emit the wrong host.
+   * ancestor or runtime parent renders a React Native `Text` wrapper: a nested `Text` must render as the
+   * inline `NativeVirtualText` host rather than `NativeText`, and optimizing it would emit the wrong host.
    * Prefer targeted `@boost-force` first, and enable this only after verifying affected screens.
    * @default false
    */

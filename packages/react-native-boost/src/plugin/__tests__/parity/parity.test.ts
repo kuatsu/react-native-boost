@@ -319,5 +319,14 @@ describe('differential parity', () => {
       expect(hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
       expect(boostOptimizes(os, jsx)).toBe(false);
     });
+
+    it('Text returned by a renderer defers when mounted under Text', async () => {
+      const jsx = '<Text>{renderBreak()}</Text>';
+      const preamble = "const renderBreak = () => <Text>{'\\n'}</Text>;";
+      const hosts = await captureWrapperHosts(os, jsx, preamble);
+      expect(hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
+
+      expect(boostOptimizes(os, jsx, preamble, false)).toBe(false);
+    });
   });
 });

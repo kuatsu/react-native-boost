@@ -70,7 +70,7 @@ function optimizeAndInspect(
 }
 
 const viewSource = (attributes: string) => `${SOURCE_HEADER}const element = <View ${attributes} />;`;
-const textSource = (attributes: string) => `${SOURCE_HEADER}const element = <Text ${attributes}>hello</Text>;`;
+const textSource = (attributes: string) => `${SOURCE_HEADER}<Text ${attributes}>hello</Text>;`;
 const imageSource = (attributes: string) => `${SOURCE_HEADER}const element = <Image ${attributes} />;`;
 
 /**

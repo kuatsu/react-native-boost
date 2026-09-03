@@ -19,6 +19,7 @@ pluginTester({
 // bails (it would be made pressable), while a Text under a plain `<Link>` optimizes.
 const dangerousUnknownAncestorFixtures = [
   'text-under-unknown-ancestor',
+  'text-with-runtime-parent',
   'expo-router-link-as-child',
   'expo-router-link-as-child-false-static',
   'expo-router-link-alias-as-child',

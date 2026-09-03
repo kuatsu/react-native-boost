@@ -22,6 +22,7 @@ import {
   extractSelectableAndUpdateStyle,
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
+  inheritsTextContextFromRuntimeParent,
   createStyleOriginResolver,
   UNISTYLES_TEXT_HOST,
 } from '../../utils/common';
@@ -119,6 +120,11 @@ export const textOptimizer: Optimizer = (path, logger, options, platform, unisty
     {
       reason: 'contains non-primitive children',
       shouldBail: () => hasInvalidChildren(path, parent),
+    },
+    {
+      reason: 'has unresolved runtime parent that may render Text',
+      shouldBail: () =>
+        options?.dangerouslyOptimizeTextWithUnknownAncestors !== true && inheritsTextContextFromRuntimeParent(path),
     },
     ...ancestorBailoutChecks(path, options?.dangerouslyOptimizeTextWithUnknownAncestors === true),
   ];

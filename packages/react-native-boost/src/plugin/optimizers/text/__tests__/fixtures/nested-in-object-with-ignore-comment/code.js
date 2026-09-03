@@ -1,10 +1,18 @@
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 const benchmarks = [
   {
     title: 'Text',
     count: 10_000,
-    optimizedComponent: <Text>Nice text</Text>,
-    // @boost-ignore
-    unoptimizedComponent: <Text>Nice text</Text>,
+    optimizedComponent: (
+      <View>
+        <Text>Nice text</Text>
+      </View>
+    ),
+    unoptimizedComponent: (
+      <View>
+        {/* @boost-ignore */}
+        <Text>Nice text</Text>
+      </View>
+    ),
   },
 ];

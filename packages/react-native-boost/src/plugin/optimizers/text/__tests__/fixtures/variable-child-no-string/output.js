@@ -11,13 +11,5 @@ import { Text } from 'react-native';
   accessible={_getDefaultTextAccessible()}>
   Hello, world!
 </_NativeText>;
-const test = (
-  <_NativeText
-    style={_getDefaultTextStyle()}
-    allowFontScaling={true}
-    ellipsizeMode={'tail'}
-    accessible={_getDefaultTextAccessible()}>
-    Test
-  </_NativeText>
-);
+const test = <Text>Test</Text>;
 <Text>{test}</Text>;

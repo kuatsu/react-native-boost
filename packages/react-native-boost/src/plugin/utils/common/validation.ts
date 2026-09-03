@@ -165,6 +165,30 @@ export const getAncestorClassification = (path: NodePath<t.JSXOpeningElement>): 
   return classification;
 };
 
+/** Whether a Text has no JSX parent that determines its runtime text context. */
+export const inheritsTextContextFromRuntimeParent = (path: NodePath<t.JSXOpeningElement>): boolean => {
+  let childPath: NodePath<t.Node> = path.parentPath;
+  let ancestorPath = childPath.parentPath;
+
+  while (ancestorPath) {
+    if (ancestorPath.isJSXElement() || ancestorPath.isJSXFragment()) {
+      if (childPath.listKey !== 'children') return true;
+      if (ancestorPath.isJSXElement() && !isReactFragmentElement(ancestorPath)) return false;
+    }
+
+    if (ancestorPath.isExpressionStatement() && ancestorPath.parentPath?.isProgram()) {
+      // A bare module-level JSX expression has no runtime parent.
+      const expressionPath = ancestorPath.get('expression');
+      return !(expressionPath.isJSXElement() || expressionPath.isJSXFragment());
+    }
+
+    childPath = ancestorPath;
+    ancestorPath = ancestorPath.parentPath;
+  }
+
+  return true;
+};
+
 /**
  * The ancestor-safety bailout checks shared by the Text and View optimizers. An element nested under a
  * `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`) instead of the block
@@ -193,10 +217,33 @@ export const ancestorBailoutChecks = (
   ];
 };
 
+function isReactFragmentElement(path: NodePath<t.JSXElement>): boolean {
+  const name = path.node.openingElement.name;
+
+  if (t.isJSXIdentifier(name)) {
+    const binding = path.scope.getBinding(name.name);
+    return (
+      name.name === 'Fragment' ||
+      (isReactImportBinding(binding) &&
+        t.isImportSpecifier(binding.path.node) &&
+        getImportSpecifierImportedName(binding.path.node) === 'Fragment')
+    );
+  }
+
+  return (
+    t.isJSXMemberExpression(name) &&
+    t.isJSXIdentifier(name.object) &&
+    t.isJSXIdentifier(name.property, { name: 'Fragment' }) &&
+    isReactImportBinding(path.scope.getBinding(name.object.name))
+  );
+}
+
 function classifyJSXElementAsAncestor(
   path: NodePath<t.JSXElement>,
   context: AncestorAnalysisContext
 ): AncestorClassification {
+  if (isReactFragmentElement(path)) return 'safe';
+
   // An ancestor Boost already rewrote earlier in this same traversal: classify it by the host it
   // became (Text → inline-text context, View → normal context). This is checked before the import-based
   // paths because the freshly-injected host import is not yet resolvable via scope.
@@ -221,8 +268,6 @@ function classifyJSXIdentifierAsAncestor(
   identifierName: string,
   context: AncestorAnalysisContext
 ): AncestorClassification {
-  if (identifierName === 'Fragment') return 'safe';
-
   const binding = path.scope.getBinding(identifierName);
   if (!binding) return 'unknown';
 
@@ -247,10 +292,6 @@ function classifyJSXMemberExpressionAsAncestor(
 
   if (importDeclaration.source.value === 'react-native') {
     return expression.property.name === 'Text' ? 'text' : 'safe';
-  }
-
-  if (importDeclaration.source.value === 'react' && expression.property.name === 'Fragment') {
-    return 'safe';
   }
 
   return 'unknown';

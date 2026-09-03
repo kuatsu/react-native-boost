@@ -70,6 +70,12 @@ Options:
 - Refactor ancestor/component structure to be statically obvious
 - Enable `dangerouslyOptimizeViewWithUnknownAncestors` / `dangerouslyOptimizeTextWithUnknownAncestors` to override this behavior
 
+### Skip reason: `has unresolved runtime parent that may render Text`
+
+A root `Text` returned by a component or renderer can be mounted inside another `Text`. Boost keeps the wrapper because only that wrapper can select `NativeText` or `NativeVirtualText` from the runtime context.
+
+Use `@boost-force` only when every use of that component has a non-text parent. The `dangerouslyOptimizeTextWithUnknownAncestors` option also overrides this check.
+
 ### Ignores do not work as expected in monorepos
 
 `ignores` are resolved from Babel's working directory.
