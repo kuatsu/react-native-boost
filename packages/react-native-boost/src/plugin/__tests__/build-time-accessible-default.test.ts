@@ -2,15 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { transformSync, type TransformCaller } from '@babel/core';
 import boostPlugin from '../index';
 
-// Compile a bare `<Text>` (common path: no accessibility props) with the given Babel caller platform,
-// mirroring how Metro invokes the plugin per platform bundle.
+// Compile a bare `<Text>` with the given Metro platform. The assumption marks this isolated test root as safe.
 const compile = (platform?: string): string =>
   transformSync(`import { Text } from 'react-native';\nexport default () => <Text>hi</Text>;`, {
     configFile: false,
     babelrc: false,
     filename: 'case.jsx',
     caller: (platform ? { name: 'metro', platform } : { name: 'test' }) as TransformCaller,
-    plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { logLevel: 'silent' }]],
+    plugins: [
+      '@babel/plugin-syntax-jsx',
+      [boostPlugin, { logLevel: 'silent', assumptions: { unknownAncestorsDoNotRenderText: true } }],
+    ],
   })!.code!;
 
 describe('build-time `accessible` default', () => {

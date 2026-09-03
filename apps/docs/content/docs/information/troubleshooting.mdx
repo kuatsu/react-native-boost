@@ -66,7 +66,7 @@ Options:
 
 A root `Text` returned by a component or renderer can be mounted inside another `Text`. Boost keeps the wrapper because only that wrapper can select `NativeText` or `NativeVirtualText` from the runtime context.
 
-Use `@boost-force` only when every use of that component has a non-text parent. The `dangerouslyOptimizeTextWithUnknownAncestors` option also overrides this check.
+Use `@boost-force` only when every use of that component has a non-text parent. The project-wide unknown ancestor assumption also overrides this check.
 
 ### Ignores do not work as expected in monorepos
 

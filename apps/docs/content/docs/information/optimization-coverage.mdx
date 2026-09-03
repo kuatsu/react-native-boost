@@ -9,7 +9,7 @@ React Native Boost is conservative by design. If it cannot prove an optimization
 
 | Component | Optimized when... | Common bailout reasons |
 | --- | --- | --- |
-| `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor that may render Text`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
+| `Text` | Imported from `react-native`, no blacklisted props, primitive children, safe ancestor chain | `contains blacklisted props`, `has Text ancestor`, `has unresolved ancestor that may render Text`, `has unresolved runtime parent that may render Text`, `contains non-primitive children`, `is a direct child of expo-router Link with asChild` |
 | `View` | Imported from `react-native`, safe ancestor chain, no spread that may carry a translated prop | `has a spread that may carry a translated prop`, `has both a dynamic id and a nativeID (ambiguous precedence)`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
 | `Image` | Imported from `react-native`, native platform known, supported source/style props, safe ancestor chain | `target platform is unknown`, `has a Unistyles style and there is no lean Image host to route to`, `has an unresolved style source that may be a Unistyles style`, `contains unsupported Image props`, `has a spread that may carry Image wrapper props`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
 | `ActivityIndicator` | Imported from `react-native`, native platform known, direct props only, no children, safe ancestor chain | `target platform is unknown`, `has spread props`, `contains children`, `contains an impure prop expression that cannot be safely reordered`, `has Text ancestor`, `has unresolved ancestor that may render Text` |
@@ -30,7 +30,7 @@ These skip optimization before component-specific checks:
 
 Use `@boost-force` to force optimization on a component that would otherwise be skipped. This bypasses all bailout checks except the `react-native` import check. See the [Decorators](/docs/configuration/boost-decorator#boost-force) page for details.
 
-Set `assumptions.unknownAncestorsDoNotRenderText` to `true` to optimize components under unknown ancestors across the project. This can produce the wrong native host if an unknown ancestor renders a `Text` around its children.
+Set `assumptions.unknownAncestorsDoNotRenderText` to `true` to optimize components under unknown ancestors or runtime parents across the project. This can produce the wrong native host if one provides a `Text` context.
 
 ## Text Coverage
 
@@ -58,7 +58,9 @@ Like `View`, `Text` optimization depends on ancestor classification:
 - `text`: skip (`has Text ancestor`) — a `Text` nested in another `Text` renders as the inline `NativeVirtualText` host (`RCTVirtualText`), not `NativeText` (`RCTText`), so optimizing it would emit the wrong host.
 - `unknown`: skip by default
 
-The project-wide unknown ancestor assumption can optimize this case. A false assumption can introduce regressions. For example, `expo-router`'s `Link` wraps its children in a `Text` by default. A `Text` under that `Link` must render as `NativeVirtualText`.
+A root `Text` returned by a component or renderer also skips as `has unresolved runtime parent that may render Text`. Its caller can mount it inside another `Text`, which requires `NativeVirtualText` instead of `NativeText`.
+
+The project-wide unknown ancestor assumption can optimize these cases. A false assumption can introduce regressions. For example, `expo-router`'s `Link` wraps its children in a `Text` by default. A `Text` under that `Link` must render as `NativeVirtualText`.
 
 A `Text` used as a direct child of `expo-router` `Link` with `asChild` is **always** skipped
 (`is a direct child of expo-router Link with asChild`), even when the assumption is enabled, because `Link` makes that child

@@ -403,7 +403,8 @@ describe('differential parity', () => {
       const hosts = await captureWrapperHosts(os, jsx, preamble);
       expect(hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
 
-      expect(boostOptimizes(os, jsx, preamble, false)).toBe(false);
+      const boost = await captureBoostHosts(os, jsx, preamble, false);
+      expect(boost.optimized).toBe(false);
     });
   });
 });
