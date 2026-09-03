@@ -36,7 +36,6 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'onPartialLoad',
   'onProgress',
   'ref',
-  'srcSet',
   'tabIndex',
 ]);
 
@@ -67,6 +66,7 @@ const IMAGE_SPREAD_GUARD_PROPS = new Set([
   'resizeMode',
   'source',
   'src',
+  'srcSet',
   'style',
   'tintColor',
   'width',
@@ -82,7 +82,7 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-export const imageOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
+export const imageOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled, reactNativeMinor) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'Image')) return;
 
@@ -93,6 +93,10 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
   // resolvable spread already bails (`style` is in {@link IMAGE_SPREAD_GUARD_PROPS}), as does an
   // unresolvable spread. See {@link classifyStyleOrigin}.
   const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
+  const srcSetAttribute = findAttribute(path.node.attributes, 'srcSet');
+  const staticSrcSetSource = srcSetAttribute
+    ? buildStaticSrcSetSource(path.node.attributes, platform, reactNativeMinor)
+    : undefined;
 
   const hardChecks: BailoutCheck[] = [
     {
@@ -116,6 +120,14 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
     {
       reason: 'contains non-empty children',
       shouldBail: () => parent.children.some((child) => !t.isJSXText(child) || child.value.trim() !== ''),
+    },
+    {
+      reason: 'has an unsupported or dynamic srcSet',
+      shouldBail: () => srcSetAttribute !== undefined && staticSrcSetSource === undefined,
+    },
+    {
+      reason: 'has a dynamic style with srcSet',
+      shouldBail: () => srcSetAttribute !== undefined && buildStaticStyleInfo(path.node.attributes) === null,
     },
     {
       reason: 'has an unsupported or dynamic source',
@@ -164,7 +176,7 @@ export const imageOptimizer: Optimizer = (path, logger, options, platform, unist
     throw new PluginError('No file found in Babel hub');
   }
 
-  const nativeSource = buildStaticNativeSource(path.node.attributes, platform);
+  const nativeSource = staticSrcSetSource ?? buildStaticNativeSource(path.node.attributes, platform);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 
   logger.optimized({ component: 'Image', path });
@@ -422,6 +434,112 @@ function buildRuntimeImageInfo(path: NodePath<t.JSXOpeningElement>, file: HubFil
   };
 }
 
+type StaticSrcSetEntry = {
+  uri: string;
+  scale: number;
+};
+
+function buildStaticSrcSetSource(
+  attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>,
+  platform?: string,
+  reactNativeMinor?: number
+): NativeSource | undefined {
+  if (attributes.some((attribute) => t.isJSXSpreadAttribute(attribute))) return undefined;
+  if (findAttribute(attributes, 'source')) return undefined;
+
+  const srcSetAttribute = findAttribute(attributes, 'srcSet');
+  if (!srcSetAttribute) return undefined;
+
+  const srcSet = getAttributeValueExpression(srcSetAttribute);
+  if (!t.isStringLiteral(srcSet)) return undefined;
+
+  const entries = parseStaticSrcSet(srcSet.value, reactNativeMinor);
+  if (!entries) return undefined;
+
+  const srcAttribute = findAttribute(attributes, 'src');
+  let src: t.StringLiteral | undefined;
+  if (srcAttribute) {
+    const value = getAttributeValueExpression(srcAttribute);
+    if (!t.isStringLiteral(value)) return undefined;
+    src = value;
+  }
+
+  const width = getAttributeExpression(attributes, 'width');
+  const height = getAttributeExpression(attributes, 'height');
+  if (width && !isStaticSrcSetDimension(width)) return undefined;
+  if (height && !isStaticSrcSetDimension(height)) return undefined;
+
+  const requestHeaders = buildRequestHeaders(attributes);
+  if (!requestHeaders) return undefined;
+
+  if (src && !entries.some((entry) => entry.scale === 1)) {
+    entries.push({ uri: src.value, scale: 1 });
+  }
+
+  const sourceArray = t.arrayExpression(
+    entries.map((entry) =>
+      t.objectExpression([
+        t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)),
+        t.objectProperty(t.identifier('scale'), t.numericLiteral(entry.scale)),
+        t.objectProperty(t.identifier('uri'), t.stringLiteral(entry.uri)),
+        ...(width ? [t.objectProperty(t.identifier('width'), t.cloneNode(width, true))] : []),
+        ...(height ? [t.objectProperty(t.identifier('height'), t.cloneNode(height, true))] : []),
+      ])
+    )
+  );
+  const emitsDimensions = platform === 'android' && entries.length === 1;
+
+  return {
+    sourceAttributes: [srcSetAttribute, srcAttribute].filter(
+      (attribute): attribute is t.JSXAttribute => attribute !== undefined
+    ),
+    requestHeaderAttributes: requestHeaders.attributes,
+    sourceArray,
+    consumesSizeProps: true,
+    androidHeaders: t.cloneNode(requestHeaders.headers, true),
+    width: emitsDimensions && width ? t.cloneNode(width, true) : undefined,
+    height: emitsDimensions && height ? t.cloneNode(height, true) : undefined,
+    arraySourceDimensions: true,
+  };
+}
+
+function parseStaticSrcSet(value: string, reactNativeMinor?: number): StaticSrcSetEntry[] | undefined {
+  if (reactNativeMinor === undefined || reactNativeMinor < 83) return undefined;
+
+  const modernParser = reactNativeMinor >= 87;
+  const sources = modernParser
+    ? value
+        .split(',')
+        .map((source) => source.trim())
+        .filter(Boolean)
+    : value.split(', ');
+  const entries: StaticSrcSetEntry[] = [];
+
+  for (const source of sources) {
+    const parts = source.split(modernParser ? /\s+/ : ' ');
+    if (parts.length > 2) return undefined;
+
+    const [uri, descriptor = '1x'] = parts;
+    if (!uri || !/^(?:\d+(?:\.\d+)?|\.\d+)x$/.test(descriptor)) return undefined;
+
+    const scale = modernParser
+      ? Number.parseFloat(descriptor.slice(0, -1))
+      : Number.parseInt(descriptor.split('x')[0]!, 10);
+    if (!Number.isFinite(scale) || scale <= 0) return undefined;
+    entries.push({ uri, scale });
+  }
+
+  return entries.length > 0 ? entries : undefined;
+}
+
+function isStaticSrcSetDimension(expression: t.Expression): boolean {
+  return (
+    t.isNumericLiteral(expression) ||
+    t.isNullLiteral(expression) ||
+    (t.isUnaryExpression(expression, { operator: '-' }) && t.isNumericLiteral(expression.argument))
+  );
+}
+
 function buildStaticNativeSource(
   attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>,
   platform?: string
@@ -651,7 +769,11 @@ function flattenStaticStyle(styleExpression: t.Expression): Map<string, t.Expres
 }
 
 function hasImageSourceInput(attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>): boolean {
-  return findAttribute(attributes, 'source') !== undefined || findAttribute(attributes, 'src') !== undefined;
+  return (
+    findAttribute(attributes, 'source') !== undefined ||
+    findAttribute(attributes, 'src') !== undefined ||
+    findAttribute(attributes, 'srcSet') !== undefined
+  );
 }
 
 function getAttributeExpression(

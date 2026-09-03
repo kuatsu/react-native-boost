@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { parseSync, transformSync, traverse, types as t, type PluginObj, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
@@ -15,9 +16,11 @@ const transformImage = async (
   {
     unknownAncestorsDoNotRenderText = false,
     unistylesEnabled = false,
+    reactNativeMinor = 86,
   }: {
     unknownAncestorsDoNotRenderText?: boolean;
     unistylesEnabled?: boolean;
+    reactNativeMinor?: number | null;
   } = {}
 ): Promise<string> => {
   const logger = createLogger('silent');
@@ -25,7 +28,14 @@ const transformImage = async (
     name: `${platform}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
-        imageOptimizer(path, logger, { assumptions: { unknownAncestorsDoNotRenderText } }, platform, unistylesEnabled);
+        imageOptimizer(
+          path,
+          logger,
+          { assumptions: { unknownAncestorsDoNotRenderText } },
+          platform,
+          unistylesEnabled,
+          reactNativeMinor ?? undefined
+        );
       },
     },
   });
@@ -79,6 +89,12 @@ const getHoistedImageSources = (source: string): t.ArrayExpression[] => {
 
   return sources;
 };
+
+const getSourceObjects = (source: t.ArrayExpression): t.ObjectExpression[] =>
+  source.elements.map((element) => {
+    if (!t.isObjectExpression(element)) throw new Error('expected an Image source object');
+    return element;
+  });
 
 const getAttributeExpression = (attributes: t.JSXAttribute[], name: string): t.Expression | undefined => {
   const attribute = attributes.find((item) => t.isJSXIdentifier(item.name, { name }));
@@ -315,6 +331,168 @@ describe('image android output', () => {
     const images = getNativeImageAttributes(output);
     expect(images).toHaveLength(1);
     expect(getAttributeNames(images[0]!).has('tintColor')).toBe(false);
+  });
+});
+
+describe('image srcSet output', () => {
+  it('parses and hoists static density sources', async () => {
+    const output = await transformImage(
+      `
+        import { Image } from 'react-native';
+        <Image srcSet="logo.png 1x, logo@2x.png 2x, logo@3x.png 3x" />;
+      `,
+      'ios'
+    );
+
+    expect(output).toContain('<_NativeImage');
+    expect(output).not.toContain('processImageSourceProps');
+
+    const image = getNativeImageAttributes(output)[0]!;
+    expect(getAttributeNames(image).has('srcSet')).toBe(false);
+    expect(getAttributeExpression(image, 'source')).toMatchObject({ name: '_imageSource' });
+
+    const entries = getSourceObjects(getHoistedImageSources(output)[0]!);
+    expect(entries).toHaveLength(3);
+    expect(getStringPropertyValue(entries[0]!, 'uri')).toBe('logo.png');
+    expect(getObjectExpressionProperty(entries[0]!, 'scale')).toMatchObject({ value: 1 });
+    expect(getStringPropertyValue(entries[1]!, 'uri')).toBe('logo@2x.png');
+    expect(getObjectExpressionProperty(entries[1]!, 'scale')).toMatchObject({ value: 2 });
+    expect(getStringPropertyValue(entries[2]!, 'uri')).toBe('logo@3x.png');
+    expect(getObjectExpressionProperty(entries[2]!, 'scale')).toMatchObject({ value: 3 });
+  });
+
+  it('matches the scale parser used by the target React Native version', async () => {
+    const source = `
+      import { Image } from 'react-native';
+      <Image src="fallback.png" srcSet="logo.png 1.5x" />;
+    `;
+    const legacyEntries = getSourceObjects(
+      getHoistedImageSources(await transformImage(source, 'ios', { reactNativeMinor: 86 }))[0]!
+    );
+    const modernEntries = getSourceObjects(
+      getHoistedImageSources(await transformImage(source, 'ios', { reactNativeMinor: 87 }))[0]!
+    );
+
+    expect(legacyEntries.map((entry) => getObjectExpressionProperty(entry, 'scale'))).toMatchObject([{ value: 1 }]);
+    expect(modernEntries.map((entry) => getObjectExpressionProperty(entry, 'scale'))).toMatchObject([
+      { value: 1.5 },
+      { value: 1 },
+    ]);
+  });
+
+  it('uses the relaxed RN 0.87 separator parser only for RN 0.87', async () => {
+    const source = `
+      import { Image } from 'react-native';
+      <Image srcSet="logo.png 1x,logo@2x.png 2x" />;
+    `;
+    const legacyOutput = await transformImage(source, 'ios', { reactNativeMinor: 86 });
+    const modernOutput = await transformImage(source, 'ios', { reactNativeMinor: 87 });
+
+    expect(legacyOutput).not.toContain('_NativeImage');
+    expect(getSourceObjects(getHoistedImageSources(modernOutput)[0]!)).toHaveLength(2);
+  });
+
+  it('bails when no React Native version was identified', async () => {
+    const output = await transformImage(
+      `import { Image } from 'react-native';\n<Image srcSet="logo.png 1x" />;`,
+      'ios',
+      {
+        reactNativeMinor: null,
+      }
+    );
+
+    expect(output).not.toContain('_NativeImage');
+  });
+
+  it('detects the installed React Native version through the Babel plugin', async () => {
+    const output = await formatTestResult(
+      transformSync(`import { Image } from 'react-native';\n<Image srcSet="logo.png 1.5x" />;`, {
+        configFile: false,
+        babelrc: false,
+        filename: 'case.jsx',
+        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
+        plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { logLevel: 'silent' }]],
+      })!.code!
+    );
+    const { version } = createRequire(import.meta.url)('react-native/package.json') as { version: string };
+    const minor = Number(version.split('.')[1]);
+
+    if (minor >= 83) {
+      const entry = getSourceObjects(getHoistedImageSources(output)[0]!)[0]!;
+      expect(getObjectExpressionProperty(entry, 'scale')).toMatchObject({ value: minor >= 87 ? 1.5 : 1 });
+    } else {
+      expect(output).not.toContain('_NativeImage');
+    }
+  });
+
+  it('uses src only when srcSet has no 1x source', async () => {
+    const output = await transformImage(
+      `
+        import { Image } from 'react-native';
+        <Image src="fallback.png" srcSet="logo@2x.png 2x, logo@3x.png 3x" />;
+        <Image src="ignored.png" srcSet="logo.png, logo@2x.png 2x" />;
+      `,
+      'ios'
+    );
+
+    const [withFallback, withDefault] = getHoistedImageSources(output).map(getSourceObjects);
+    expect(withFallback!.map((entry) => getStringPropertyValue(entry, 'uri'))).toEqual([
+      'logo@2x.png',
+      'logo@3x.png',
+      'fallback.png',
+    ]);
+    expect(withFallback!.map((entry) => getObjectExpressionProperty(entry, 'scale'))).toMatchObject([
+      { value: 2 },
+      { value: 3 },
+      { value: 1 },
+    ]);
+    expect(withDefault!.map((entry) => getStringPropertyValue(entry, 'uri'))).toEqual(['logo.png', 'logo@2x.png']);
+  });
+
+  it('builds static dimensions and request headers', async () => {
+    const output = await transformImage(
+      `
+        import { Image } from 'react-native';
+        <Image
+          srcSet="logo.png 1x"
+          width={24}
+          height={12}
+          crossOrigin="use-credentials"
+          referrerPolicy="origin"
+        />;
+      `,
+      'android'
+    );
+
+    const image = getNativeImageAttributes(output)[0]!;
+    const entry = getSourceObjects(getHoistedImageSources(output)[0]!)[0]!;
+    const headers = getAttributeExpression(image, 'headers');
+    expect(t.isObjectExpression(headers)).toBe(true);
+    expect(getStringPropertyValue(headers as t.ObjectExpression, 'Access-Control-Allow-Credentials')).toBe('true');
+    expect(getStringPropertyValue(headers as t.ObjectExpression, 'Referrer-Policy')).toBe('origin');
+    expect(getObjectExpressionProperty(entry, 'width')).toMatchObject({ value: 24 });
+    expect(getObjectExpressionProperty(entry, 'height')).toMatchObject({ value: 12 });
+
+    const style = getAttributeExpression(image, 'style') as t.ArrayExpression;
+    const dimensions = unwrapRuntimeGate(style.elements[0] as t.Expression, 'processImageArraySourceDimensions');
+    expect(getObjectExpressionProperty(dimensions as t.ObjectExpression, 'width')).toMatchObject({ value: 24 });
+    expect(getObjectExpressionProperty(dimensions as t.ObjectExpression, 'height')).toMatchObject({ value: 12 });
+  });
+
+  it.each([
+    ['a dynamic srcSet', '<Image srcSet={sources} />'],
+    ['a source prop', '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />'],
+    ['a dynamic dimension', '<Image srcSet="logo.png 1x" width={width} />'],
+    ['a spread', '<Image srcSet="logo.png 1x" {...{ testID: "logo" }} />'],
+    ['an unsupported descriptor', '<Image srcSet="logo.png 300w" />'],
+    ['a separator unsupported by RN 0.86', '<Image srcSet="logo.png 1x,logo@2x.png 2x" />'],
+    ['a malformed descriptor', '<Image srcSet="logo.png x" />'],
+    ['a dynamic style', '<Image srcSet="logo.png 1x" style={styles.image} />'],
+  ])('bails on %s', async (_reason, element) => {
+    const output = await transformImage(`import { Image } from 'react-native';\n${element};`, 'ios');
+
+    expect(output).not.toContain('_NativeImage');
+    expect(output).toContain('<Image');
   });
 });
 

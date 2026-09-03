@@ -351,6 +351,17 @@ export const IMAGE_SOURCE_VOCAB: PropSpec[] = [
     arb: fc.constantFrom('"https://example.com/logo.png"'),
     disposition: 'required static src',
   },
+  {
+    name: 'srcSet',
+    arb: fc.constantFrom(
+      '"logo.png 1x, logo@2x.png 2x"',
+      '"logo.png, logo@3x.png 3x"',
+      '"logo@2x.png 2x, logo@3x.png 3x"',
+      '"logo.png 1.5x"',
+      '"logo.png 1x,logo@2x.png 2x"'
+    ),
+    disposition: 'required static srcSet',
+  },
 ];
 
 export const IMAGE_VOCAB: PropSpec[] = [
