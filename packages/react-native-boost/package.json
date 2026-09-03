@@ -92,7 +92,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
-    "release-it": "^20.2.1",
+    "release-it": "^21.0.2",
     "rollup": "^4.63.1",
     "rollup-plugin-dts": "^6.5.1",
     "rollup-plugin-esbuild": "^6.2.0",
