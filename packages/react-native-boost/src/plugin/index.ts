@@ -19,6 +19,7 @@ import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
 import { staticAnimatedOptimizer } from './optimizers/static-animated';
 import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operations';
+import { platformFoldingOptimizer } from './optimizers/platform-folding';
 import { validateBabelOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
 import {
@@ -43,6 +44,7 @@ export type {
 const warnings = new Set<string>();
 
 const optimizers: Optimizer[] = [
+  platformFoldingOptimizer,
   staticAnimatedOptimizer,
   nativeTextOptimizer,
   nativeViewOptimizer,
