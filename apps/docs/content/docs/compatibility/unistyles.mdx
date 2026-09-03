@@ -3,23 +3,19 @@ title: Unistyles Support
 description: Keep Unistyles styling working on Boost-optimized components.
 ---
 
-React Native Boost is compatible with react-native-unistyles v3. Previous versions of Unistyles are untested and not officially supported.
+React Native Boost is compatible with Unistyles v3. Previous versions of Unistyles are untested and not officially supported.
 
 ## Setup
 
-Enable Boost's Unistyles support layer through the Babel plugin's config options:
+Enable Boost's Unistyles support layer in `metro.config.js`:
 
 ```js
-// babel.config.js
-module.exports = {
-  plugins: [
-    ['react-native-boost/plugin', { integrations: { unistyles: 'on' } }],
-    ['react-native-unistyles/plugin', { root: 'src' }],
-  ],
-};
+module.exports = withBoostConfig(config, {
+  integrations: { unistyles: 'on' },
+});
 ```
 
-Set `integrations.unistyles` to `off` when Unistyles is installed in your project's dependencies, but not actually used in code. The order of the two plugins does not matter.
+Set `integrations.unistyles` to `off` when Unistyles is installed in your project's dependencies, but not actually used in code.
 
 <Callout type="info" title="Auto-detection">
   React Native Boost can auto-detect Unistyles and enable this mode automatically if you haven't explicitly disabled it. However, this auto-detection is fragile and Boost will therefore log a warning to the console. Explicitly set the config flag as shown above to silence the warning.

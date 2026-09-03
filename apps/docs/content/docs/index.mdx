@@ -7,21 +7,23 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 ## Introduction
 
-React Native Boost consists of two pieces:
+React Native Boost is a React Native performance compiler.
 
-- A Babel plugin that statically analyzes your source code and replaces safe `Text`, `View`, `Image`, and `ActivityIndicator` components with their direct native output, leading to significant performance improvements compared to the JS-based wrapper components.
-- A runtime package used internally by the plugin for cross-platform-safe imports and helper utilities.
+It analyzes your app at build time and automatically applies safe performance optimizations across your React Native code.
 
-The analyzer is intentionally strict and skips any optimizations that may lead to user-facing bugs and behavioral changes.
+It eliminates unnecessary runtime work, replaces JavaScript abstractions with more efficient native equivalents, and fixes common performance pitfalls without requiring you to rewrite your application code.
 
 ## Compatibility
 
 | `react-native-boost` | React Native |
 | --- | --- |
-| `0.x` | All versions[^1] |
+| `0.x` | All versions |
 | `1.x` | `>=0.83` |
+| `2.x` | `>=0.83` |
 
-[^1]: Starting from React Native `0.80`, `react-native-boost@0` prints import deprecation warnings. [See react-native-community/discussions-and-proposals #893.](https://github.com/react-native-community/discussions-and-proposals/discussions/893)
+In Boost 2.x, we validate runtime behavior against all versions of React Native since 0.83. Boost 0.x and 1.x are not supported anymore and may break with future React Native updates.
+
+Starting from React Native 0.80, Boost 0.x prints import deprecation warnings. [See react-native-community/discussions-and-proposals #893.](https://github.com/react-native-community/discussions-and-proposals/discussions/893)
 
 ## Getting Started
 
@@ -58,20 +60,18 @@ The analyzer is intentionally strict and skips any optimizations that may lead t
   </Tab>
 </Tabs>
 
-2. If you use Expo and do not have a `babel.config.js` yet:
-
-```bash
-npx expo customize babel.config.js
-```
-
-3. Add the plugin:
+2. Add Boost to `metro.config.js`:
 
 ```js
-// babel.config.js
-module.exports = {
-  plugins: ['react-native-boost/plugin'],
-};
+const { getDefaultConfig } = require('expo/metro-config');
+const { withBoostConfig } = require('react-native-boost/metro');
+
+module.exports = withBoostConfig(getDefaultConfig(__dirname));
 ```
+
+Bare React Native apps should import `getDefaultConfig` from `@react-native/metro-config` instead.
+
+If you do not use Metro in your project, refer to the [Babel plugin setup instructions](./configuration/non-metro.mdx) instead.
 
 If you're using Unistyles or Nativewind in your project, refer to these additional setup instructions:
 
@@ -80,7 +80,7 @@ If you're using Unistyles or Nativewind in your project, refer to these addition
   <Card title="Nativewind Support" href="/docs/compatibility/nativewind" />
 </Cards>
 
-4. Restart the development server and clear cache:
+3. Restart the development server and clear cache:
 
 <Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
   <Tab value="npm">

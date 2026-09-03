@@ -17,6 +17,10 @@
         "default": "./dist/plugin/esm/index.mjs"
       },
       "default": "./dist/plugin/index.js"
+    },
+    "./metro": {
+      "types": "./dist/metro/index.d.ts",
+      "default": "./dist/metro/index.js"
     }
   },
   "typesVersions": {
@@ -26,6 +30,9 @@
       ],
       "plugin": [
         "dist/plugin/index.d.ts"
+      ],
+      "metro": [
+        "dist/metro/index.d.ts"
       ]
     }
   },

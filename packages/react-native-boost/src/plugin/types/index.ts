@@ -53,38 +53,35 @@ export interface PluginIntegrationOptions {
 
 export type LogLevel = 'silent' | 'warn' | 'info' | 'debug';
 
-export interface PluginOptions {
-  /**
-   * Configures individual optimizations. Omitted entries use their documented defaults.
-   * @default {}
-   */
+export interface BoostOptions {
+  /** Configures individual optimizations. */
   optimizations?: PluginOptimizationOptions;
-  /**
-   * Declares project-wide facts that let Boost apply optimizations it cannot prove safe by static analysis.
-   * @default {}
-   */
+  /** Declares project-wide facts that enable additional optimizations. */
   assumptions?: PluginAssumptions;
-  /**
-   * Configures behavior for supported third-party libraries.
-   * @default {}
-   */
+  /** Configures supported third-party libraries. */
   integrations?: PluginIntegrationOptions;
-  /**
-   * Paths to ignore from optimization.
-   *
-   * Patterns are resolved from Babel's current working directory.
-   * In nested monorepo apps, parent segments may be needed, for example `../../node_modules/**`.
-   * @default []
-   */
+  /** Paths to ignore from optimization. */
   ignores?: string[];
-  /**
-   * Controls plugin logging.
-   *
-   * `warn` logs warnings and forced optimizations. `info` also logs successful optimizations. `debug`
-   * also logs skipped optimizations and their reasons. `silent` disables all logs.
-   * @default 'info'
-   */
+  /** Controls plugin logging. */
   logLevel?: LogLevel;
+}
+
+export type ReactNativeTargetOption =
+  | { packageJson: string; version?: never }
+  | { packageJson?: never; version: string };
+
+export interface BabelPluginOptions extends BoostOptions {
+  /** Supplies the React Native target when automatic detection is unsuitable. */
+  target?: {
+    reactNative?: ReactNativeTargetOption;
+  };
+}
+
+export interface MetroPluginOptions extends BoostOptions {
+  /** Supplies the React Native package used by a custom Metro resolver. */
+  target?: {
+    reactNative?: { packageJson: string };
+  };
 }
 
 export type OptimizableComponent = 'Text' | 'View' | 'Image' | 'ActivityIndicator';
@@ -116,7 +113,7 @@ export interface PluginLogger {
 export type Optimizer = (
   path: NodePath<t.JSXOpeningElement>,
   logger: PluginLogger,
-  options?: PluginOptions,
+  options?: BoostOptions,
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
   platform?: TargetPlatform,
   /**

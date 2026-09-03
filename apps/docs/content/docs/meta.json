@@ -12,6 +12,7 @@
     "information/benchmarks",
     "---Configuration---",
     "configuration/configure",
+    "configuration/non-metro",
     "configuration/boost-decorator",
     "---Compatibility---",
     "compatibility/unistyles",

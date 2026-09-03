@@ -404,6 +404,29 @@ describe('image srcSet output', () => {
     expect(output).not.toContain('_NativeImage');
   });
 
+  it('uses an explicit React Native version from the Babel plugin options', async () => {
+    const output = await formatTestResult(
+      transformSync(`import { Image } from 'react-native';\n<Image srcSet="logo.png 1x,logo@2x.png 2x" />;`, {
+        configFile: false,
+        babelrc: false,
+        filename: 'case.jsx',
+        caller: { name: 'metro', platform: 'ios' } as TransformCaller,
+        plugins: [
+          '@babel/plugin-syntax-jsx',
+          [
+            boostPlugin,
+            {
+              logLevel: 'silent',
+              target: { reactNative: { version: '0.87.1' } },
+            },
+          ],
+        ],
+      })!.code!
+    );
+
+    expect(getSourceObjects(getHoistedImageSources(output)[0]!)).toHaveLength(2);
+  });
+
   it('detects the installed React Native version through the Babel plugin', async () => {
     const output = await formatTestResult(
       transformSync(`import { Image } from 'react-native';\n<Image srcSet="logo.png 1.5x" />;`, {

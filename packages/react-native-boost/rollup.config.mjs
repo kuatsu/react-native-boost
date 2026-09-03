@@ -12,6 +12,7 @@ const commonPlugins = [
     tsconfig: 'tsconfig.json',
   }),
 ];
+const nodePlugins = [resolve({ extensions }), esbuild({ target: 'esnext', tsconfig: 'tsconfig.json' })];
 
 export default [
   {
@@ -42,6 +43,18 @@ export default [
     ],
   },
   {
+    input: 'src/metro/index.ts',
+    external,
+    plugins: nodePlugins,
+    output: { file: 'dist/metro/index.js', format: 'cjs', sourcemap: true },
+  },
+  {
+    input: 'src/metro/transformer.ts',
+    external,
+    plugins: nodePlugins,
+    output: { file: 'dist/metro/transformer.js', format: 'cjs', sourcemap: true },
+  },
+  {
     input: 'src/runtime/index.ts',
     plugins: [dts()],
     external,
@@ -58,5 +71,11 @@ export default [
     plugins: [dts()],
     external,
     output: { file: 'dist/plugin/index.d.ts', format: 'esm' },
+  },
+  {
+    input: 'src/metro/index.ts',
+    plugins: [dts()],
+    external,
+    output: { file: 'dist/metro/index.d.ts', format: 'esm' },
   },
 ];

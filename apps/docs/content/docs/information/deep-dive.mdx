@@ -287,8 +287,8 @@ Dynamic values, or `aria-*` state/value groups that the wrapper merges, are rout
 ### Image
 
 `Image` source, style, and accessibility props are normalized before Boost swaps the wrapper for
-`NativeImage`. Static values are processed at build time. Dynamic values use small runtime helpers.
-Compared to `Text` and `View`, the host component for `Image` is not imported directly. React Native does not export it through a supported interface, and only exports it through deprecated deep imports which log warnings when used. The runtime loads the public `Image` module to register `RCTImageView`, then renders that registered host directly.
+`NativeImage`. Static values are processed at build time. This includes parsing static `srcSet` density candidates with the detected React Native version and
+hoisting the generated source list. Dynamic values use small runtime helpers. Compared to `Text` and `View`, the host component for `Image` is not imported directly. React Native does not export it through a supported interface, and only exports it through deprecated deep imports which log warnings when used. The runtime loads the public `Image` module to register `RCTImageView`, then renders that registered host directly.
 
 ### ActivityIndicator
 
@@ -297,10 +297,9 @@ Compared to `Text` and `View`, the host component for `Image` is not imported di
 For the complete matrix of what's optimized, translated, and skipped, see
 [Coverage & Bailouts](/docs/information/optimization-coverage).
 
-## Inside the plugin
+## Inside the compiler
 
-The plugin is a single Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`,
-`View`, `Image`, and `ActivityIndicator` optimizers; each follows the same shape.
+The Metro integration injects one Babel visitor on `JSXOpeningElement`. For each element it runs the `Text`, `View`, `Image`, and `ActivityIndicator` optimizers.
 
 <Mermaid
   chart={`flowchart TD
