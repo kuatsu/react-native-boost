@@ -82,7 +82,14 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-export const imageOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled, reactNativeMinor) => {
+export const nativeImageOptimizer: Optimizer = (
+  path,
+  logger,
+  options,
+  platform,
+  unistylesEnabled,
+  reactNativeMinor
+) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'Image')) return;
 

@@ -19,6 +19,3 @@ yarn-error.log
 
 # pnpm
 .pnpm-store/
-
-# Turborepo
-.turbo/
