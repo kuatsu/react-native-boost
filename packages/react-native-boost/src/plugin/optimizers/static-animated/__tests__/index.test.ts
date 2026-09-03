@@ -34,6 +34,15 @@ function transformWithBoost(source: string, reactNativeMinor = 86, staticAnimate
 }
 
 const source = (element: string) => `import { Animated } from 'react-native';\n${element};`;
+const bailoutCases = [
+  ['dynamic style', '<Animated.View style={{ opacity: value }} />'],
+  ['Animated event', '<Animated.ScrollView onScroll={Animated.event([], { useNativeDriver: true })} />'],
+  ['spread props', '<Animated.View {...props} />'],
+  ['ref', '<Animated.View ref={ref} />'],
+  ['passthrough values', '<Animated.View passthroughAnimatedPropExplicitValues={{ style: { opacity: 1 } }} />'],
+  ['dynamic child', '<Animated.Text>{value}</Animated.Text>'],
+  ['ScrollView refresh control', '<Animated.ScrollView refreshControl={<RefreshControl />} />'],
+];
 
 describe('static Animated optimizer', () => {
   it('lowers static Animated.View and reproduces Animated style flattening', () => {
@@ -109,16 +118,12 @@ describe('static Animated optimizer', () => {
     expect(output).toContain('<Text>nested</Text>');
   });
 
-  it.each([
-    ['dynamic style', '<Animated.View style={{ opacity: value }} />'],
-    ['Animated event', '<Animated.ScrollView onScroll={Animated.event([], { useNativeDriver: true })} />'],
-    ['spread props', '<Animated.View {...props} />'],
-    ['ref', '<Animated.View ref={ref} />'],
-    ['passthrough values', '<Animated.View passthroughAnimatedPropExplicitValues={{ style: { opacity: 1 } }} />'],
-    ['dynamic child', '<Animated.Text>{value}</Animated.Text>'],
-    ['ScrollView refresh control', '<Animated.ScrollView refreshControl={<RefreshControl />} />'],
-  ])('bails on %s', (_, element) => {
+  it.each(bailoutCases)('bails on %s', (_, element) => {
     expect(transformAnimated(source(element))).toContain('<Animated.');
+  });
+
+  it.each(bailoutCases)('lets @boost-force override the %s bailout', (_, element) => {
+    expect(transformAnimated(source(`<>{/* @boost-force */}${element}</>`))).not.toContain('<Animated.');
   });
 
   it('ignores local and deep Animated bindings', () => {
@@ -133,17 +138,21 @@ describe('static Animated optimizer', () => {
 
   it('defaults on only for RN 0.83 through 0.86 and honors overrides', () => {
     const input = source('<Animated.View />');
+    const forcedInput = source('<>{/* @boost-force */}<Animated.View /></>');
 
     expect(transformWithBoost(input, 82)).toContain('<Animated.View');
     expect(transformWithBoost(input, 83)).not.toContain('<Animated.View');
     expect(transformWithBoost(input, 86)).not.toContain('<Animated.View');
     expect(transformWithBoost(input, 87)).toContain('<Animated.View');
+    expect(transformWithBoost(forcedInput, 87)).toContain('<Animated.View');
     expect(transformWithBoost(input, 87, 'on')).not.toContain('<Animated.View');
     expect(transformWithBoost(input, 86, 'off')).toContain('<Animated.View');
+    expect(transformWithBoost(forcedInput, 86, 'off')).toContain('<Animated.View');
   });
 
   it('respects @boost-ignore and unsupported platforms', () => {
     expect(transformAnimated(source('<>{/* @boost-ignore */}<Animated.View /></>'))).toContain('<Animated.View');
     expect(transformAnimated(source('<Animated.View />'), 'web')).toContain('<Animated.View');
+    expect(transformAnimated(source('<>{/* @boost-force */}<Animated.View /></>'), 'web')).toContain('<Animated.View');
   });
 });

@@ -17,9 +17,9 @@ If a line containing `@boost-ignore` appears immediately before a JSX opening ta
 
 ## @boost-force
 
-Use `@boost-force` to override supported bailout rules on a specific element, such as an unknown ancestor or an unresolved spread.
+Use `@boost-force` to override bailout rules on a specific element, such as an unknown ancestor or an unresolved spread.
 
-It does not override the `react-native` import check or hard checks that would always change behavior.
+It cannot enable a disabled optimizer, include a file excluded by `ignores`, or optimize a component that is not imported from `react-native`. It also cannot run a platform-specific optimizer when Boost cannot tell whether the build targets iOS or Android.
 
 ```jsx
 const Component = ({ props }) => {
