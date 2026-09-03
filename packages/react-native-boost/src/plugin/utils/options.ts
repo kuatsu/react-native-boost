@@ -11,6 +11,7 @@ const optimizationKeys = [
   'native-activity-indicator',
   'static-animated',
   'stylesheet-operations',
+  'platform-folding',
 ];
 const assumptionKeys = ['unknownAncestorsDoNotRenderText'];
 const integrationKeys = ['unistyles'];

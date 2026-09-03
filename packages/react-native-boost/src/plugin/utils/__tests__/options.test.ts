@@ -10,6 +10,7 @@ describe('plugin options', () => {
         'native-image': 'off' as const,
         'static-animated': 'on' as const,
         'stylesheet-operations': 'on' as const,
+        'platform-folding': 'on' as const,
       },
       assumptions: { unknownAncestorsDoNotRenderText: true },
       integrations: { unistyles: 'on' as const },

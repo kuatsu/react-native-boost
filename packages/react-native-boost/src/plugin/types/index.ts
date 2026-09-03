@@ -30,6 +30,8 @@ export interface PluginOptimizationOptions {
   'static-animated'?: OptimizationSetting;
   /** Evaluates static React Native `StyleSheet` operations at build time. @default 'on' */
   'stylesheet-operations'?: OptimizationSetting;
+  /** Folds React Native `Platform.select` calls and `Platform.OS` branches at build time. @default 'on' */
+  'platform-folding'?: OptimizationSetting;
 }
 
 export interface PluginAssumptions {
