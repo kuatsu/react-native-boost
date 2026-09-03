@@ -1,48 +1,39 @@
 ---
 title: How It Works
-description: Why React Native Boost makes your app faster (the short version).
+description: Why React Native Boost makes your app faster.
 ---
 
-In React Native, `Text`, `View`, `Image`, and `ActivityIndicator` aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript components **every time it renders**, wrapping lower-level native components underneath. `Animated` components add another JavaScript wrapper.
+In React Native, many of the standard components, like `Text` and `View`, aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript code **every time it renders**, wrapping lower-level native components underneath.
 
-These wrappers are genuinely useful. They handle edge cases and power conveniences such as accessibility props, style normalization, Image source processing, and animations. But many elements do not need all that runtime work, so a wrapper can become pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
+These wrappers are genuinely useful. They handle edge cases and power many conveniences such as style normalization. But the majority of elements do not need all that runtime work, making these wrappers pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
-React Native Boost removes the wrapper when it isn't needed.
+React Native Boost removes such wrappers when they're not needed. Additionally, it also provides a few smaller micro-optimizations that move small runtime work to the build time, like resolving `StyleSheet` function calls, folding `Platform.OS` branches, and more, which all stack up additionally across an app.
 
-## The one-sentence version
-
-At build time, Boost rewrites supported elements into the output they were going to render anyway. It can also remove an `Animated` wrapper when the element contains no animation. The work that wrappers used to repeat on every render is either gone or moved from the user's device to build time.
+React Native Boost can therefore be described as a performance optimization compiler for React Native.
 
 ## A quick before and after
 
 ```tsx
 // You write:
-<Text>Hello</Text>
+<Text style={{ color: Platform.select({ ios: "red", default: "blue" }) }}>Hello</Text>
 
-// Boost compiles it to (simplified):
-<NativeText allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
+// On iOS, Boost compiles it to (simplified):
+<NativeText style={{ color: "red" }} allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
 ```
 
-`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlined above. Boost just skips the middleman. The defaults the wrapper would have applied are baked in at build time, so what ends up on screen is identical.
-
-These optimized components are imported from `react-native-boost/runtime` rather than `react-native` directly. That indirection lets them fall back to the standard components on web and other platforms where the native versions aren't available.
+`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlined above. Boost just skips the middleman on the runtime and does it during build time instead. The defaults the wrapper would have applied are baked in during compilation, so runtime behavior stays identical.
 
 ## Only when it's safe
 
-By default, Boost rewrites a component only when it can **prove** that doing so is safe. For each supported component it checks a lot of things. For example:
+By default, Boost rewrites a component only when it can **prove** that doing so is safe. For each optimization candidate it checks a lot of things. For example:
 
-- Is this really the `react-native` component, or some other `Text` from another library?
+- Is this really a `react-native` component, or some other `Text` from another library?
 - Are its props fully compatible with the underlying native component?
 - Is it in a safe spot in the tree (for example, not nested inside another `Text`)?
 
-If any check fails, Boost leaves that component exactly as it was. The bias is strongly toward safety: it would rather miss an optimization than risk a bug.
+If any check fails, Boost leaves that component or function exactly as it was. It has a strong bias toward safety and would rather miss an optimization than risk a bug.
 
 <Cards>
-  <Card
-    title="Deep Dive"
-    href="/docs/information/deep-dive"
-    description="The wrapper tax, the full call graph, the plugin internals, and the safety proofs in detail."
-  />
   <Card
     title="Optimizers"
     href="/docs/optimizers"

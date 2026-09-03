@@ -68,7 +68,7 @@ Thanks to various improvements to the reconciler and other internals in React Na
 
 ## `reduceDefaultPropsInText` feature flag in React Native
 
-In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced. It trimmed the `Text` wrapper's output so that unset accessibility/`aria-*` props no longer crossed the JS→native boundary on every render. It shipped disabled by default and has since **graduated**: in newer React Native the flag is gone and the optimized behavior is simply the default. It's one step in React Native's long-term goal of reducing the `Text` and `View` wrapper overhead directly in core. The [Deep Dive](/docs/information/deep-dive#react-natives-own-roadmap) traces its full lifecycle.
+In React Native 0.82, a `reduceDefaultPropsInText` feature flag was introduced. It trimmed the `Text` wrapper's output so that unset accessibility/`aria-*` props no longer crossed the JS→native boundary on every render. It shipped disabled by default and has since **graduated**: in newer React Native the flag is gone and the optimized behavior is simply the default. It's one step in React Native's long-term goal of reducing the `Text` and `View` wrapper overhead directly in core.
 
 <GitHubSnippet
   url="https://github.com/react/react-native/blob/27e83d0a959a2e7ef9af8b0379f0ef763b2cd4d9/packages/react-native/Libraries/Text/TextNativeComponent.js#L77-L78"
