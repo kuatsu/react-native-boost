@@ -1,6 +1,6 @@
 import { transformSync } from '@babel/core';
 import { describe, expect, it } from 'vitest';
-import { activityIndicatorOptimizer } from '..';
+import { nativeActivityIndicatorOptimizer } from '..';
 import type { BoostOptions, TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 
@@ -16,7 +16,10 @@ const transformActivityIndicator = (
   return transformSync(source, {
     configFile: false,
     babelrc: false,
-    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(activityIndicatorOptimizer, pluginOptions, platform)],
+    plugins: [
+      '@babel/plugin-syntax-jsx',
+      generateTestPlugin(nativeActivityIndicatorOptimizer, pluginOptions, platform),
+    ],
   })!.code!;
 };
 

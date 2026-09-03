@@ -7,14 +7,7 @@
   "env": {
     "node": true
   },
-  "ignorePatterns": [
-    "**/fixtures",
-    "**/*.config.{js,mjs,cjs}",
-    "**/scripts",
-    "**/plugins",
-    "**/__tests__",
-    "apps/docs/.docusaurus/**"
-  ],
+  "ignorePatterns": ["**/fixtures", "**/*.config.{js,mjs,cjs}", "**/scripts", "**/plugins", "**/__tests__"],
   "rules": {
     "no-unused-vars": [
       "error",
@@ -128,13 +121,5 @@
     "unicorn/switch-case-braces": "error",
     "unicorn/text-encoding-identifier-case": "error",
     "unicorn/throw-new-error": "error"
-  },
-  "overrides": [
-    {
-      "files": ["packages/react-native-time-to-render/src/*.ts"],
-      "rules": {
-        "unicorn/filename-case": "off"
-      }
-    }
-  ]
+  }
 }

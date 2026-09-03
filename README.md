@@ -7,7 +7,7 @@
 # react-native-boost
 
 [![npm version](https://img.shields.io/npm/v/react-native-boost.svg)](https://www.npmjs.com/package/react-native-boost)
-[![CI](https://github.com/kuatsu/react-native-boost/actions/workflows/test.yml/badge.svg)](https://github.com/kuatsu/react-native-boost/actions/workflows/test.yml)
+[![CI](https://github.com/kuatsu/react-native-boost/actions/workflows/ci.yml/badge.svg)](https://github.com/kuatsu/react-native-boost/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
 
 **The React Native performance compiler.**

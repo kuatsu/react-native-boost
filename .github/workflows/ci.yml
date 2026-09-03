@@ -1,4 +1,4 @@
-name: Test & build
+name: CI
 on:
   push:
     branches:
@@ -9,6 +9,7 @@ on:
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,6 +31,7 @@ jobs:
         run: pnpm typecheck
 
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -42,6 +44,7 @@ jobs:
         run: pnpm test
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

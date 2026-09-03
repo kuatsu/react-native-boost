@@ -1,13 +1,13 @@
 import path from 'node:path';
 import { declare } from '@babel/helper-plugin-utils';
-import { textOptimizer } from './optimizers/text';
-import { imageOptimizer } from './optimizers/image';
+import { nativeTextOptimizer } from './optimizers/native-text';
+import { nativeImageOptimizer } from './optimizers/native-image';
 import type { BabelPluginOptions, HubFile, TargetPlatform } from './types';
 import { createLogger } from './utils/logger';
-import { viewOptimizer } from './optimizers/view';
+import { nativeViewOptimizer } from './optimizers/native-view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
-import { activityIndicatorOptimizer } from './optimizers/activity-indicator';
+import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
 import { validateBabelOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
 import {
@@ -112,13 +112,13 @@ export default declare((api, rawOptions, dirname?: string) => {
         const file = (path.hub as unknown as { file: HubFile }).file;
         const reactNativeMinor = resolveReactNativeMinor(file);
         if (isOptimizationEnabled(options, 'native-text'))
-          textOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
+          nativeTextOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
         if (isOptimizationEnabled(options, 'native-view'))
-          viewOptimizer(path, logger, options, platform, unistylesEnabled);
+          nativeViewOptimizer(path, logger, options, platform, unistylesEnabled);
         if (isOptimizationEnabled(options, 'native-image'))
-          imageOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
+          nativeImageOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
         if (isOptimizationEnabled(options, 'native-activity-indicator'))
-          activityIndicatorOptimizer(path, logger, options, platform, unistylesEnabled);
+          nativeActivityIndicatorOptimizer(path, logger, options, platform, unistylesEnabled);
       },
     },
   };

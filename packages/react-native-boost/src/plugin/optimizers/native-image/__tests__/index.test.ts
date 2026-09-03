@@ -8,7 +8,7 @@ import { formatTestResult } from '../../../utils/format-test-result';
 import { createLogger } from '../../../utils/logger';
 import type { TargetPlatform } from '../../../types';
 import boostPlugin from '../../../index';
-import { imageOptimizer } from '..';
+import { nativeImageOptimizer } from '..';
 
 const transformImage = async (
   source: string,
@@ -28,7 +28,7 @@ const transformImage = async (
     name: `${platform}-image-optimizer-test`,
     visitor: {
       JSXOpeningElement(path) {
-        imageOptimizer(
+        nativeImageOptimizer(
           path,
           logger,
           { assumptions: { unknownAncestorsDoNotRenderText } },
@@ -146,7 +146,7 @@ const unwrapRuntimeGate = (expression: t.Expression | undefined, helperName: str
 };
 
 pluginTester({
-  plugin: generateTestPlugin(imageOptimizer, {}, 'ios'),
+  plugin: generateTestPlugin(nativeImageOptimizer, {}, 'ios'),
   title: 'image',
   fixtures: path.resolve(import.meta.dirname, 'fixtures'),
   babelOptions: {
@@ -156,7 +156,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(imageOptimizer, { assumptions: { unknownAncestorsDoNotRenderText: true } }, 'ios'),
+  plugin: generateTestPlugin(nativeImageOptimizer, { assumptions: { unknownAncestorsDoNotRenderText: true } }, 'ios'),
   title: 'image unknown ancestor assumption',
   babelOptions: {
     plugins: ['@babel/plugin-syntax-jsx'],
@@ -646,7 +646,7 @@ describe('image unknown platform output', () => {
       name: 'unknown-platform-image-optimizer-test',
       visitor: {
         JSXOpeningElement(path) {
-          imageOptimizer(path, logger, {}, undefined);
+          nativeImageOptimizer(path, logger, {}, undefined);
         },
       },
     });

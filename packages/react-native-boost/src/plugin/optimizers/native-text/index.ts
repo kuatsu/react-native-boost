@@ -83,7 +83,7 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const textOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled, reactNativeMinor) => {
+export const nativeTextOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled, reactNativeMinor) => {
   if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;

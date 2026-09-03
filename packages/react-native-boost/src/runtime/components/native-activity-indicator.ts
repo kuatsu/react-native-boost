@@ -9,9 +9,11 @@ type ReactNativeActivityIndicatorModule = {
   };
 };
 
-// Accessing ActivityIndicator registers the platform host view config before its string is used.
 const { ActivityIndicator, Platform } = reactNativeModule as ReactNativeActivityIndicatorModule;
 
+/**
+ * Native ActivityIndicator component with graceful fallback.
+ */
 export const NativeActivityIndicator: ComponentType<ActivityIndicatorProps> =
   Platform.OS === 'android'
     ? ('AndroidProgressBar' as unknown as ComponentType<ActivityIndicatorProps>)
