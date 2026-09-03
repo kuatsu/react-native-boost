@@ -1,9 +1,9 @@
 ---
-title: Static Animated
+title: Animated Wrapper Removal
 description: How Boost removes Animated wrappers that do not contain an animation.
 ---
 
-The Static Animated optimizer removes an `Animated` wrapper when its element contains no animated value or event.
+The Animated Wrapper Removal optimizer removes an `Animated` wrapper when its element contains no animated value or event.
 
 ```tsx
 // Before
@@ -55,14 +55,14 @@ This optimizer is enabled by default for React Native 0.83 through 0.86.
 
 It is disabled by default for React Native 0.87 and later. React Native 0.87 changed how Android flushes native Animated operations. An `Animated` wrapper that has no animations itself may still flush work queued elsewhere, so removing it is not always safe.
 
-You can set `static-animated` to `on` explicitly, but this may cause small behavioral changes on Android in React Native 0.87 and higher.
+You can set `animated-wrapper-removal` to `on` explicitly, but this may cause small behavioral changes on Android in React Native 0.87 and higher.
 
 ## Configuration
 
 ```js
 module.exports = withBoostConfig(config, {
   optimizations: {
-    'static-animated': 'off',
+    'animated-wrapper-removal': 'off',
   },
 });
 ```

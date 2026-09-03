@@ -38,7 +38,7 @@ function transformBoostCase(os: PlatformOS, jsxBody: string, preamble = '', runt
         {
           logLevel: 'silent',
           assumptions: { unknownAncestorsDoNotRenderText: runtimeParentIsSafe },
-          optimizations: { 'static-animated': 'on' },
+          optimizations: { 'animated-wrapper-removal': 'on' },
         },
       ],
     ],

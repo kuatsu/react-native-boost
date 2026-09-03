@@ -18,7 +18,7 @@ type AnimatedComponent = 'Image' | 'ScrollView' | 'Text' | 'View';
 const COMPONENTS = new Set<AnimatedComponent>(['Image', 'ScrollView', 'Text', 'View']);
 const REF_PROPS = new Set(['innerViewRef', 'ref', 'scrollViewRef']);
 
-const optimizeStaticAnimated: JSXOptimizer = (path, { logger, platform }) => {
+const optimizeAnimatedWrapperRemoval: JSXOptimizer = (path, { logger, platform }) => {
   const component = getAnimatedComponent(path);
   if (!component) return;
 
@@ -65,7 +65,7 @@ const optimizeStaticAnimated: JSXOptimizer = (path, { logger, platform }) => {
 
   const replacement = addFileImportHint({
     file,
-    nameHint: `StaticAnimated${component}`,
+    nameHint: `AnimatedWrapperRemoval${component}`,
     path,
     importName: component,
     moduleName: 'react-native',
@@ -101,9 +101,9 @@ const optimizeStaticAnimated: JSXOptimizer = (path, { logger, platform }) => {
   logger.optimized({ target, path });
 };
 
-export const staticAnimatedOptimizer = createJSXOptimizer(
-  'static-animated',
-  optimizeStaticAnimated,
+export const animatedWrapperRemovalOptimizer = createJSXOptimizer(
+  'animated-wrapper-removal',
+  optimizeAnimatedWrapperRemoval,
   ({ reactNativeMinor }) =>
     reactNativeMinor !== undefined && reactNativeMinor >= 83 && reactNativeMinor <= 86 ? 'on' : 'off'
 );
