@@ -13,7 +13,12 @@ export const generateTestPlugin = (optimizer: Optimizer, options: BoostOptions =
       visitor: {
         JSXOpeningElement(path) {
           // Auto-detection is not exercised in fixtures.
-          optimizer(path, logger, options, platform, options.integrations?.unistyles === 'on');
+          optimizer(path, {
+            logger,
+            options,
+            platform,
+            unistylesEnabled: options.integrations?.unistyles === 'on',
+          });
         },
       },
     };

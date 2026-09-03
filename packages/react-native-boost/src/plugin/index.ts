@@ -111,14 +111,12 @@ export default declare((api, rawOptions, dirname?: string) => {
         if (isIgnoredFile(path, options.ignores ?? [])) return;
         const file = (path.hub as unknown as { file: HubFile }).file;
         const reactNativeMinor = resolveReactNativeMinor(file);
-        if (isOptimizationEnabled(options, 'native-text'))
-          nativeTextOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
-        if (isOptimizationEnabled(options, 'native-view'))
-          nativeViewOptimizer(path, logger, options, platform, unistylesEnabled);
-        if (isOptimizationEnabled(options, 'native-image'))
-          nativeImageOptimizer(path, logger, options, platform, unistylesEnabled, reactNativeMinor);
+        const context = { logger, options, platform, unistylesEnabled, reactNativeMinor };
+        if (isOptimizationEnabled(options, 'native-text')) nativeTextOptimizer(path, context);
+        if (isOptimizationEnabled(options, 'native-view')) nativeViewOptimizer(path, context);
+        if (isOptimizationEnabled(options, 'native-image')) nativeImageOptimizer(path, context);
         if (isOptimizationEnabled(options, 'native-activity-indicator'))
-          nativeActivityIndicatorOptimizer(path, logger, options, platform, unistylesEnabled);
+          nativeActivityIndicatorOptimizer(path, context);
       },
     },
   };
