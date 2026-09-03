@@ -1,5 +1,22 @@
 # Changelog
 
+# [1.7.0](https://github.com/kuatsu/react-native-boost/compare/v1.6.0...v1.7.0) (2026-09-03)
+
+
+### Bug Fixes
+
+* fix changelog generation ([da0ec8f](https://github.com/kuatsu/react-native-boost/commit/da0ec8fb3e885ebd87296e5b0f1f8caa0b4174b6))
+* **image:** fix accessibility parity issues ([c4db0ca](https://github.com/kuatsu/react-native-boost/commit/c4db0cab8239a60e21a86e07144579e1de932346))
+* **image:** match legacy Android accessibility handling ([559f65c](https://github.com/kuatsu/react-native-boost/commit/559f65cd1b0720c9b32322d31bc856e3c396ebff))
+* **runtime:** replace feature flag imports with version defaults ([df21e58](https://github.com/kuatsu/react-native-boost/commit/df21e5814a0be8722618bf9de8c115df1a266d38))
+* **text:** avoid mutating flattened styles ([4f99942](https://github.com/kuatsu/react-native-boost/commit/4f99942e29527720af922a0c5b11bd56e298fe36))
+
+
+### Features
+
+* **image:** manually register host and promote optimizer to default ([82dca04](https://github.com/kuatsu/react-native-boost/commit/82dca0492c18998ff01eebbaf4bcc56801181f4d))
+* update to react-native 0.86 ([#77](https://github.com/kuatsu/react-native-boost/issues/77)) ([3c3f9b2](https://github.com/kuatsu/react-native-boost/commit/3c3f9b2cf9f15a536f5db3a9107b9a2d16ddc649))
+
 # [1.6.0](https://github.com/kuatsu/react-native-boost/compare/v1.5.0...v1.6.0) (2026-07-11)
 
 
