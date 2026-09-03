@@ -29,7 +29,7 @@ export interface PluginOptimizationOptions {
 
 export interface PluginAssumptions {
   /**
-   * Assume unresolved ancestor components do not render a React Native `Text` around their children.
+   * Assume unresolved ancestors and runtime parents do not provide a React Native `Text` context.
    *
    * This increases optimization coverage, but can emit the wrong native host when the assumption is false.
    * Enable it only after you verify this behavior across the project.
