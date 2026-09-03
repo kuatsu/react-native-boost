@@ -1,0 +1,38 @@
+---
+title: Non-Metro environments
+description: Configure Boost in apps that do not use Metro.
+---
+
+Since React Native Boost 2.x, we're using a Metro config adapter. In previous versions, a Babel config plugin was used instead.
+
+The Babel plugin is still provided as a fallback option for setups where Metro is unavailable. These are rare and it's likely that your app does not fall under this category. If you're unsure if you're using Metro, but simply don't see the `metro.config.js` file in your project, try running this command first to create it:
+
+```sh
+npx expo customize metro.config.js
+```
+
+Then refer back to the [Metro configuration guide](./configure).
+
+If Metro is indeed unavailable in your setup, you can use the Babel plugin:
+
+```js
+// babel.config.js
+module.exports = {
+  plugins: [
+    [
+      'react-native-boost/plugin',
+      {
+        target: {
+          reactNative: {
+            packageJson: require.resolve('react-native/package.json'),
+          },
+        },
+      },
+    ],
+  ],
+};
+```
+
+Boost needs to know the React Native version to safely perform optimizations across different supported versions. Instead of `packageJson`, you can also supply `{ version: require('react-native/package.json').version }`.
+
+While the target is optional, we strongly recommend adding it. If it is not provided, the Babel plugin tries to detect the React Native version automatically, which is fragile and therefore logs a warning.

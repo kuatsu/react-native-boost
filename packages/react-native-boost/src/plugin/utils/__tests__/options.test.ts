@@ -1,7 +1,7 @@
-import { transformSync } from '@babel/core';
-import { describe, expect, it } from 'vitest';
+import { transformSync, type TransformCaller } from '@babel/core';
+import { describe, expect, it, vi } from 'vitest';
 import boostPlugin from '../../index';
-import { validatePluginOptions } from '../options';
+import { validateBabelOptions, validateMetroOptions } from '../options';
 
 describe('plugin options', () => {
   it('accepts the current configuration', () => {
@@ -11,9 +11,48 @@ describe('plugin options', () => {
       integrations: { unistyles: 'on' as const },
       ignores: ['node_modules/**'],
       logLevel: 'info' as const,
+      target: { reactNative: { version: '0.87.1' } },
     };
 
-    expect(validatePluginOptions(options)).toEqual(options);
+    expect(validateBabelOptions(options)).toEqual(options);
+  });
+
+  it('ignores an unmigrated Metro plugin and asks the user to move its old options', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const output = transformSync(`import { Text } from 'react-native'; <Text>Hello</Text>;`, {
+      configFile: false,
+      babelrc: false,
+      caller: { name: 'metro', bundler: 'metro', platform: 'ios' } as TransformCaller,
+      plugins: ['@babel/plugin-syntax-jsx', [boostPlugin, { verbose: true, optimizations: { text: false } }]],
+    })!.code!;
+
+    expect(output).not.toContain('NativeText');
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('Move your options to withBoostConfig'));
+    log.mockRestore();
+  });
+
+  it('runs only the Metro-injected plugin when a manual copy is also configured', () => {
+    const output = transformSync(`import { Text } from 'react-native'; <Text>Hello</Text>;`, {
+      configFile: false,
+      babelrc: false,
+      caller: { name: 'metro', bundler: 'metro', platform: 'ios' } as TransformCaller,
+      plugins: [
+        '@babel/plugin-syntax-jsx',
+        [boostPlugin, {}, 'manual'],
+        [boostPlugin, { logLevel: 'silent', __reactNativeBoost: 'injected' }, 'injected'],
+      ],
+    })!.code!;
+
+    expect(output).toContain('NativeText');
+  });
+
+  it('keeps Metro-only options separate', () => {
+    expect(validateMetroOptions({ target: { reactNative: { packageJson: '/react-native/package.json' } } })).toEqual({
+      target: { reactNative: { packageJson: '/react-native/package.json' } },
+    });
+    expect(() => validateMetroOptions({ target: { reactNative: { version: '0.87.1' } } })).toThrow(
+      'Unknown `target.reactNative` option `version`'
+    );
   });
 
   it('disables an optimization with its public name', () => {
@@ -39,7 +78,7 @@ describe('plugin options', () => {
     ],
     [{ optimizations: { text: false } }, 'Use `native-text` instead.'],
   ])('rejects removed configuration %#', (options, message) => {
-    expect(() => validatePluginOptions(options)).toThrow(message);
+    expect(() => validateBabelOptions(options)).toThrow(message);
   });
 
   it.each([
@@ -50,7 +89,13 @@ describe('plugin options', () => {
     [{ logLevel: 'verbose' }, '`logLevel` must be one of'],
     [{ optimizations: { 'native-text': true } }, 'must be `on` or `off`'],
     [{ integrations: { unistyles: true } }, 'must be `auto`, `on`, or `off`'],
+    [{ target: { reactNative: {} } }, 'must contain either `packageJson` or `version`'],
+    [{ target: { reactNative: { version: '0.87' } } }, 'must be a full React Native version'],
+    [
+      { target: { reactNative: { packageJson: 'package.json', version: '0.87.1' } } },
+      'must contain either `packageJson` or `version`',
+    ],
   ])('rejects invalid configuration %#', (options, message) => {
-    expect(() => validatePluginOptions(options)).toThrow(message);
+    expect(() => validateBabelOptions(options)).toThrow(message);
   });
 });

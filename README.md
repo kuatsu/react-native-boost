@@ -61,21 +61,22 @@ npm install react-native-boost
 yarn add react-native-boost
 ```
 
-Then, add the plugin to your Babel configuration (`babel.config.js`):
+Then, add Boost to your Metro configuration (`metro.config.js`):
 
 ```js
-module.exports = {
-  plugins: ['react-native-boost/plugin'],
-};
+const { getDefaultConfig } = require('expo/metro-config'); // use `@react-native/metro-config` for non-Expo apps
+const { withBoostConfig } = require('react-native-boost/metro');
+
+module.exports = withBoostConfig(getDefaultConfig(__dirname));
 ```
 
-If you're using Expo and don't see the `babel.config.js` file, run the following command to create it:
+If you don't see the `metro.config.js` file, run this command first:
 
 ```sh
-npx expo customize babel.config.js
+npx expo customize metro.config.js
 ```
 
-If you're using Unistyles or Nativewind, refer to additional required setup instructions in [the documentation](https://react-native-boost.oss.kuatsu.de/docs).
+If you're using Unistyles, Nativewind, or a bundler other than Metro, see the [documentation](https://react-native-boost.oss.kuatsu.de/docs) for setup instructions.
 
 Finally, restart your React Native development server and clear the bundler cache:
 
@@ -87,7 +88,7 @@ yarn start --clear
 
 That's it! No imports in your code, rebuilding, or anything else is required.
 
-Optionally, you can configure the Babel plugin with a few options described in the [documentation](https://react-native-boost.oss.kuatsu.de/docs/configuration/configure).
+Optional configuration is described in the [documentation](https://react-native-boost.oss.kuatsu.de/docs/configuration/configure).
 
 ## How it works
 
