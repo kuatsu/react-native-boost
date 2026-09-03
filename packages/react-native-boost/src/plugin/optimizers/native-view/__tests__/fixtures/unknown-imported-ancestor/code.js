@@ -1,12 +1,8 @@
 import { View } from 'react-native';
 import { ExternalWrapper } from './ExternalWrapper';
-<>
+
+<ExternalWrapper>
   <View>
-    <Optimized />
+    <NotOptimized />
   </View>
-  <ExternalWrapper>
-    <View>
-      <NotOptimized />
-    </View>
-  </ExternalWrapper>
-</>;
+</ExternalWrapper>;

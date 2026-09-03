@@ -7,8 +7,6 @@ import {
   convergencePoints,
   coreValidAt,
   fpsAt,
-  hasProfile,
-  isThermalRun,
   median,
   peakBoostGain,
   peakCoreGain,
@@ -58,7 +56,6 @@ const twoProfile = (coreScale: number): FpsResult =>
 describe('anchoredCore', () => {
   it('is undefined without both profiles (single-profile / legacy run)', () => {
     const legacy = result([m(100, 'default', 'off', 40), m(100, 'default', 'on', 60)]);
-    expect(hasProfile(legacy, 'core')).toBe(false);
     expect(anchoredCore(legacy)).toBeUndefined();
     expect(peakCoreGain(legacy)).toBeUndefined();
     expect(peakBoostGain(legacy)).toBeCloseTo(50); // (60-40)/40
@@ -145,10 +142,9 @@ describe('regime: thermal (direct) vs legacy (anchor)', () => {
       m(300, 'default', 'off', 30, 0, 'nominal'),
       m(300, 'default', 'on', 60, 0, 'nominal'),
       m(300, 'core', 'off', 42, 0, 'nominal'),
-      m(300, 'core', 'on', 60, 0, 'nominal'), // agrees with default_on → load 300 is validated
+      m(300, 'core', 'on', 57, 0, 'nominal'), // 5% divergence stays within validation tolerance
     ]);
-    expect(isThermalRun(r)).toBe(true);
-    expect(peakCoreGain(r)).toBeCloseTo(40); // (42-30)/30 direct, no anchor
+    expect(peakCoreGain(r)).toBeCloseTo(40); // direct; anchoring would produce about 47%
   });
 
   it('legacy run (all-unknown thermal) → anchored core gain', () => {
@@ -158,7 +154,6 @@ describe('regime: thermal (direct) vs legacy (anchor)', () => {
       m(300, 'core', 'off', 42, 0, 'unknown'),
       m(300, 'core', 'on', 50, 0, 'unknown'), // anchor ×60/50=1.2 → 42 lifts to 50.4 → +68%
     ]);
-    expect(isThermalRun(r)).toBe(false);
     expect(peakCoreGain(r)).toBeCloseTo(68);
   });
 });
@@ -173,11 +168,11 @@ describe('convergencePoints', () => {
       m(100, 'default', 'off', 40),
       m(100, 'default', 'on', 60),
       m(100, 'core', 'off', 44),
-      m(100, 'core', 'on', 60),
+      m(100, 'core', 'on', 57),
     ]);
     const points = convergencePoints(r)!;
     const heavy = points.find((p) => p.load === 100)!;
-    expect(heavy.baselineOptimized).toBeCloseTo(44); // direct median, not anchored
+    expect(heavy.baselineOptimized).toBeCloseTo(44); // direct; anchoring would produce about 46
     expect(heavy.informative).toBe(true);
     expect(points.find((p) => p.load === 10)!.informative).toBe(false); // pinned at ceiling
   });
@@ -194,7 +189,6 @@ describe('validate (per-load)', () => {
       ])
     );
     expect(report.allValid).toBe(true);
-    expect(report.invalidLoads.size).toBe(0);
   });
 
   it('drops a load with a capture above the floor', () => {

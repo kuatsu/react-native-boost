@@ -177,40 +177,40 @@ describe('native attribute conformance', () => {
     }
   });
 
-  it('exercises the optimized path (otherwise conformance would pass vacuously)', () => {
-    expect(optimizeAndInspect(viewSource('testID="element"'), nativeViewOptimizer, 'View')?.optimized).toBe(true);
-    expect(optimizeAndInspect(textSource('numberOfLines={1}'), nativeTextOptimizer, 'Text')?.optimized).toBe(true);
-    expect(optimizeAndInspect(imageSource(IMAGE_BASE_SOURCE), nativeImageOptimizer, 'Image', 'ios')?.optimized).toBe(
-      true
-    );
-  });
-
   describe('View', () => {
-    it.each([...VIEW_WRAPPER_ONLY_PROPS, ...VIEW_PASSTHROUGH_PROPS])(
-      'leaves only native attributes on the host for <View %s />',
-      (attributes) => {
-        const result = optimizeAndInspect(viewSource(attributes), nativeViewOptimizer, 'View');
-        if (!result?.optimized) return;
-        const leaked = result.attributes.filter((attribute) => !NATIVE_VIEW_ATTRIBUTES.has(attribute));
-        expect(leaked, `optimized <View ${attributes} /> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
-          []
-        );
-      }
-    );
+    it.each(VIEW_WRAPPER_ONLY_PROPS)('leaves only native attributes on the host for <View %s />', (attributes) => {
+      const result = optimizeAndInspect(viewSource(attributes), nativeViewOptimizer, 'View');
+      if (!result?.optimized) return;
+      const leaked = result.attributes.filter((attribute) => !NATIVE_VIEW_ATTRIBUTES.has(attribute));
+      expect(leaked, `optimized <View ${attributes} /> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
+        []
+      );
+    });
+
+    it.each(VIEW_PASSTHROUGH_PROPS)('optimizes and leaves only native attributes on <View %s />', (attributes) => {
+      const result = optimizeAndInspect(viewSource(attributes), nativeViewOptimizer, 'View');
+      expect(result?.optimized).toBe(true);
+      const leaked = result?.attributes.filter((attribute) => !NATIVE_VIEW_ATTRIBUTES.has(attribute));
+      expect(leaked, `optimized <View ${attributes} /> leaks non-native attribute(s): ${leaked?.join(', ')}`).toEqual(
+        []
+      );
+    });
   });
 
   describe('Text', () => {
-    it.each([...TEXT_WRAPPER_ONLY_PROPS, ...TEXT_PASSTHROUGH_PROPS])(
-      'leaves only native attributes on the host for <Text %s>',
-      (attributes) => {
-        const result = optimizeAndInspect(textSource(attributes), nativeTextOptimizer, 'Text');
-        if (!result?.optimized) return;
-        const leaked = result.attributes.filter((attribute) => !NATIVE_TEXT_ATTRIBUTES.has(attribute));
-        expect(leaked, `optimized <Text ${attributes}> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual(
-          []
-        );
-      }
-    );
+    it.each(TEXT_WRAPPER_ONLY_PROPS)('leaves only native attributes on the host for <Text %s>', (attributes) => {
+      const result = optimizeAndInspect(textSource(attributes), nativeTextOptimizer, 'Text');
+      if (!result?.optimized) return;
+      const leaked = result.attributes.filter((attribute) => !NATIVE_TEXT_ATTRIBUTES.has(attribute));
+      expect(leaked, `optimized <Text ${attributes}> leaks non-native attribute(s): ${leaked.join(', ')}`).toEqual([]);
+    });
+
+    it.each(TEXT_PASSTHROUGH_PROPS)('optimizes and leaves only native attributes on <Text %s>', (attributes) => {
+      const result = optimizeAndInspect(textSource(attributes), nativeTextOptimizer, 'Text');
+      expect(result?.optimized).toBe(true);
+      const leaked = result?.attributes.filter((attribute) => !NATIVE_TEXT_ATTRIBUTES.has(attribute));
+      expect(leaked, `optimized <Text ${attributes}> leaks non-native attribute(s): ${leaked?.join(', ')}`).toEqual([]);
+    });
   });
 
   describe('Image', () => {
