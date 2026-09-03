@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { HubFile, Optimizer } from '../../types';
+import type { HubFile, JSXOptimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
@@ -17,6 +17,7 @@ import {
   UNISTYLES_VIEW_HOST,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { createJSXOptimizer } from '../../utils/optimizer';
 
 /**
  * Props the `View` wrapper destructures and transforms before handing off to its native host. The
@@ -56,7 +57,7 @@ const VIEW_SPREAD_GUARD_KEYS_UNISTYLES = new Set([...VIEW_SPREAD_GUARD_KEYS, 'st
 const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected']);
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
-export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistylesEnabled }) => {
+const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnabled }) => {
   if (!isReactNativeComponent(path, 'View')) return;
 
   const forced = isForcedLine(path);
@@ -88,7 +89,7 @@ export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistyle
     const overriddenReason = getFirstBailoutReason(overridableChecks);
 
     if (overriddenReason) {
-      logger.forced({ component: 'View', path, reason: overriddenReason });
+      logger.forced({ target: 'View', path, reason: overriddenReason });
     }
   } else {
     const skipReason = getFirstBailoutReason([
@@ -100,7 +101,7 @@ export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistyle
     ]);
 
     if (skipReason) {
-      logger.skipped({ component: 'View', path, reason: skipReason });
+      logger.skipped({ target: 'View', path, reason: skipReason });
       return;
     }
   }
@@ -113,7 +114,7 @@ export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistyle
   }
 
   logger.optimized({
-    component: 'View',
+    target: 'View',
     path,
   });
 
@@ -127,6 +128,8 @@ export const nativeViewOptimizer: Optimizer = (path, { logger, options, unistyle
   const viewHost = getStyleOrigin() === 'unistyles' ? UNISTYLES_VIEW_HOST : undefined;
   replaceWithNativeComponent(path, parent, file, 'NativeView', viewHost);
 };
+
+export const nativeViewOptimizer = createJSXOptimizer('native-view', optimizeNativeView);
 
 /**
  * Reproduces the `View` wrapper's ergonomic-prop translation for an optimized element: renames

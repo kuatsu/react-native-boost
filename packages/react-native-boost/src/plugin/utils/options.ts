@@ -4,7 +4,14 @@ import PluginError from './plugin-error';
 const sharedOptionKeys = ['optimizations', 'assumptions', 'integrations', 'ignores', 'logLevel'];
 const babelOptionKeys = [...sharedOptionKeys, 'target'];
 const metroOptionKeys = [...sharedOptionKeys, 'target'];
-const optimizationKeys = ['native-text', 'native-view', 'native-image', 'native-activity-indicator', 'static-animated'];
+const optimizationKeys = [
+  'native-text',
+  'native-view',
+  'native-image',
+  'native-activity-indicator',
+  'static-animated',
+  'stylesheet-operations',
+];
 const assumptionKeys = ['unknownAncestorsDoNotRenderText'];
 const integrationKeys = ['unistyles'];
 const optimizationStates: OptimizationState[] = ['on', 'off'];

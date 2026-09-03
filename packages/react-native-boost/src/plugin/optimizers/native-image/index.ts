@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { HubFile, Optimizer } from '../../types';
+import type { HubFile, JSXOptimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
@@ -17,6 +17,7 @@ import {
   createStyleOriginResolver,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { createJSXOptimizer } from '../../utils/optimizer';
 
 const IMAGE_BAILOUT_PROPS = new Set([
   'aria-live',
@@ -82,15 +83,12 @@ const OBJECT_FIT_TO_RESIZE_MODE: Record<string, string> = {
   'scale-down': 'contain',
 };
 
-export const nativeImageOptimizer: Optimizer = (
-  path,
-  { logger, options, platform, unistylesEnabled, reactNativeMinor }
-) => {
+const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, unistylesEnabled, reactNativeMinor }) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'Image')) return;
 
   if (platform !== 'ios' && platform !== 'android') {
-    logger.skipped({ component: 'Image', path, reason: 'target platform is unknown' });
+    logger.skipped({ target: 'Image', path, reason: 'target platform is unknown' });
     return;
   }
 
@@ -145,7 +143,7 @@ export const nativeImageOptimizer: Optimizer = (
   if (forced) {
     const overriddenReason = getFirstBailoutReason(bailoutChecks);
     if (overriddenReason) {
-      logger.forced({ component: 'Image', path, reason: overriddenReason });
+      logger.forced({ target: 'Image', path, reason: overriddenReason });
     }
   } else {
     const skipReason = getFirstBailoutReason([
@@ -157,7 +155,7 @@ export const nativeImageOptimizer: Optimizer = (
     ]);
 
     if (skipReason) {
-      logger.skipped({ component: 'Image', path, reason: skipReason });
+      logger.skipped({ target: 'Image', path, reason: skipReason });
       return;
     }
   }
@@ -172,7 +170,7 @@ export const nativeImageOptimizer: Optimizer = (
   const nativeSource = staticSrcSetSource ?? buildStaticNativeSource(path.node.attributes, platform);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 
-  logger.optimized({ component: 'Image', path });
+  logger.optimized({ target: 'Image', path });
 
   if (nativeSource && styleInfo !== null) {
     processImageProps(path, file, nativeSource, styleInfo, platform, reactNativeMinor);
@@ -181,6 +179,8 @@ export const nativeImageOptimizer: Optimizer = (
   }
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
+
+export const nativeImageOptimizer = createJSXOptimizer('native-image', optimizeNativeImage);
 
 type NativeSource = {
   sourceAttributes: t.JSXAttribute[];

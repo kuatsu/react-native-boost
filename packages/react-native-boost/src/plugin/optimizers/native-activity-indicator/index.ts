@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import { HubFile, Optimizer } from '../../types';
+import type { HubFile, JSXOptimizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
@@ -13,6 +13,7 @@ import {
   makeAttribute,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
+import { createJSXOptimizer } from '../../utils/optimizer';
 
 const CONSUMED_PROPS = new Set([
   'animating',
@@ -26,12 +27,12 @@ const CONSUMED_PROPS = new Set([
   'style',
 ]);
 
-export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, options, platform, unistylesEnabled }) => {
+const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, options, platform, unistylesEnabled }) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
   if (platform !== 'ios' && platform !== 'android') {
-    logger.skipped({ component: 'ActivityIndicator', path, reason: 'target platform is unknown' });
+    logger.skipped({ target: 'ActivityIndicator', path, reason: 'target platform is unknown' });
     return;
   }
 
@@ -67,7 +68,7 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
 
   if (forced) {
     const overriddenReason = getFirstBailoutReason(bailoutChecks);
-    if (overriddenReason) logger.forced({ component: 'ActivityIndicator', path, reason: overriddenReason });
+    if (overriddenReason) logger.forced({ target: 'ActivityIndicator', path, reason: overriddenReason });
   } else {
     const skipReason = getFirstBailoutReason([
       {
@@ -77,7 +78,7 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
       ...bailoutChecks,
     ]);
     if (skipReason) {
-      logger.skipped({ component: 'ActivityIndicator', path, reason: skipReason });
+      logger.skipped({ target: 'ActivityIndicator', path, reason: skipReason });
       return;
     }
   }
@@ -138,9 +139,14 @@ export const nativeActivityIndicatorOptimizer: Optimizer = (path, { logger, opti
   );
 
   t.inheritsComments(outer, parent);
-  logger.optimized({ component: 'ActivityIndicator', path });
+  logger.optimized({ target: 'ActivityIndicator', path });
   path.parentPath.replaceWith(outer);
 };
+
+export const nativeActivityIndicatorOptimizer = createJSXOptimizer(
+  'native-activity-indicator',
+  optimizeNativeActivityIndicator
+);
 
 function addRuntimeImport(path: NodePath<t.JSXOpeningElement>, file: HubFile, importName: string): t.Identifier {
   return addFileImportHint({

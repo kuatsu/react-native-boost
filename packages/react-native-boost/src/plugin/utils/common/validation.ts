@@ -3,7 +3,6 @@ import { ensureArray, BailoutCheck } from '../helpers';
 import { HubFile } from '../../types';
 import { minimatch } from 'minimatch';
 import nodePath from 'node:path';
-import PluginError from '../plugin-error';
 import {
   UNISTYLES_MODULE_NAME,
   UNISTYLES_NATIVE_TEXT_MODULE,
@@ -13,24 +12,9 @@ import {
 import { getMarkedReactNativeComponent } from './optimized-host';
 import { extractStyleAttribute } from './attributes';
 
-/**
- * Checks if the file is in the list of ignored files.
- *
- * @param path - The path to the JSXOpeningElement.
- * @param ignores - List of glob paths (absolute or relative to import.meta.dirname).
- * @returns true if the file matches any of the ignore patterns.
- */
-export const isIgnoredFile = (path: NodePath<t.JSXOpeningElement>, ignores: string[]): boolean => {
-  const hub = path.hub as unknown;
-  const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
-
-  if (!file) {
-    throw new PluginError('No file found in Babel hub');
-  }
-
+/** Checks if a file matches one of the configured ignore patterns. */
+export const isIgnoredFile = (file: HubFile, ignores: string[]): boolean => {
   const fileName = file.opts.filename;
-
-  // Use the current working directory which typically corresponds to the user's project root.
   const baseDirectory = 'cwd' in file.opts ? (file.opts.cwd as string) : process.cwd();
 
   // Iterate through the ignore patterns.
@@ -47,24 +31,25 @@ export const isIgnoredFile = (path: NodePath<t.JSXOpeningElement>, ignores: stri
   return false;
 };
 
-export const isForcedLine = (path: NodePath<t.JSXOpeningElement>): boolean => {
-  return hasDecoratorComment(path, '@boost-force');
-};
+export const isForcedLine = (path: NodePath): boolean => hasDecoratorComment(path, '@boost-force');
 
-export const isIgnoredLine = (path: NodePath<t.JSXOpeningElement>): boolean => {
-  return hasDecoratorComment(path, '@boost-ignore');
-};
+export const isIgnoredLine = (path: NodePath): boolean => hasDecoratorComment(path, '@boost-ignore');
 
-/**
- * Checks if the JSX element has a preceding comment containing the given decorator string.
- *
- * Scans the JSXOpeningElement's own leading comments, the parent element's comments,
- * ObjectProperty containers, and backward siblings.
- */
-function hasDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: string): boolean {
-  if (path.node.leadingComments?.some((comment) => comment.value.includes(decorator))) {
-    return true;
+function hasDecoratorComment(path: NodePath, decorator: string): boolean {
+  if (path.isJSXOpeningElement()) return hasJSXDecoratorComment(path, decorator);
+
+  let currentPath: NodePath | null = path;
+  while (currentPath) {
+    if (currentPath.node.leadingComments?.some((comment) => comment.value.includes(decorator))) return true;
+    if (currentPath.isStatement()) break;
+    currentPath = currentPath.parentPath;
   }
+  return false;
+}
+
+/** Finds JSX decorators attached to the element or its preceding JSX comment. */
+function hasJSXDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: string): boolean {
+  if (path.node.leadingComments?.some((comment) => comment.value.includes(decorator))) return true;
 
   const jsxElementPath = path.parentPath;
   if (jsxElementPath.node.leadingComments?.some((comment) => comment.value.includes(decorator))) {

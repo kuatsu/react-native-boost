@@ -23,16 +23,16 @@ export const createLogger = (logLevel: LogLevel = 'info'): PluginLogger => {
   return {
     optimized(payload) {
       if (logLevel === 'warn') return;
-      writeLog('optimized', `Optimized ${payload.component} in ${formatPathLocation(payload.path)}`);
+      writeLog('optimized', `Optimized ${payload.target} in ${formatPathLocation(payload.path)}`);
     },
     skipped(payload) {
       if (logLevel !== 'debug') return;
-      writeLog('skipped', `Skipped ${payload.component} in ${formatPathLocation(payload.path)} (${payload.reason})`);
+      writeLog('skipped', `Skipped ${payload.target} in ${formatPathLocation(payload.path)} (${payload.reason})`);
     },
     forced(payload) {
       writeLog(
         'forced',
-        `Force-optimized ${payload.component} in ${formatPathLocation(payload.path)} (skipped bailout: ${payload.reason})`
+        `Force-optimized ${payload.target} in ${formatPathLocation(payload.path)} (skipped bailout: ${payload.reason})`
       );
     },
     warning(payload) {
@@ -46,12 +46,12 @@ export const createLogger = (logLevel: LogLevel = 'info'): PluginLogger => {
 function formatWarningContext(payload: WarningLogPayload): string {
   const location = payload.path ? formatPathLocation(payload.path) : '';
 
-  if (payload.component && location.length > 0) {
-    return `${payload.component} in ${location}`;
+  if (payload.target && location.length > 0) {
+    return `${payload.target} in ${location}`;
   }
 
-  if (payload.component) {
-    return payload.component;
+  if (payload.target) {
+    return payload.target;
   }
 
   return location;

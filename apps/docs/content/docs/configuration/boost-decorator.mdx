@@ -1,13 +1,13 @@
 ---
 title: "Decorators"
-description: Control optimization on individual JSX elements with @boost-ignore and @boost-force.
+description: Control individual optimizations with @boost-ignore and @boost-force.
 ---
 
 ## @boost-ignore
 
-Use `@boost-ignore` to disable optimization on a specific element.
+Use `@boost-ignore` to disable a specific optimization.
 
-If a line containing `@boost-ignore` appears immediately before a JSX opening tag, that component is skipped.
+Place it immediately before a supported component or operation.
 
 ```jsx
 <Text>This will be optimized.</Text>
@@ -17,17 +17,22 @@ If a line containing `@boost-ignore` appears immediately before a JSX opening ta
 
 ## @boost-force
 
-Use `@boost-force` to override bailout rules on a specific element, such as an unknown ancestor or an unresolved spread.
+Use `@boost-force` to override bailout rules on a specific component or operation, such as an unknown ancestor, unresolved spread, or runtime style value.
 
 It cannot enable a disabled optimizer, include a file excluded by `ignores`, or optimize a component that is not imported from `react-native`. It also cannot run a platform-specific optimizer when Boost cannot tell whether the build targets iOS or Android.
 
 ```jsx
 const Component = ({ props }) => {
   return (
-    {/* @boost-force */}
-    <Text {...props}>This will be optimized despite having unresolvable spread props.</Text>
-  )
-}
+    <>
+      {/* @boost-force */}
+      <Text {...props}>This will be optimized despite having unresolvable spread props.</Text>
+    </>
+  );
+};
+
+/* @boost-force */
+const style = StyleSheet.flatten(styles);
 ```
 
 <Callout type="warn" title="Use with caution">

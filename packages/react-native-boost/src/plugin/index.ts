@@ -1,14 +1,24 @@
 import path from 'node:path';
+import { traverse, type PluginObj } from '@babel/core';
 import { declare } from '@babel/helper-plugin-utils';
 import { nativeTextOptimizer } from './optimizers/native-text';
 import { nativeImageOptimizer } from './optimizers/native-image';
-import type { BabelPluginOptions, HubFile, TargetPlatform } from './types';
+import type {
+  BabelPluginOptions,
+  HubFile,
+  OptimizationName,
+  Optimizer,
+  OptimizerContext,
+  OptimizerState,
+  TargetPlatform,
+} from './types';
 import { createLogger } from './utils/logger';
 import { nativeViewOptimizer } from './optimizers/native-view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
 import { staticAnimatedOptimizer } from './optimizers/static-animated';
+import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operations';
 import { validateBabelOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
 import {
@@ -31,6 +41,15 @@ export type {
 } from './types';
 
 const warnings = new Set<string>();
+
+const optimizers: Optimizer[] = [
+  staticAnimatedOptimizer,
+  nativeTextOptimizer,
+  nativeViewOptimizer,
+  nativeImageOptimizer,
+  nativeActivityIndicatorOptimizer,
+  stylesheetOperationsOptimizer,
+];
 
 export default declare((api, rawOptions, dirname?: string) => {
   api.assertVersion(7);
@@ -102,39 +121,36 @@ export default declare((api, rawOptions, dirname?: string) => {
     return getReactNativeMinor(targetResolution.target?.version);
   };
 
-  return {
+  const plugin: PluginObj<OptimizerState> = {
     name: 'react-native-boost',
     pre(file) {
       if (injectionId) (file.metadata as Record<string, unknown>).reactNativeBoost = { injectionId };
+
+      const hubFile = file as unknown as HubFile;
+      const ignored = isIgnoredFile(hubFile, options.ignores ?? []);
+      const reactNativeMinor = ignored ? undefined : resolveReactNativeMinor(hubFile);
+      this.optimizerContext = { logger, options, platform, unistylesEnabled, reactNativeMinor };
+      this.enabledOptimizations = ignored ? new Set() : getEnabledOptimizations(options, this.optimizerContext);
     },
-    visitor: {
-      JSXOpeningElement(path) {
-        if (isIgnoredFile(path, options.ignores ?? [])) return;
-        const file = (path.hub as unknown as { file: HubFile }).file;
-        const reactNativeMinor = resolveReactNativeMinor(file);
-        const context = { logger, options, platform, unistylesEnabled, reactNativeMinor };
-        // The flush is redundant through RN 0.86; RN 0.87 Android can rely on each wrapper to drain a global queue.
-        const staticAnimatedDefault =
-          reactNativeMinor !== undefined && reactNativeMinor >= 83 && reactNativeMinor <= 86 ? 'on' : 'off';
-        if (isOptimizationEnabled(options, 'static-animated', staticAnimatedDefault))
-          staticAnimatedOptimizer(path, context);
-        if (isOptimizationEnabled(options, 'native-text')) nativeTextOptimizer(path, context);
-        if (isOptimizationEnabled(options, 'native-view')) nativeViewOptimizer(path, context);
-        if (isOptimizationEnabled(options, 'native-image')) nativeImageOptimizer(path, context);
-        if (isOptimizationEnabled(options, 'native-activity-indicator'))
-          nativeActivityIndicatorOptimizer(path, context);
-      },
-    },
+    visitor: traverse.visitors.merge(optimizers.map((optimizer) => optimizer.visitor)),
   };
+
+  return plugin as unknown as PluginObj;
 });
 
-function isOptimizationEnabled(
-  options: BabelPluginOptions,
-  name: keyof NonNullable<BabelPluginOptions['optimizations']>,
-  defaultState: 'on' | 'off' = 'on'
-): boolean {
-  const setting = options.optimizations?.[name];
-  return ((Array.isArray(setting) ? setting[0] : setting) ?? defaultState) === 'on';
+function getEnabledOptimizations(options: BabelPluginOptions, context: OptimizerContext): Set<OptimizationName> {
+  return new Set(
+    optimizers
+      .filter((optimizer) => {
+        const defaultState =
+          typeof optimizer.defaultState === 'function'
+            ? optimizer.defaultState(context)
+            : (optimizer.defaultState ?? 'on');
+        const setting = options.optimizations?.[optimizer.name];
+        return ((Array.isArray(setting) ? setting[0] : setting) ?? defaultState) === 'on';
+      })
+      .map((optimizer) => optimizer.name)
+  );
 }
 
 function normalizeTargetPlatform(platform: unknown): TargetPlatform | undefined {

@@ -1,0 +1,68 @@
+---
+title: StyleSheet Operations
+description: Evaluates simple StyleSheet operations during the build.
+---
+
+The StyleSheet Operations optimizer moves simple `StyleSheet.flatten` and `StyleSheet.compose` work from the runtime to build time.
+
+## Flattening static styles
+
+When every style value is known during the build, Boost can create the final object ahead of time:
+
+```jsx
+const style = StyleSheet.flatten([
+  { padding: 8, color: 'red' },
+  null,
+  [{ color: 'blue' }, { opacity: 0.5 }],
+]);
+```
+
+This becomes the equivalent of:
+
+```jsx
+const style = {
+  padding: 8,
+  color: 'blue',
+  opacity: 0.5,
+};
+```
+
+Later style values still override earlier values. Boost does not process colors, transforms, or other style values. React Native continues to handle those values normally.
+
+## Composing static styles
+
+Boost can also simplify `StyleSheet.compose` when it knows whether either value is empty:
+
+```jsx
+const style = StyleSheet.compose(null, styles.card);
+```
+
+This becomes the equivalent of:
+
+```jsx
+const style = styles.card;
+```
+
+When both values are static, Boost replaces the call with the same two-item style array that React Native would create.
+
+## When Boost skips an operation
+
+Boost leaves the call unchanged when the result depends on runtime data:
+
+```jsx
+const style = StyleSheet.flatten([styles.card, active && styles.active]);
+```
+
+It also skips calls from other style libraries. The optimizer only handles `StyleSheet` imported from `react-native`.
+
+## Configuration
+
+The optimizer is enabled by default. You can disable it in `metro.config.js`:
+
+```js
+module.exports = withBoostConfig(config, {
+  optimizations: {
+    'stylesheet-operations': 'off',
+  },
+});
+```
