@@ -83,7 +83,7 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-export const textOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled) => {
+export const textOptimizer: Optimizer = (path, logger, options, platform, unistylesEnabled, reactNativeMinor) => {
   if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
@@ -163,7 +163,7 @@ export const textOptimizer: Optimizer = (path, logger, options, platform, unisty
   renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
-  processProps(path, file, platform, routeToUnistyles);
+  processProps(path, file, platform, routeToUnistyles, reactNativeMinor);
 
   // A Unistyles-styled Text routes to Unistyles' lean host (a registering wrapper around `RCTText`); its
   // `style` is passed by identity (see `processProps`) so the Unistyles native-state — and therefore the
@@ -277,7 +277,8 @@ function processProps(
   path: NodePath<t.JSXOpeningElement>,
   file: HubFile,
   platform?: string,
-  passStyleByIdentity = false
+  passStyleByIdentity = false,
+  reactNativeMinor?: number
 ) {
   // Grab the up-to-date list of attributes
   const currentAttributes = [...path.node.attributes];
@@ -326,10 +327,24 @@ function processProps(
   let staticStyleAttribute: t.JSXAttribute | undefined;
   let styleSpread: t.JSXSpreadAttribute | undefined;
 
-  // RN prepends `{ overflow: 'hidden' }` from 0.85. The runtime returns this release default or
-  // `undefined`, so user styles still win. Web and Unistyles skip it; dynamic styles use `processTextStyle`.
+  // RN prepends `{ overflow: 'hidden' }` from 0.85. Use the build target when both its version and
+  // native platform are known. The runtime fallback preserves unknown-platform and Babel-only builds.
   const emitsDefaultStyle = !passStyleByIdentity && platform !== 'web';
-  const buildDefaultTextStyleExpression = (): t.Expression => {
+  const resolvesDefaultStyleAtBuildTime =
+    emitsDefaultStyle && reactNativeMinor !== undefined && (platform === 'ios' || platform === 'android');
+  const buildDefaultTextStyleExpression = (): t.Expression | undefined => {
+    if (resolvesDefaultStyleAtBuildTime) {
+      if (reactNativeMinor < 85) return undefined;
+      const defaultStyleIdentifier = addFileImportHint({
+        file,
+        nameHint: 'textDefaultOverflowStyle',
+        path,
+        importName: 'textDefaultOverflowStyle',
+        moduleName: RUNTIME_MODULE_NAME,
+      });
+      return t.identifier(defaultStyleIdentifier.name);
+    }
+
     const defaultStyleIdentifier = addFileImportHint({
       file,
       nameHint: 'getDefaultTextStyle',
@@ -361,11 +376,10 @@ function processProps(
     // helper, where the WeakMap reference cache and `StyleSheet.flatten` are the actual win.
     const staticStyle = tryBuildStaticTextStyle(styleExpr);
     if (staticStyle) {
+      const defaultStyle = emitsDefaultStyle ? buildDefaultTextStyleExpression() : undefined;
       staticStyleAttribute = t.jsxAttribute(
         t.jsxIdentifier('style'),
-        t.jsxExpressionContainer(
-          emitsDefaultStyle ? t.arrayExpression([buildDefaultTextStyleExpression(), staticStyle]) : staticStyle
-        )
+        t.jsxExpressionContainer(defaultStyle ? t.arrayExpression([defaultStyle, staticStyle]) : staticStyle)
       );
     } else {
       const flattenIdentifier = addFileImportHint({
@@ -375,17 +389,21 @@ function processProps(
         importName: 'processTextStyle',
         moduleName: RUNTIME_MODULE_NAME,
       });
-      const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), [styleExpr]);
+      const helperArguments = [styleExpr];
+      if (resolvesDefaultStyleAtBuildTime) {
+        helperArguments.push(t.booleanLiteral(reactNativeMinor >= 85));
+      }
+      const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), helperArguments);
       styleSpread = t.jsxSpreadAttribute(flattenedStyleExpr);
     }
   } else if (!styleAttribute && emitsDefaultStyle) {
     // No style at all still gets the wrapper's default. A style attribute without an extractable
     // expression (e.g. `style=""`) is left verbatim instead — emitting a second `style` would have the
     // later attribute silently discard one of the two.
-    staticStyleAttribute = t.jsxAttribute(
-      t.jsxIdentifier('style'),
-      t.jsxExpressionContainer(buildDefaultTextStyleExpression())
-    );
+    const defaultStyle = buildDefaultTextStyleExpression();
+    if (defaultStyle) {
+      staticStyleAttribute = t.jsxAttribute(t.jsxIdentifier('style'), t.jsxExpressionContainer(defaultStyle));
+    }
   }
 
   // --- selectionColor ---

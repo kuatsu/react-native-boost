@@ -10,9 +10,10 @@ import type { ActivityIndicatorProps, ColorValue, ProcessedColorValue } from 're
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
-const propsCache = new WeakMap();
+const propsWithDefaultTextStyleCache = new WeakMap();
+const propsWithoutDefaultTextStyleCache = new WeakMap();
 const imageBaseStyle = { overflow: 'hidden' } as const;
-const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
+export const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
 const emptyImageSource = { uri: undefined, width: undefined, height: undefined };
 export const activityIndicatorStyles = {
   container: { alignItems: 'center', justifyContent: 'center' },
@@ -48,8 +49,8 @@ let cachedReactNativeMinor: number | null | undefined;
  * Callers treat `null` as "the current wrapper behavior".
  *
  * @remarks
- * `Platform.constants` is a synchronous native-constants read, so it happens lazily on first use and
- * is memoized rather than run at module load.
+ * This fallback is used only when the Babel plugin cannot resolve the build target. The synchronous
+ * native-constants read happens lazily on first use and is memoized.
  *
  * Boost intentionally mirrors release defaults by version. Do not import RN's private feature flags:
  * their paths are unstable, and apps that override private flags must patch Boost or skip optimization.
@@ -73,8 +74,7 @@ let cachedDefaultTextStyle: TextStyle | false | undefined;
 
 /**
  * The default style `Text` prepends to every element's `style` — `{ overflow: 'hidden' }` on RN ≥
- * 0.85, and `undefined` otherwise. The plugin prepends this as the first `style` array entry of every
- * optimized `Text`, so the user's own `overflow` still wins.
+ * 0.85, and `undefined` otherwise. The plugin uses this fallback when the build target is unknown.
  */
 export function getDefaultTextStyle(): TextStyle | undefined {
   const minor = getReactNativeMinor();
@@ -110,19 +110,17 @@ function propagatesArraySourceDimensions(): boolean {
 }
 
 /**
- * Gates a plain OBJECT source's inline `headers` for the top-level Android `headers` prop. The
- * plugin wraps the statically-extracted headers in this call so build-time output tracks the
- * installed RN exactly. See {@link liftsObjectSourceHeaders}.
+ * Gates a plain OBJECT source's inline `headers` for the top-level Android `headers` prop when the
+ * build target is unknown. See {@link liftsObjectSourceHeaders}.
  */
 export function processImageObjectSourceHeaders<T>(headers: T): T | undefined {
   return liftsObjectSourceHeaders() ? headers : undefined;
 }
 
 /**
- * Gates the layout style entry synthesized from a single-entry ARRAY source's intrinsic dimensions.
- * The plugin emits this as the first `style` array entry so build-time output tracks the installed
- * RN exactly; an `undefined` entry is ignored by style flattening, exactly like the wrapper's
- * `false`. See {@link propagatesArraySourceDimensions}.
+ * Gates a single-entry ARRAY source's intrinsic dimensions when the build target is unknown. An
+ * `undefined` entry is ignored by style flattening, exactly like the wrapper's `false`.
+ * See {@link propagatesArraySourceDimensions}.
  */
 export function processImageArraySourceDimensions<T>(dimensions: T): T | undefined {
   return propagatesArraySourceDimensions() ? dimensions : undefined;
@@ -132,25 +130,32 @@ export function processImageArraySourceDimensions<T>(dimensions: T): T | undefin
  * Normalizes `Text` style values for `NativeText`.
  *
  * @param style - Style prop passed to a text-like component.
+ * @param includesDefaultStyle - Build-time release default. Omit it to detect the runtime version.
  * @returns Native-friendly text props. Returns an empty object when `style` is falsy or cannot be normalized.
  * @remarks
  * - Flattens style arrays via `StyleSheet.flatten`
  * - Converts numeric `fontWeight` values to string values
  * - Maps `userSelect` and `verticalAlign` to native-compatible props
- * - Prepends {@link getDefaultTextStyle} so the versioned `overflow: 'hidden'` default applies to
- *   dynamically-styled (and falsy-styled) `Text` exactly as the wrapper applies it
+ * - Applies the build-time default-style setting, or uses {@link getDefaultTextStyle} as a fallback
  */
-export function processTextStyle(style: GenericStyleProp<TextStyle>): Partial<TextProps> {
-  const defaultTextStyle = getDefaultTextStyle();
-
+export function processTextStyle(
+  style: GenericStyleProp<TextStyle>,
+  includesDefaultStyle?: boolean
+): Partial<TextProps> {
+  const defaultTextStyle =
+    includesDefaultStyle === undefined
+      ? getDefaultTextStyle()
+      : includesDefaultStyle
+        ? textDefaultOverflowStyle
+        : undefined;
   if (!style) return defaultTextStyle ? { style: defaultTextStyle } : {};
 
-  // Cache the computed props
-  let props = propsCache.get(style);
+  const cache = defaultTextStyle ? propsWithDefaultTextStyleCache : propsWithoutDefaultTextStyleCache;
+  let props = cache.get(style);
   if (props) return props;
 
   props = {};
-  propsCache.set(style, props);
+  cache.set(style, props);
 
   const flattenedStyle = StyleSheet.flatten(style) as TextStyle;
 
