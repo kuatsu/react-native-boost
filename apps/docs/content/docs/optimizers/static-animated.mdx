@@ -1,0 +1,70 @@
+---
+title: Static Animated
+description: How Boost removes Animated wrappers that do not contain an animation.
+---
+
+The Static Animated optimizer removes an `Animated` wrapper when its element contains no animated value or event.
+
+```tsx
+// Before
+<Animated.View style={{ opacity: 1 }}>
+  <Text>Hello</Text>
+</Animated.View>
+
+// After, simplified
+<View style={{ opacity: 1 }} collapsable={false}>
+  <Text>Hello</Text>
+</View>
+```
+
+The resulting `View`, `Text`, or `Image` may then additionally pass through its corresponding Boost optimizer. For example, `Animated.View` can become `View` and then [`NativeView`](./native-view) in the same build.
+
+Boost keeps the defaults that React Native's Animated wrapper would have added. It also flattens static style arrays at build time.
+
+## Supported components
+
+- `Animated.View`
+- `Animated.Text`
+- `Animated.Image`
+- `Animated.ScrollView`
+
+## When it runs
+
+The optimizer can remove a wrapper when:
+
+- `Animated` is imported from `react-native`.
+- The build targets iOS or Android.
+- Its props and expression children are known not to contain animated values or events.
+- Its style is absent, null, or a static object or array literal.
+- Any callbacks are inline functions or local functions that Boost can identify.
+
+## When it skips
+
+Boost keeps the Animated wrapper when it finds:
+
+- An `Animated.Value`, interpolation, animated calculation, or `Animated.event`.
+- A prop, style, or child value that cannot be resolved at build time.
+- Spread props or duplicate props.
+- A `ref` or Animated passthrough prop.
+- A `refreshControl` on `Animated.ScrollView`.
+- An unknown or unsupported target platform.
+
+`@boost-force` does not override these checks. Boost must prove that the wrapper contains no animation before removing it.
+
+## React Native version support
+
+This optimizer is enabled by default for React Native 0.83 through 0.86.
+
+It is disabled by default for React Native 0.87 and later. React Native 0.87 changed how Android flushes native Animated operations. An `Animated` wrapper that has no animations itself may still flush work queued elsewhere, so removing it is not always safe.
+
+You can set `static-animated` to `on` explicitly, but this may cause small behavioral changes on Android in React Native 0.87 and higher.
+
+## Configuration
+
+```js
+module.exports = withBoostConfig(config, {
+  optimizations: {
+    'static-animated': 'off',
+  },
+});
+```

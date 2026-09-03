@@ -21,11 +21,15 @@ async function compileWrapperCase(os: PlatformOS, jsxBody: string, preamble = ''
   const activityIndicatorImport = jsxBody.includes('<ActivityIndicator')
     ? `import ActivityIndicator from 'react-native/Libraries/Components/ActivityIndicator/ActivityIndicator';\n`
     : '';
+  const animatedImport = jsxBody.includes('<Animated.')
+    ? `import AnimatedText from 'react-native/Libraries/Animated/components/AnimatedText';\nimport AnimatedView from 'react-native/Libraries/Animated/components/AnimatedView';\nconst Animated = { Text: AnimatedText, View: AnimatedView };\n`
+    : '';
   const source =
     `import Text from 'react-native/Libraries/Text/Text';\n` +
     `import View from 'react-native/Libraries/Components/View/View';\n` +
     imageImport +
     activityIndicatorImport +
+    animatedImport +
     `${preamble}\n` +
     `export default function Case(){ return ${jsxBody}; }`;
   const out = transformSync(source, {

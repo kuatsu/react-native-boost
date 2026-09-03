@@ -1,0 +1,47 @@
+---
+title: Native Text
+description: How Boost removes the React Native Text wrapper and when it keeps it.
+---
+
+The Native Text optimizer replaces React Native's `Text` component, which is a JavaScript-based wrapper component, with its native host component.
+
+```tsx
+// Before
+<Text>Hello</Text>
+
+// After, simplified
+<NativeText allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
+```
+
+Boost adds the same defaults and converts the same accessibility and style props that the wrapper would handle at runtime.
+
+## When it runs
+
+The optimizer can usually replace a `Text` when:
+
+- It is imported from `react-native`.
+- Its children are known to be text or numbers.
+- It is not inside another `Text`.
+- It has no press or responder behavior that needs the wrapper.
+- Boost can determine its text context.
+
+Direct accessibility props, `id`, `numberOfLines`, `selectionColor`, and supported text styles are normalized before the wrapper is removed.
+
+## When it skips
+
+Boost keeps the `Text` wrapper when it finds:
+
+- Press or responder props such as `onPress`, `onLongPress`, or `onResponderGrant`.
+- Children that might be React elements instead of text.
+- A parent `Text`, which requires React Native's inline text host.
+- An unknown parent or runtime caller that might place it inside a `Text`.
+- A spread that might contain props Boost must convert.
+- A dynamic `id` together with `nativeID`, where their precedence is unclear.
+- An `expo-router` `Link` with `asChild`, which makes its child pressable.
+- An unknown style source while Unistyles support is active.
+
+If your project guarantees that unknown parents never add a text context, you can use [`unknownAncestorsDoNotRenderText`](/docs/configuration/configure#plugin-assumptions-unknownancestorsdonotrendertext) to increase optimization coverage.
+
+## Configuration
+
+The optimizer is enabled by default. Set `native-text` to `off` to disable it.

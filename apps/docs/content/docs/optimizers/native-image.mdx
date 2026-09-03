@@ -1,0 +1,35 @@
+---
+title: Native Image
+description: How Boost moves React Native Image wrapper work to build time and when it skips an image.
+---
+
+The Native Image optimizer replaces React Native's `Image` component, which is a JavaScript-based wrapper component, with its native host component.
+
+The wrapper normally prepares sources, dimensions, styles, request headers, and accessibility props during rendering. Boost moves this work to build time when possible. Dynamic sources use a small runtime helper when they can still be handled safely.
+
+## When it runs
+
+The optimizer can usually replace an `Image` when:
+
+- It is imported from `react-native`.
+- The build targets iOS or Android.
+- It has a supported `source`, `src`, or static `srcSet`.
+- Its wrapper-level props can be safely prepared or passed through.
+- It is not inside a `Text`.
+
+## When it skips
+
+Boost keeps the `Image` wrapper when it finds:
+
+- No image source.
+- A dynamic or malformed `srcSet`.
+- Load callbacks, a `ref`, children, or another prop that requires the wrapper.
+- A spread that might contain Image wrapper props.
+- A `srcSet` combination whose dimensions or styles cannot be resolved safely.
+- A parent or unknown ancestor that might provide a text context.
+- A Unistyles style, or a style that might come from Unistyles. Unistyles does not provide a lean Image host.
+- An unknown or unsupported target platform.
+
+## Configuration
+
+The optimizer is enabled by default. Set `native-image` to `off` to disable it.

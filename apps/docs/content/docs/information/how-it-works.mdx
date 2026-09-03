@@ -3,15 +3,15 @@ title: How It Works
 description: Why React Native Boost makes your app faster (the short version).
 ---
 
-In React Native, `Text`, `View`, `Image`, and `ActivityIndicator` aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript components **every time it renders**, wrapping lower-level native components underneath.
+In React Native, `Text`, `View`, `Image`, and `ActivityIndicator` aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript components **every time it renders**, wrapping lower-level native components underneath. `Animated` components add another JavaScript wrapper.
 
-That wrapper is genuinely useful. It handles edge cases and powers conveniences such as accessibility props, style normalization, and Image source processing. But many elements do not need that runtime work, so the wrapper becomes pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
+These wrappers are genuinely useful. They handle edge cases and power conveniences such as accessibility props, style normalization, Image source processing, and animations. But many elements do not need all that runtime work, so a wrapper can become pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
 React Native Boost removes the wrapper when it isn't needed.
 
 ## The one-sentence version
 
-At build time, Boost rewrites `Text`, `View`, `Image`, and `ActivityIndicator` elements into the native output they were going to render anyway. The work the wrapper used to repeat on every render is either gone completely, or moved from the user's device to build-time.
+At build time, Boost rewrites supported elements into the output they were going to render anyway. It can also remove an `Animated` wrapper when the element contains no animation. The work that wrappers used to repeat on every render is either gone or moved from the user's device to build time.
 
 ## A quick before and after
 
@@ -29,7 +29,7 @@ These optimized components are imported from `react-native-boost/runtime` rather
 
 ## Only when it's safe
 
-Boost never changes how your app looks or behaves. It rewrites a component only when it can **prove** that doing so is safe. For each supported component it checks a lot of things. For example:
+By default, Boost rewrites a component only when it can **prove** that doing so is safe. For each supported component it checks a lot of things. For example:
 
 - Is this really the `react-native` component, or some other `Text` from another library?
 - Are its props fully compatible with the underlying native component?
@@ -44,9 +44,9 @@ If any check fails, Boost leaves that component exactly as it was. The bias is s
     description="The wrapper tax, the full call graph, the plugin internals, and the safety proofs in detail."
   />
   <Card
-    title="Coverage & Bailouts"
-    href="/docs/information/optimization-coverage"
-    description="Exactly what gets optimized, what gets skipped, and why."
+    title="Optimizers"
+    href="/docs/optimizers"
+    description="What gets optimized, what gets skipped, and why."
   />
   <Card
     title="Benchmarks"

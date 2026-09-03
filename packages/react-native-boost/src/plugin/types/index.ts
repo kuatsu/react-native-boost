@@ -25,6 +25,8 @@ export interface PluginOptimizationOptions {
    * @default 'on'
    */
   'native-activity-indicator'?: OptimizationSetting;
+  /** Removes built-in `Animated` wrappers whose props contain no animated values. @default 'on' for RN 0.83–0.86, 'off' otherwise */
+  'static-animated'?: OptimizationSetting;
 }
 
 export interface PluginAssumptions {
@@ -84,7 +86,15 @@ export interface MetroPluginOptions extends BoostOptions {
   };
 }
 
-export type OptimizableComponent = 'Text' | 'View' | 'Image' | 'ActivityIndicator';
+export type OptimizableComponent =
+  | 'Text'
+  | 'View'
+  | 'Image'
+  | 'ActivityIndicator'
+  | 'Animated.Text'
+  | 'Animated.View'
+  | 'Animated.Image'
+  | 'Animated.ScrollView';
 
 export type TargetPlatform = 'ios' | 'android' | 'web';
 

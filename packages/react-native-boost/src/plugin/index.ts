@@ -8,6 +8,7 @@ import { nativeViewOptimizer } from './optimizers/native-view';
 import { isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
+import { staticAnimatedOptimizer } from './optimizers/static-animated';
 import { validateBabelOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
 import {
@@ -112,6 +113,11 @@ export default declare((api, rawOptions, dirname?: string) => {
         const file = (path.hub as unknown as { file: HubFile }).file;
         const reactNativeMinor = resolveReactNativeMinor(file);
         const context = { logger, options, platform, unistylesEnabled, reactNativeMinor };
+        // The flush is redundant through RN 0.86; RN 0.87 Android can rely on each wrapper to drain a global queue.
+        const staticAnimatedDefault =
+          reactNativeMinor !== undefined && reactNativeMinor >= 83 && reactNativeMinor <= 86 ? 'on' : 'off';
+        if (isOptimizationEnabled(options, 'static-animated', staticAnimatedDefault))
+          staticAnimatedOptimizer(path, context);
         if (isOptimizationEnabled(options, 'native-text')) nativeTextOptimizer(path, context);
         if (isOptimizationEnabled(options, 'native-view')) nativeViewOptimizer(path, context);
         if (isOptimizationEnabled(options, 'native-image')) nativeImageOptimizer(path, context);
@@ -124,10 +130,11 @@ export default declare((api, rawOptions, dirname?: string) => {
 
 function isOptimizationEnabled(
   options: BabelPluginOptions,
-  name: keyof NonNullable<BabelPluginOptions['optimizations']>
+  name: keyof NonNullable<BabelPluginOptions['optimizations']>,
+  defaultState: 'on' | 'off' = 'on'
 ): boolean {
   const setting = options.optimizations?.[name];
-  return (Array.isArray(setting) ? setting[0] : setting) !== 'off';
+  return ((Array.isArray(setting) ? setting[0] : setting) ?? defaultState) === 'on';
 }
 
 function normalizeTargetPlatform(platform: unknown): TargetPlatform | undefined {

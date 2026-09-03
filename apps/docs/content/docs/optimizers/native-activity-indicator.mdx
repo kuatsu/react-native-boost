@@ -1,0 +1,36 @@
+---
+title: Native Activity Indicator
+description: How Boost prepares the native ActivityIndicator tree and when it keeps the wrapper.
+---
+
+React Native's `ActivityIndicator` component renders an outer native `View` and a platform spinner. Boost creates those same two native elements at build time, removing a fiber from the tree.
+
+It also applies the platform defaults for color, size, visibility, and layout. Dynamic direct values use small runtime helpers when needed.
+
+## When it runs
+
+The optimizer can usually replace an `ActivityIndicator` when:
+
+- It is imported from `react-native`.
+- The build targets iOS or Android.
+- Its props are written directly on the element.
+- It has no children.
+- Moving its props to the two generated native elements keeps their evaluation order safe.
+- It is not inside a `Text`.
+
+## When it skips
+
+Boost keeps the wrapper when it finds:
+
+- An unknown or unsupported target platform.
+- Spread props.
+- Children.
+- A prop expression with side effects, such as a function call.
+- A parent or unknown ancestor that might provide a text context.
+- A Unistyles style, or a style that might come from Unistyles.
+
+These checks prevent Boost from changing prop precedence, execution order, or style reactivity.
+
+## Configuration
+
+The optimizer is enabled by default. Set `native-activity-indicator` to `off` to disable it.

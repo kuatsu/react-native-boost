@@ -2,7 +2,7 @@ import { NodePath, types as t } from '@babel/core';
 import { addDefault, addNamed } from '@babel/helper-module-imports';
 import { FileImportOptions, HubFile } from '../../types';
 import { RUNTIME_MODULE_NAME, UNISTYLES_NATIVE_TEXT_MODULE, UNISTYLES_NATIVE_VIEW_MODULE } from '../constants';
-import { markOptimizedHost, OptimizedHostKind } from './optimized-host';
+import { markReactNativeComponent, ReactNativeComponentName } from './optimized-host';
 
 /**
  * Adds a hint to the file object to ensure that a specific import is added only once and cached on the file object.
@@ -52,11 +52,11 @@ export interface NativeComponentSource {
 /** The native hosts Boost rewrites elements into; the local-name basis for each injected import. */
 type NativeComponentName = 'NativeText' | 'NativeView' | 'NativeImage';
 
-/** Which context each optimized host establishes for the ancestor walk. Total over every host name. */
-const HOST_KIND_BY_NAME: Record<NativeComponentName, OptimizedHostKind> = {
-  NativeText: 'text',
-  NativeView: 'view',
-  NativeImage: 'view',
+/** The public component whose render context each native host preserves. */
+const COMPONENT_BY_HOST: Record<NativeComponentName, ReactNativeComponentName> = {
+  NativeText: 'Text',
+  NativeView: 'View',
+  NativeImage: 'Image',
 };
 
 /**
@@ -108,7 +108,7 @@ export const replaceWithNativeComponent = (
 
   // Record what this element was optimized into so the ancestor walk can classify it once it becomes a
   // descendant's ancestor (the injected import is not yet resolvable via scope this traversal).
-  markOptimizedHost(path.node, HOST_KIND_BY_NAME[nativeComponentName]);
+  markReactNativeComponent(path.node, COMPONENT_BY_HOST[nativeComponentName]);
 
   // Replace the component with its native counterpart
   const jsxName = path.node.name as t.JSXIdentifier;

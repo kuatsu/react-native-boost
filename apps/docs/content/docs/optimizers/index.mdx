@@ -1,0 +1,45 @@
+---
+title: Overview
+description: What React Native Boost can optimize and the cases it safely skips.
+---
+
+React Native Boost includes different optimizers that optimize different parts of your app. Every optimizer runs at build time and leaves your code unchanged when it cannot prove that a rewrite is safe.
+
+<Cards>
+  <Card title="Native Text" href="/docs/optimizers/native-text" description="Removes the React Native Text wrapper." />
+  <Card title="Native View" href="/docs/optimizers/native-view" description="Removes the React Native View wrapper." />
+  <Card title="Native Image" href="/docs/optimizers/native-image" description="Moves Image wrapper work to build time." />
+  <Card title="Native Activity Indicator" href="/docs/optimizers/native-activity-indicator" description="Builds the native spinner tree ahead of time." />
+  <Card title="Static Animated" href="/docs/optimizers/static-animated" description="Removes Animated wrappers that contain no animation." />
+</Cards>
+
+## Shared component safety rules
+
+When optimizing a component, all optimizers first confirm that the component comes from `react-native`. A component from another package, or a local component with the same name, is not changed.
+
+Boost also skips a component when:
+
+- Its file matches an [`ignores`](/docs/configuration/configure#plugin-options-ignores) pattern.
+- Its line has [`@boost-ignore`](/docs/configuration/boost-decorator#boost-ignore).
+- Required information is only available at runtime.
+
+Set `logLevel: 'debug'` to see why a component was skipped.
+
+## Controlling optimizers
+
+Most optimizers are enabled by default. Exceptions are:
+
+- The [Static Animated optimizer](./static-animated) is enabled by default only for React Native 0.83 through 0.86.
+
+You can turn each optimizer on or off in `metro.config.js`:
+
+```js
+module.exports = withBoostConfig(config, {
+  optimizations: {
+    'native-image': 'off',
+    'static-animated': 'on',
+  },
+});
+```
+
+See [Configure Boost](/docs/configuration/configure#optimization-options) for all options.
