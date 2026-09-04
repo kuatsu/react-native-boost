@@ -4,6 +4,9 @@
   "description": "Benchmarks the time to render",
   "private": true,
   "main": "src/index",
+  "peerDependencies": {
+    "react-native": ">=0.83.0"
+  },
   "codegenConfig": {
     "name": "RNTimeToRenderSpec",
     "type": "all",

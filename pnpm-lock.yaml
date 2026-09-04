@@ -283,6 +283,9 @@ importers:
       '@rollup/plugin-node-resolve':
         specifier: ^16.0.3
         version: 16.0.3(rollup@4.63.1)
+      '@types/babel__core':
+        specifier: ^7.20.5
+        version: 7.20.5
       '@types/babel__helper-module-imports':
         specifier: ^7.18.3
         version: 7.18.3
@@ -292,12 +295,24 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.5
+        version: 19.2.5(@types/react@19.2.18)
+      '@typescript/typescript6':
+        specifier: ^6.0.2
+        version: 6.0.2
       babel-plugin-tester:
         specifier: ^12.0.0
         version: 12.0.0(@babel/core@7.29.7(supports-color@8.1.1))
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0
+      metro-config:
+        specifier: 0.87.0
+        version: 0.87.0(supports-color@8.1.1)
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -315,7 +330,7 @@ importers:
         version: 4.63.1
       rollup-plugin-dts:
         specifier: ^6.5.1
-        version: 6.5.1(rollup@4.63.1)(typescript@7.0.2)
+        version: 6.5.1(@typescript/typescript6@6.0.2)(rollup@4.63.1)(typescript@7.0.2)
       rollup-plugin-esbuild:
         specifier: ^6.2.1
         version: 6.2.1(esbuild@0.28.2)(rollup@4.63.1)(supports-color@8.1.1)
@@ -326,7 +341,11 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@26.4.1)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
 
-  packages/react-native-time-to-render: {}
+  packages/react-native-time-to-render:
+    dependencies:
+      react-native:
+        specifier: '>=0.83.0'
+        version: 0.87.1(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1)
 
   tooling/benchmark:
     devDependencies:
@@ -3204,6 +3223,10 @@ packages:
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
+
+  '@typescript/typescript6@6.0.2':
+    resolution: {integrity: sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==}
+    hasBin: true
 
   '@ungap/structured-clone@1.4.0':
     resolution: {integrity: sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ==}
@@ -6609,6 +6632,11 @@ packages:
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
 
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   typescript@7.0.2:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
     engines: {node: '>=16.20.0'}
@@ -9258,6 +9286,15 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.18
 
+  '@react-native/virtualized-lists@0.87.1(@types/react@19.2.18)(react-native@0.87.1(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8)':
+    dependencies:
+      invariant: 2.2.4
+      nullthrows: 1.1.1
+      react: 19.2.8
+      react-native: 0.87.1(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1)
+    optionalDependencies:
+      '@types/react': 19.2.18
+
   '@react-navigation/core@7.21.13(react@19.2.3)':
     dependencies:
       '@react-navigation/routers': 7.6.4
@@ -9885,6 +9922,10 @@ snapshots:
 
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
+
+  '@typescript/typescript6@6.0.2':
+    dependencies:
+      '@typescript/old': typescript@6.0.3
 
   '@ungap/structured-clone@1.4.0': {}
 
@@ -13430,6 +13471,49 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  react-native@0.87.1(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1):
+    dependencies:
+      '@react-native/asset-utils': 0.87.1
+      '@react-native/codegen': 0.87.1(@babel/core@7.29.7(supports-color@8.1.1))
+      '@react-native/community-cli-plugin': 0.87.1(supports-color@8.1.1)
+      '@react-native/gradle-plugin': 0.87.1
+      '@react-native/normalize-colors': 0.87.1
+      '@react-native/virtualized-lists': 0.87.1(@types/react@19.2.18)(react-native@0.87.1(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8)
+      anser: 1.4.10
+      ansi-regex: 5.0.1
+      babel-plugin-syntax-hermes-parser: 0.36.1
+      base64-js: 1.5.1
+      commander: 12.1.0
+      flow-enums-runtime: 0.0.6
+      hermes-compiler: 250829098.0.17
+      invariant: 2.2.4
+      memoize-one: 5.2.1
+      metro-runtime: 0.87.0
+      metro-source-map: 0.87.0(supports-color@8.1.1)
+      nullthrows: 1.1.1
+      pretty-format: 29.7.0
+      promise: 8.3.0
+      react: 19.2.8
+      react-devtools-core: 6.1.5
+      react-refresh: 0.14.2
+      regenerator-runtime: 0.13.11
+      scheduler: 0.27.0
+      semver: 7.8.5
+      stacktrace-parser: 0.1.11
+      tinyglobby: 0.2.17
+      whatwg-fetch: 3.6.20
+      ws: 7.5.13
+      yargs: 17.7.3
+    optionalDependencies:
+      '@types/react': 19.2.18
+    transitivePeerDependencies:
+      - '@babel/core'
+      - '@react-native-community/cli'
+      - '@react-native/metro-config'
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   react-refresh@0.14.2: {}
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.18)(react@19.2.8):
@@ -13688,7 +13772,7 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.2.7
       '@rolldown/binding-win32-x64-msvc': 1.2.7
 
-  rollup-plugin-dts@6.5.1(rollup@4.63.1)(typescript@7.0.2):
+  rollup-plugin-dts@6.5.1(@typescript/typescript6@6.0.2)(rollup@4.63.1)(typescript@7.0.2):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       '@jridgewell/sourcemap-codec': 1.6.0
@@ -13698,6 +13782,7 @@ snapshots:
       typescript: 7.0.2
     optionalDependencies:
       '@babel/code-frame': 8.0.0
+      '@typescript/typescript6': 6.0.2
 
   rollup-plugin-esbuild@6.2.1(esbuild@0.28.2)(rollup@4.63.1)(supports-color@8.1.1):
     dependencies:
@@ -14092,6 +14177,8 @@ snapshots:
   type-fest@4.41.0: {}
 
   typedarray@0.0.6: {}
+
+  typescript@6.0.3: {}
 
   typescript@7.0.2:
     optionalDependencies:

@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 import type { ComponentType } from 'react';
 
 let counter = 0;
