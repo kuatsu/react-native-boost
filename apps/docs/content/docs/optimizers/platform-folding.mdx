@@ -3,7 +3,7 @@ title: Platform Folding
 description: Resolves React Native Platform values during the build.
 ---
 
-The Platform Folding optimizer resolves React Native `Platform.select` calls and `Platform.OS` uses for the target platform. This removes runtime checks and unreachable branches.
+The Platform Folding optimizer resolves React Native `Platform.select` calls and `Platform.OS` uses before the other Boost optimizers run. While Metro and Expo already perform similar release transforms in a later stage of the pipeline, that is too late for Boost to optimize any JSX and styles that make use of the `Platform` module. This early pass can therefore remove these runtime helpers earlier and increase optimization coverage of other Boost optimizers.
 
 ```jsx
 import { Platform } from 'react-native';
