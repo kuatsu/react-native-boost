@@ -261,38 +261,21 @@ const buildObjectPropertyFromAttribute = (attribute: t.JSXAttribute): t.ObjectPr
 };
 
 /**
- * Builds an expression that merges the given JSX attributes into a single props object. When none of
- * the attributes is a spread (the common case) the result is a plain `ObjectExpression` literal — every
- * attribute becomes one property, including the empty case which yields `{}`. When at least one spread
- * is present the result is `Object.assign({}, …)` (one single-key object per plain attribute, each
- * spread's argument as a bare merge source), because reproducing object-spread merge semantics requires
- * the call. Either shape produces a structurally-equal object; only the construction differs.
+ * Builds an object expression from JSX attributes while preserving spread order.
  *
  * @param attributes - The attributes to build the expression from.
- * @returns An `ObjectExpression` (no spread) or an `Object.assign` `CallExpression` (spread present).
+ * @returns An object expression containing direct properties and spread elements.
  */
-export const buildPropertiesFromAttributes = (attributes: (t.JSXAttribute | t.JSXSpreadAttribute)[]): t.Expression => {
-  if (!attributes.some((attribute) => t.isJSXSpreadAttribute(attribute))) {
-    const properties = attributes
-      .filter((attribute): attribute is t.JSXAttribute => t.isJSXAttribute(attribute))
-      .map((attribute) => buildObjectPropertyFromAttribute(attribute));
-    return t.objectExpression(properties);
-  }
-
-  const arguments_: t.Expression[] = [];
-  for (const attribute of attributes) {
-    if (t.isJSXSpreadAttribute(attribute)) {
-      arguments_.push(attribute.argument);
-    } else if (t.isJSXAttribute(attribute)) {
-      arguments_.push(t.objectExpression([buildObjectPropertyFromAttribute(attribute)]));
-    }
-  }
-
-  return t.callExpression(t.memberExpression(t.identifier('Object'), t.identifier('assign')), [
-    t.objectExpression([]),
-    ...arguments_,
-  ]);
-};
+export const buildPropertiesFromAttributes = (
+  attributes: (t.JSXAttribute | t.JSXSpreadAttribute)[]
+): t.ObjectExpression =>
+  t.objectExpression(
+    attributes.map((attribute) =>
+      t.isJSXSpreadAttribute(attribute)
+        ? t.spreadElement(attribute.argument)
+        : buildObjectPropertyFromAttribute(attribute)
+    )
+  );
 
 /**
  * Checks if the JSX element has an accessibility property.
