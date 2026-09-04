@@ -1,6 +1,6 @@
 import { NodePath, types as t } from '@babel/core';
 import type { Optimizer, OptimizerState, TargetPlatform } from '../../types';
-import { isIgnoredLine } from '../../utils/common';
+import { isIgnoredLine, isStaticLiteralTree } from '../../utils/common';
 
 const platformFoldingVisitor = {
   CallExpression(path: NodePath<t.CallExpression>, state: OptimizerState) {
@@ -89,12 +89,18 @@ function buildSelectReplacement(path: NodePath<t.CallExpression>, platform: Targ
     if (!t.isObjectProperty(property) || property.computed) return;
 
     const name = getStaticPropertyName(property.key);
-    if (name === undefined) continue;
     if (name === '__proto__') return;
-    properties.set(name, property);
+    if (name !== undefined) properties.set(name, property);
   }
 
   const selected = properties.get(platform) ?? properties.get('native') ?? properties.get('default');
+  const hasUnsafeDiscardedValue = argument.properties.some(
+    (property) => property !== selected && t.isObjectProperty(property) && !isStaticLiteralTree(property.value)
+  );
+  if (hasUnsafeDiscardedValue) {
+    const property = t.stringLiteral(selected ? getStaticPropertyName(selected.key)! : platform);
+    return t.memberExpression(t.cloneNode(argument, true), property, true);
+  }
   if (selected) return t.cloneNode(selected.value, true) as t.Expression;
   return t.unaryExpression('void', t.numericLiteral(0));
 }

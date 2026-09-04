@@ -79,12 +79,42 @@ describe('platform folding optimizer', () => {
     expect(output).not.toContain('<Android');
   });
 
+  it('preserves discarded value evaluations, order, duplicates, and present undefined', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        const calls = [];
+        const record = (name, value) => { calls.push(name); return value; };
+        const selected = Platform.select({
+          ios: record('first ios', 'first'),
+          android: record('android', 'android'),
+          ios: record('second ios', undefined),
+          native: record('native', 'native'),
+        });
+        globalThis.result = { calls, selected };
+      `,
+      'ios'
+    );
+    const executable = output.replace(/^import .*;\n/, '');
+    const globalObject: { result?: { calls: string[]; selected: unknown } } = {};
+    new Function('globalThis', executable)(globalObject);
+
+    expect(globalObject.result).toEqual({
+      calls: ['first ios', 'android', 'second ios', 'native'],
+      selected: undefined,
+    });
+    expect(output).not.toContain('Platform.select');
+  });
+
   it('keeps unsafe select specs and unsupported branches unchanged', () => {
     const output = transformPlatform(`
       import { Platform } from 'react-native';
       const computed = Platform.select({ [key]: 'computed', ios: 'ios' });
       const spread = Platform.select({ ...spec, ios: 'ios' });
       const getter = Platform.select({ get ios() { return 'getter'; } });
+      const setter = Platform.select({ set ios(value) {}, default: 'default' });
+      const method = Platform.select({ ios() { return 'method'; } });
+      const prototype = Platform.select({ __proto__: null, ios: 'ios' });
       const extraArgument = Platform.select({ ios: 'ios' }, sideEffect());
       const loose = Platform.OS == 'ios' ? 'yes' : 'no';
       const dynamic = Platform.OS === target ? 'yes' : 'no';
@@ -92,7 +122,7 @@ describe('platform folding optimizer', () => {
       const constants = Platform.constants === 'ios' ? 'yes' : 'no';
     `);
 
-    expect(output.match(/Platform\.select\(/g)).toHaveLength(4);
+    expect(output.match(/Platform\.select\(/g)).toHaveLength(7);
     expect(output).toContain("Platform.OS == 'ios'");
     expect(output).toContain('Platform.OS === target');
     expect(output).toContain("Platform.Version === 'ios'");
