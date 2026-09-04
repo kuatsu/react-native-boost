@@ -1,6 +1,6 @@
 import { NodePath, types as t } from '@babel/core';
 import type { Optimizer, OptimizerState, TargetPlatform } from '../../types';
-import { isIgnoredLine, isStaticLiteralTree } from '../../utils/common';
+import { isIgnoredLine, isModuleImportBinding, isStaticLiteralTree } from '../../utils/common';
 
 const platformFoldingVisitor = {
   CallExpression(path: NodePath<t.CallExpression>, state: OptimizerState) {
@@ -206,7 +206,7 @@ function isReadOnly(path: NodePath<t.MemberExpression>): boolean {
 function isPlatformReference(path: NodePath, expression: t.Node): boolean {
   if (t.isIdentifier(expression)) {
     const binding = path.scope.getBinding(expression.name);
-    return isReactNativeImport(binding, t.isImportSpecifier, 'Platform');
+    return isModuleImportBinding(binding, 'react-native', t.isImportSpecifier, 'Platform');
   }
 
   if (
@@ -219,22 +219,7 @@ function isPlatformReference(path: NodePath, expression: t.Node): boolean {
   }
 
   const binding = path.scope.getBinding(expression.object.name);
-  return isReactNativeImport(binding, t.isImportNamespaceSpecifier);
-}
-
-function isReactNativeImport(
-  binding: ReturnType<NodePath['scope']['getBinding']>,
-  isSpecifier: (node: t.Node) => boolean,
-  importedName?: string
-): boolean {
-  if (!binding || binding.kind !== 'module' || !isSpecifier(binding.path.node)) return false;
-  if (!t.isImportDeclaration(binding.path.parent) || binding.path.parent.source.value !== 'react-native') return false;
-  if (binding.path.parent.importKind === 'type') return false;
-  if (t.isImportSpecifier(binding.path.node)) {
-    if (binding.path.node.importKind === 'type') return false;
-    return importedName === undefined || t.isIdentifier(binding.path.node.imported, { name: importedName });
-  }
-  return importedName === undefined;
+  return isModuleImportBinding(binding, 'react-native', t.isImportNamespaceSpecifier);
 }
 
 function getStaticPropertyName(key: t.Node): string | undefined {

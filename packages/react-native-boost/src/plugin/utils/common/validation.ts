@@ -102,6 +102,24 @@ function hasJSXDecoratorComment(path: NodePath<t.JSXOpeningElement>, decorator: 
   return false;
 }
 
+export function isModuleImportBinding(
+  binding: ReturnType<NodePath['scope']['getBinding']>,
+  source: string,
+  isSpecifier: (node: t.Node) => boolean,
+  importedName?: string
+): boolean {
+  if (!binding || binding.kind !== 'module' || !isSpecifier(binding.path.node)) return false;
+  if (!t.isImportDeclaration(binding.path.parent) || binding.path.parent.source.value !== source) return false;
+  if (binding.path.parent.importKind === 'type') return false;
+  if (t.isImportSpecifier(binding.path.node)) {
+    return (
+      binding.path.node.importKind !== 'type' &&
+      (importedName === undefined || t.isIdentifier(binding.path.node.imported, { name: importedName }))
+    );
+  }
+  return importedName === undefined;
+}
+
 export const isReactNativeComponent = (path: NodePath<t.JSXOpeningElement>, expectedImportedName: string): boolean => {
   if (getMarkedReactNativeComponent(path.node) === expectedImportedName) return true;
   if (!t.isJSXIdentifier(path.node.name) || !t.isJSXElement(path.parent)) return false;

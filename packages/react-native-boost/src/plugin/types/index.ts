@@ -26,6 +26,8 @@ export interface PluginOptimizationOptions {
    * @default 'on'
    */
   'native-activity-indicator'?: OptimizationSetting;
+  /** Creates persistent `Animated` values lazily instead of recreating unused values on each render. @default 'on' for detected RN 0.83+ */
+  'animated-value-initialization'?: OptimizationSetting;
   /** Removes built-in `Animated` wrappers whose props contain no animated values. @default 'on' for RN 0.83–0.86, 'off' otherwise */
   'animated-wrapper-removal'?: OptimizationSetting;
   /** Evaluates static React Native `StyleSheet` operations at build time. @default 'on' */
