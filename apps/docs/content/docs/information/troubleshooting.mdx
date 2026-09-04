@@ -62,7 +62,7 @@ Options:
 
 ### Skip reason: `has unresolved runtime parent that may render Text`
 
-A root `Text` returned by a component or renderer can be mounted inside another `Text`. Boost keeps the wrapper because only that wrapper can select `NativeText` or `NativeVirtualText` from the runtime context.
+A root component can be mounted inside a `Text`. Boost keeps a root `Text` wrapper so it can select `NativeText` or `NativeVirtualText`. It also keeps a root `View` with children so the wrapper can reset inherited text context.
 
 Use `@boost-force` only when every use of that component has a non-text parent. The project-wide unknown ancestor assumption also overrides this check.
 

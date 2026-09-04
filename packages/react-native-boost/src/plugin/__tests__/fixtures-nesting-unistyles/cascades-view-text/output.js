@@ -1,6 +1,6 @@
+import _UnistylesNativeView from 'react-native-unistyles/components/native/NativeView';
 import { NativeText as _UnistylesNativeText } from 'react-native-unistyles/components/native/NativeText';
 import { getDefaultTextAccessible as _getDefaultTextAccessible } from 'react-native-boost/runtime';
-import _UnistylesNativeView from 'react-native-unistyles/components/native/NativeView';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 const styles = StyleSheet.create({
@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   t: {},
 });
 const C = () => (
-  <_UnistylesNativeView style={styles.box}>
+  <View style={styles.box}>
     <_UnistylesNativeText
       style={styles.t}
       allowFontScaling={true}
@@ -27,5 +27,5 @@ const C = () => (
         deep
       </_UnistylesNativeText>
     </_UnistylesNativeView>
-  </_UnistylesNativeView>
+  </View>
 );

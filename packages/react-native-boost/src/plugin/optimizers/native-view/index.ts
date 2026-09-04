@@ -6,12 +6,14 @@ import {
   addFileImportHint,
   buildPropertiesFromAttributes,
   hasAmbiguousIdNativeID,
+  hasBlacklistedProperty,
   hasBlacklistedPropertyInSpread,
   isForcedLine,
   isIgnoredLine,
   isReactNativeComponent,
   replaceWithNativeComponent,
   ancestorBailoutChecks,
+  inheritsTextContextFromRuntimeParent,
   createStyleOriginResolver,
   makeAttribute,
   UNISTYLES_VIEW_HOST,
@@ -50,6 +52,7 @@ const VIEW_SPREAD_GUARD_KEYS = new Set([
 // Unistyles style), so the guard set additionally includes `style`. Precomputed to avoid rebuilding it
 // per element.
 const VIEW_SPREAD_GUARD_KEYS_UNISTYLES = new Set([...VIEW_SPREAD_GUARD_KEYS, 'style']);
+const VIEW_CHILDREN_PROP = new Set(['children']);
 
 // ARIA siblings that trigger aggregation. Their presence routes the whole matching group (including a
 // passed `accessibilityState`/`accessibilityValue`) through the runtime helper, because the wrapper
@@ -81,6 +84,13 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
       shouldBail: () => hasAmbiguousIdNativeID(path),
+    },
+    {
+      reason: 'has unresolved runtime parent that may render Text',
+      shouldBail: () =>
+        options?.assumptions?.unknownAncestorsDoNotRenderText !== true &&
+        hasChildren(path) &&
+        inheritsTextContextFromRuntimeParent(path),
     },
     ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
@@ -130,6 +140,20 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
 };
 
 export const nativeViewOptimizer = createJSXOptimizer('native-view', optimizeNativeView);
+
+function hasChildren(path: NodePath<t.JSXOpeningElement>): boolean {
+  if (hasBlacklistedProperty(path, VIEW_CHILDREN_PROP)) return true;
+
+  const parent = path.parent;
+  return (
+    t.isJSXElement(parent) &&
+    parent.children.some(
+      (child) =>
+        (!t.isJSXText(child) || child.value.trim() !== '') &&
+        (!t.isJSXExpressionContainer(child) || !t.isJSXEmptyExpression(child.expression))
+    )
+  );
+}
 
 /**
  * Reproduces the `View` wrapper's ergonomic-prop translation for an optimized element: renames
