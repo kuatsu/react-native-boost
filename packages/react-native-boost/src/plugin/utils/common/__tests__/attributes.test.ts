@@ -37,26 +37,17 @@ describe('buildPropertiesFromAttributes', () => {
     expect(t.isStringLiteral(property.key, { value: 'aria-label' })).toBe(true);
   });
 
-  it('returns an Object.assign call when any attribute is a spread', () => {
+  it('preserves spreads and plain attributes in an object literal', () => {
     const node = buildPropertiesFromAttributes([
       spread('props'),
       attribute('accessibilityRole', t.stringLiteral('button')),
     ]);
 
-    expect(t.isCallExpression(node)).toBe(true);
-    const call = node as t.CallExpression;
-    const callee = call.callee as t.MemberExpression;
-    expect(t.isIdentifier(callee.object, { name: 'Object' })).toBe(true);
-    expect(t.isIdentifier(callee.property, { name: 'assign' })).toBe(true);
-
-    // Args: {} target, the bare spread argument, then one single-key object per plain attribute.
-    expect(call.arguments).toHaveLength(3);
-    const target = call.arguments[0] as t.ObjectExpression;
-    expect(t.isObjectExpression(target)).toBe(true);
-    expect(target.properties).toHaveLength(0);
-    expect(t.isIdentifier(call.arguments[1], { name: 'props' })).toBe(true);
-    const lastArg = call.arguments[2] as t.ObjectExpression;
-    expect(t.isObjectExpression(lastArg)).toBe(true);
-    expect(lastArg.properties).toHaveLength(1);
+    expect(node.properties).toHaveLength(2);
+    const [spreadProperty, roleProperty] = node.properties;
+    expect(t.isSpreadElement(spreadProperty)).toBe(true);
+    expect(t.isIdentifier((spreadProperty as t.SpreadElement).argument, { name: 'props' })).toBe(true);
+    expect(t.isObjectProperty(roleProperty)).toBe(true);
+    expect(t.isIdentifier((roleProperty as t.ObjectProperty).key, { name: 'accessibilityRole' })).toBe(true);
   });
 });
