@@ -1,0 +1,7 @@
+import { Image } from 'react-native';
+
+<Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+<>
+  {/* @boost-force */}
+  <Image source={{ uri: 'logo.png' }} />
+</>;
