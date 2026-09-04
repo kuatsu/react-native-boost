@@ -33,6 +33,10 @@ By default, Boost rewrites a component only when it can **prove** that doing so 
 
 If any check fails, Boost leaves that component or function exactly as it was. It has a strong bias toward safety and would rather miss an optimization than risk a bug.
 
+## Compatibility boundary
+
+Boost guarantees parity with React Native's public API and default internal configuration. It does not guarantee behavioral parity if your app uses private deep imports, custom internal feature flag values, internal component injection, or similar private or internal APIs.
+
 <Cards>
   <Card
     title="Optimizers"
