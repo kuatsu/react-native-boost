@@ -455,5 +455,34 @@ describe('differential parity', () => {
       const boost = await captureBoostHosts(os, jsx, preamble, false);
       expect(boost.optimized).toBe(false);
     });
+
+    it('keeps a nested Text virtual through a transparent component', async () => {
+      const jsx = '<RealText><Label /></RealText>';
+      const preamble = `
+        import RealText from 'react-native/Libraries/Text/Text';
+        // Keep the wrapper later so the analyzer sees its untransformed JSX.
+        const Label = () => <Passthrough><Text>label</Text></Passthrough>;
+        const Passthrough = ({ children }) => <>{children}</>;
+      `;
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      expect(wrapper.map((host) => host.which)).toEqual(['NativeText', 'NativeVirtualText']);
+
+      const boost = await captureBoostHosts(os, jsx, preamble, false);
+      expect(boost.optimized).toBe(false);
+    });
+
+    it('keeps View children outside the inherited Text context', async () => {
+      const jsx = '<RealText><Box><Label /></Box></RealText>';
+      const preamble = `
+        import RealText from 'react-native/Libraries/Text/Text';
+        const Box = ({ children }) => <View>{children}</View>;
+        const Label = () => <RealText>label</RealText>;
+      `;
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      expect(wrapper.map((host) => host.which)).toEqual(['NativeText', 'NativeView', 'NativeText']);
+
+      const boost = await captureBoostHosts(os, jsx, preamble, false);
+      expect(boost.optimized).toBe(false);
+    });
   });
 });
