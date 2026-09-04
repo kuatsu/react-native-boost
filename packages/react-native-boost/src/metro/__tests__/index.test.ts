@@ -26,12 +26,12 @@ describe('Metro integration', () => {
       { logLevel: 'silent', optimizations: { 'native-text': 'off' } }
     );
     const wrapper = fs.readFileSync(config.transformer.babelTransformerPath, 'utf8');
-    const { version } = requireFromProject('react-native/package.json') as { version: string };
+    const reactNativePackageJson = fs.realpathSync(requireFromProject.resolve('react-native/package.json'));
 
     expect(wrapper).toContain('createTransformer');
     expect(wrapper).toContain(JSON.stringify(requireFromProject.resolve('metro-babel-transformer')));
     expect(wrapper).not.toContain('module.parent');
-    expect(wrapper).toContain(`"version":"${version}"`);
+    expect(wrapper).toContain(`"packageJson":${JSON.stringify(reactNativePackageJson)}`);
     expect(wrapper).toContain('"native-text":"off"');
   });
 
@@ -93,8 +93,12 @@ describe('Metro integration', () => {
     });
 
     expect(first.transformer.babelTransformerPath).not.toBe(second.transformer.babelTransformerPath);
-    expect(fs.readFileSync(first.transformer.babelTransformerPath, 'utf8')).toContain('"version":"0.86.0"');
-    expect(fs.readFileSync(second.transformer.babelTransformerPath, 'utf8')).toContain('"version":"0.87.1"');
+    expect(fs.readFileSync(first.transformer.babelTransformerPath, 'utf8')).toContain(
+      `"packageJson":${JSON.stringify(fs.realpathSync(firstPackage))}`
+    );
+    expect(fs.readFileSync(second.transformer.babelTransformerPath, 'utf8')).toContain(
+      `"packageJson":${JSON.stringify(fs.realpathSync(secondPackage))}`
+    );
   });
 
   it('warns when React Native cannot be resolved', () => {

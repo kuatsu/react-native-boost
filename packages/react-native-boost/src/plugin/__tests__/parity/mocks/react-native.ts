@@ -1,4 +1,5 @@
 import Platform from './Platform';
+import processColor from 'react-native/Libraries/StyleSheet/processColor';
 import {
   NativeActivityIndicatorCapturer,
   NativeImageCapturer,
@@ -6,16 +7,12 @@ import {
   NativeViewCapturer,
 } from '../capture';
 import { flattenStyle } from '../normalize';
-import { processColor } from './processColor';
 
 // Bare-specifier `react-native` surface for the Boost side. It backs the runtime index's
 // `import { StyleSheet, processColor } from 'react-native'` plus the dead leftover `import { Text, View }`
 // the plugin leaves in generated code. The host components resolve to the shared capturers so any path
 // that bottoms out here is still captured.
-export { Platform };
-// Same function the wrapper resolves (via the basename redirect to `mocks/processColor.ts`), so the
-// `selectionColor` parity case has one unambiguous expected value across both sides.
-export { processColor };
+export { Platform, processColor };
 export const unstable_NativeText = NativeTextCapturer;
 export const unstable_NativeView = NativeViewCapturer;
 export const Text = NativeTextCapturer;

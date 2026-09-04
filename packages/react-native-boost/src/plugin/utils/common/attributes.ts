@@ -376,14 +376,9 @@ export function extractStyleAttribute(attributes: Array<t.JSXAttribute | t.JSXSp
 }
 
 /**
- * Extracts a direct `selectionColor` JSX attribute and the expression to run through the runtime
- * `processSelectionColor` helper. A string literal (`selectionColor="red"`), a non-empty expression
- * container (`selectionColor={expr}`), or a valueless `selectionColor` (the boolean `true`) yields both
- * the attribute and its color expression. `Text` runs even a `true` through `processColor` (which yields
- * `undefined`, omitting the prop), so routing it through the helper matches that rather than forwarding
- * a raw `true` to the native host. A `selectionColor={}` (empty container) has no expression and is left
- * verbatim (returns `{}`); React resolves it to `undefined`, which the native host omits — already
- * matching `Text`.
+ * Extracts a direct `selectionColor` JSX attribute and its expression. A string literal, a non-empty
+ * expression container, or a valueless attribute yields both values. An empty expression container is
+ * left unchanged because React already resolves it to `undefined`.
  *
  * @returns The attribute node and its color expression when extractable; otherwise an empty object.
  */

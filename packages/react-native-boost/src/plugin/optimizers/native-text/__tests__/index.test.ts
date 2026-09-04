@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { transformSync, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
@@ -6,6 +7,8 @@ import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
 import boostPlugin from '../../../index';
 import { nativeTextOptimizer } from '..';
+
+const reactNativePackageJson = createRequire(import.meta.url).resolve('react-native/package.json');
 
 pluginTester({
   plugin: generateTestPlugin(nativeTextOptimizer),
@@ -76,14 +79,79 @@ const transformText = async (reactNativeMinor: number, platform?: 'ios'): Promis
       {
         configFile: false,
         babelrc: false,
-        caller: { name: 'test', platform } as TransformCaller,
-        plugins: [
-          '@babel/plugin-syntax-jsx',
-          [boostPlugin, { logLevel: 'silent', target: { reactNative: { version: `0.${reactNativeMinor}.0` } } }],
-        ],
+        plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(nativeTextOptimizer, {}, platform, reactNativeMinor)],
       }
     )!.code!
   );
+
+const transformSelectionColor = async (
+  attribute: string,
+  platform?: 'ios' | 'android',
+  preamble = '',
+  packageJson = reactNativePackageJson
+): Promise<string> =>
+  await formatTestResult(
+    transformSync(`import { Text } from 'react-native'; ${preamble} <Text ${attribute}>hello</Text>;`, {
+      configFile: false,
+      babelrc: false,
+      caller: { name: 'test', platform } as TransformCaller,
+      plugins: [
+        '@babel/plugin-syntax-jsx',
+        [boostPlugin, { logLevel: 'silent', target: { reactNative: { packageJson } } }],
+      ],
+    })!.code!
+  );
+
+describe('selectionColor', () => {
+  it.each([
+    ['ios', 'selectionColor={4284887961}'],
+    ['android', 'selectionColor={-10079335}'],
+  ] as const)('precomputes literal colors for %s', async (platform, expected) => {
+    const output = await transformSelectionColor('selectionColor="rebeccapurple"', platform);
+
+    expect(output).toContain(expected);
+    expect(output).not.toContain('processSelectionColor');
+  });
+
+  it('precomputes constant colors', async () => {
+    const output = await transformSelectionColor(
+      'selectionColor={accent}',
+      'ios',
+      'const base = "rebeccapurple"; const accent = base;'
+    );
+
+    expect(output).toContain('selectionColor={4284887961}');
+    expect(output).not.toContain('processSelectionColor');
+  });
+
+  it('uses runtime processing for dynamic colors', async () => {
+    const output = await transformSelectionColor('selectionColor={accent}', 'ios', 'const accent = getAccent();');
+
+    expect(output).toContain('processSelectionColor');
+    expect(output).toContain('_processSelectionColor(accent)');
+  });
+
+  it('uses runtime processing when the platform is unknown', async () => {
+    const output = await transformSelectionColor('selectionColor="red"');
+
+    expect(output).toContain('processSelectionColor');
+    expect(output).toContain("_processSelectionColor('red')");
+  });
+
+  it('uses runtime processing when the target parser cannot be resolved', async () => {
+    const output = await transformSelectionColor('selectionColor="red"', 'ios', '', 'missing-package.json');
+
+    expect(output).toContain('processSelectionColor');
+    expect(output).toContain("_processSelectionColor('red')");
+  });
+
+  it('omits a statically invalid color', async () => {
+    const output = await transformSelectionColor('selectionColor="invalid"', 'ios');
+
+    expect(output).not.toContain('selectionColor');
+    expect(output).not.toContain('processSelectionColor');
+  });
+});
 
 describe('text version defaults', () => {
   it('omits the default overflow style before RN 0.85', async () => {

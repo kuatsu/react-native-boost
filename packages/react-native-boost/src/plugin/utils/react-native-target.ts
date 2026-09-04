@@ -2,11 +2,11 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import type { ReactNativeTargetOption } from '../types';
+import type { ReactNativeColorNormalizer, ReactNativeTargetOption } from '../types';
 
 export interface ResolvedReactNativeTarget {
   version: string;
-  packageJson?: string;
+  packageJson: string;
   fingerprint: string;
 }
 
@@ -19,18 +19,7 @@ export function resolveReactNativeTarget(
   configuredTarget: ReactNativeTargetOption | undefined,
   locations: Array<string | undefined>
 ): ReactNativeTargetResolution {
-  if (configuredTarget?.version) {
-    if (!isReactNativeVersion(configuredTarget.version)) return { versions: [] };
-    return {
-      target: {
-        version: configuredTarget.version,
-        fingerprint: hash(configuredTarget.version),
-      },
-      versions: [configuredTarget.version],
-    };
-  }
-
-  if (configuredTarget?.packageJson) {
+  if (configuredTarget) {
     const target = readReactNativeTarget(resolvePath(configuredTarget.packageJson, locations));
     return { target, versions: target ? [target.version] : [] };
   }
@@ -61,6 +50,19 @@ export function getReactNativeMinor(version: string | undefined): number | undef
   const match = version ? /^(\d+)\.(\d+)\./.exec(version) : null;
   if (!match) return undefined;
   return Number(match[1]) === 0 ? Number(match[2]) : Number.MAX_SAFE_INTEGER;
+}
+
+export function loadReactNativeColorNormalizer(
+  packageJson: string | undefined
+): ReactNativeColorNormalizer | undefined {
+  if (!packageJson) return undefined;
+
+  try {
+    const normalizeColor = createRequire(packageJson)('@react-native/normalize-colors') as unknown;
+    return typeof normalizeColor === 'function' ? (normalizeColor as ReactNativeColorNormalizer) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function resolvePath(packageJson: string, locations: Array<string | undefined>): string {
