@@ -60,7 +60,7 @@ export interface PluginIntegrationOptions {
 
 export type LogLevel = 'silent' | 'warn' | 'info' | 'debug';
 
-export interface BoostOptions {
+export interface PluginOptions {
   /** Configures individual optimizations. */
   optimizations?: PluginOptimizationOptions;
   /** Declares project-wide facts that enable additional optimizations. */
@@ -71,29 +71,19 @@ export interface BoostOptions {
   ignores?: string[];
   /** Controls plugin logging. */
   logLevel?: LogLevel;
-}
-
-export type ReactNativeTargetOption =
-  | { packageJson: string; version?: never }
-  | { packageJson?: never; version: string };
-
-export interface BabelPluginOptions extends BoostOptions {
   /** Supplies the React Native target when automatic detection is unsuitable. */
   target?: {
     reactNative?: ReactNativeTargetOption;
   };
 }
 
-export interface MetroPluginOptions extends BoostOptions {
-  /** Supplies the React Native package used by a custom Metro resolver. */
-  target?: {
-    reactNative?: { packageJson: string };
-  };
-}
+export type ReactNativeTargetOption = { packageJson: string };
 
 export type OptimizationName = keyof PluginOptimizationOptions;
 
 export type TargetPlatform = 'ios' | 'android' | 'web';
+
+export type ReactNativeColorNormalizer = (color: string | number) => number | null | undefined;
 
 export interface OptimizationLogPayload {
   target: string;
@@ -119,7 +109,7 @@ export interface PluginLogger {
 
 export interface OptimizerContext {
   logger: PluginLogger;
-  options: BoostOptions;
+  options: PluginOptions;
   /** Target platform from Babel's caller (e.g. Metro sets `'ios'`/`'android'`). Lets optimizers resolve platform-specific defaults at build time. */
   platform?: TargetPlatform;
   /**
@@ -130,6 +120,8 @@ export interface OptimizerContext {
   unistylesEnabled: boolean;
   /** Installed React Native minor version, when it can be resolved at build time. */
   reactNativeMinor?: number;
+  /** Color normalizer from the installed React Native package. */
+  normalizeColor?: ReactNativeColorNormalizer;
 }
 
 export interface OptimizerState extends PluginPass {

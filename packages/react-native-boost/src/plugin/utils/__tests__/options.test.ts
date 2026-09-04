@@ -1,7 +1,7 @@
 import { transformSync, type TransformCaller } from '@babel/core';
 import { describe, expect, it, vi } from 'vitest';
 import boostPlugin from '../../index';
-import { validateBabelOptions, validateMetroOptions } from '../options';
+import { validatePluginOptions } from '../options';
 
 describe('plugin options', () => {
   it('accepts the current configuration', () => {
@@ -16,10 +16,10 @@ describe('plugin options', () => {
       integrations: { unistyles: 'on' as const },
       ignores: ['node_modules/**'],
       logLevel: 'info' as const,
-      target: { reactNative: { version: '0.87.1' } },
+      target: { reactNative: { packageJson: '/react-native/package.json' } },
     };
 
-    expect(validateBabelOptions(options)).toEqual(options);
+    expect(validatePluginOptions(options)).toEqual(options);
   });
 
   it('ignores an unmigrated Metro plugin and asks the user to move its old options', () => {
@@ -51,13 +51,10 @@ describe('plugin options', () => {
     expect(output).toContain('NativeText');
   });
 
-  it('keeps Metro-only options separate', () => {
-    expect(validateMetroOptions({ target: { reactNative: { packageJson: '/react-native/package.json' } } })).toEqual({
+  it('accepts a React Native package target', () => {
+    expect(validatePluginOptions({ target: { reactNative: { packageJson: '/react-native/package.json' } } })).toEqual({
       target: { reactNative: { packageJson: '/react-native/package.json' } },
     });
-    expect(() => validateMetroOptions({ target: { reactNative: { version: '0.87.1' } } })).toThrow(
-      'Unknown `target.reactNative` option `version`'
-    );
   });
 
   it('disables an optimization with its public name', () => {
@@ -83,7 +80,7 @@ describe('plugin options', () => {
     ],
     [{ optimizations: { text: false } }, 'Use `native-text` instead.'],
   ])('rejects removed configuration %#', (options, message) => {
-    expect(() => validateBabelOptions(options)).toThrow(message);
+    expect(() => validatePluginOptions(options)).toThrow(message);
   });
 
   it.each([
@@ -94,13 +91,10 @@ describe('plugin options', () => {
     [{ logLevel: 'verbose' }, '`logLevel` must be one of'],
     [{ optimizations: { 'native-text': true } }, 'must be `on` or `off`'],
     [{ integrations: { unistyles: true } }, 'must be `auto`, `on`, or `off`'],
-    [{ target: { reactNative: {} } }, 'must contain either `packageJson` or `version`'],
-    [{ target: { reactNative: { version: '0.87' } } }, 'must be a full React Native version'],
-    [
-      { target: { reactNative: { packageJson: 'package.json', version: '0.87.1' } } },
-      'must contain either `packageJson` or `version`',
-    ],
+    [{ target: { reactNative: {} } }, '`target.reactNative.packageJson` must be a non-empty string'],
+    [{ target: { reactNative: { packageJson: '' } } }, '`target.reactNative.packageJson` must be a non-empty string'],
+    [{ target: { reactNative: { version: '0.87.1' } } }, 'Unknown `target.reactNative` option `version`'],
   ])('rejects invalid configuration %#', (options, message) => {
-    expect(() => validateBabelOptions(options)).toThrow(message);
+    expect(() => validatePluginOptions(options)).toThrow(message);
   });
 });

@@ -33,6 +33,6 @@ module.exports = {
 };
 ```
 
-Boost needs to know the React Native version to safely perform optimizations across different supported versions. Instead of `packageJson`, you can also supply `{ version: require('react-native/package.json').version }`.
+Boost reads this package to select version-specific behavior and matching build-time processors.
 
-While the target is optional, we strongly recommend adding it. If it is not provided, the Babel plugin tries to detect the React Native version automatically, which is fragile and therefore logs a warning.
+The target is optional. Without it, the Babel plugin tries to find the installed React Native package automatically and logs a warning. If detection fails, Boost skips version-dependent work and uses runtime fallbacks where available.

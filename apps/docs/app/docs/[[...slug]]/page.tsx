@@ -32,7 +32,7 @@ async function getTocInsertions(slug: string): Promise<TocInsertion[]> {
     const [pluginOptionsToc, optimizationOptionsToc, assumptionsToc, integrationOptionsToc] = await Promise.all([
       getAutoOptionSectionsToc({
         path: pluginTypesPath,
-        name: 'BoostOptions',
+        name: 'PluginOptions',
         idPrefix: 'plugin-options',
         depth: 3,
       }),

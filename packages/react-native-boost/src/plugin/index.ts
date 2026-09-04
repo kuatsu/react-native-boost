@@ -4,12 +4,12 @@ import { declare } from '@babel/helper-plugin-utils';
 import { nativeTextOptimizer } from './optimizers/native-text';
 import { nativeImageOptimizer } from './optimizers/native-image';
 import type {
-  BabelPluginOptions,
   HubFile,
   OptimizationName,
   Optimizer,
   OptimizerContext,
   OptimizerState,
+  PluginOptions,
   TargetPlatform,
 } from './types';
 import { createLogger } from './utils/logger';
@@ -20,17 +20,16 @@ import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-i
 import { animatedWrapperRemovalOptimizer } from './optimizers/animated-wrapper-removal';
 import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operations';
 import { platformFoldingOptimizer } from './optimizers/platform-folding';
-import { validateBabelOptions } from './utils/options';
+import { validatePluginOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
 import {
   getReactNativeMinor,
+  loadReactNativeColorNormalizer,
   resolveReactNativeTarget,
   type ReactNativeTargetResolution,
 } from './utils/react-native-target';
 
 export type {
-  BabelPluginOptions,
-  BoostOptions,
   IntegrationState,
   LogLevel,
   OptimizationSetting,
@@ -38,6 +37,7 @@ export type {
   PluginAssumptions,
   PluginIntegrationOptions,
   PluginOptimizationOptions,
+  PluginOptions,
   ReactNativeTargetOption,
 } from './types';
 
@@ -72,7 +72,7 @@ export default declare((api, rawOptions, dirname?: string) => {
     return { name: 'react-native-boost', visitor: {} };
   }
 
-  const options = validateBabelOptions(stripInternalOptions(rawOptions ?? {}));
+  const options = validatePluginOptions(stripInternalOptions(rawOptions ?? {}));
   const logger = createLogger(options.logLevel ?? 'info');
   const platform = normalizeTargetPlatform(caller.platform);
   const configuredTarget = options.target?.reactNative;
@@ -98,6 +98,9 @@ export default declare((api, rawOptions, dirname?: string) => {
         "`integrations: { unistyles: 'on' }` to make this explicit, or set it to `off` to opt out.",
     });
   }
+
+  let colorNormalizerResolved = false;
+  let normalizeColor: OptimizerContext['normalizeColor'];
 
   const resolveReactNativeMinor = (file: HubFile): number | undefined => {
     if (!targetResolution) {
@@ -131,7 +134,11 @@ export default declare((api, rawOptions, dirname?: string) => {
       const hubFile = file as unknown as HubFile;
       const ignored = isIgnoredFile(hubFile, options.ignores ?? []);
       const reactNativeMinor = ignored ? undefined : resolveReactNativeMinor(hubFile);
-      this.optimizerContext = { logger, options, platform, unistylesEnabled, reactNativeMinor };
+      if (!ignored && !colorNormalizerResolved) {
+        normalizeColor = loadReactNativeColorNormalizer(targetResolution?.target?.packageJson);
+        colorNormalizerResolved = true;
+      }
+      this.optimizerContext = { logger, options, platform, unistylesEnabled, reactNativeMinor, normalizeColor };
       this.enabledOptimizations = ignored ? new Set() : getEnabledOptimizations(options, this.optimizerContext);
     },
     visitor: traverse.visitors.merge(optimizers.map((optimizer) => optimizer.visitor)),
@@ -140,7 +147,7 @@ export default declare((api, rawOptions, dirname?: string) => {
   return plugin as unknown as PluginObj;
 });
 
-function getEnabledOptimizations(options: BabelPluginOptions, context: OptimizerContext): Set<OptimizationName> {
+function getEnabledOptimizations(options: PluginOptions, context: OptimizerContext): Set<OptimizationName> {
   return new Set(
     optimizers
       .filter((optimizer) => {

@@ -1,5 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
-import type { HubFile, JSXOptimizer, PluginLogger } from '../../types';
+import type { HubFile, JSXOptimizer, PluginLogger, ReactNativeColorNormalizer } from '../../types';
 import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
@@ -85,7 +85,10 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
 
-const optimizeNativeText: JSXOptimizer = (path, { logger, options, platform, unistylesEnabled, reactNativeMinor }) => {
+const optimizeNativeText: JSXOptimizer = (
+  path,
+  { logger, options, platform, unistylesEnabled, reactNativeMinor, normalizeColor }
+) => {
   if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
@@ -170,7 +173,7 @@ const optimizeNativeText: JSXOptimizer = (path, { logger, options, platform, uni
   renameIdToNativeID(path);
   addDefaultProperty(path, 'allowFontScaling', t.booleanLiteral(true));
   addDefaultProperty(path, 'ellipsizeMode', t.stringLiteral('tail'));
-  processProps(path, file, platform, routeToUnistyles, reactNativeMinor);
+  processProps(path, file, platform, routeToUnistyles, reactNativeMinor, normalizeColor);
 
   // A Unistyles-styled Text routes to Unistyles' lean host (a registering wrapper around `RCTText`); its
   // `style` is passed by identity (see `processProps`) so the Unistyles native-state — and therefore the
@@ -287,7 +290,8 @@ function processProps(
   file: HubFile,
   platform?: string,
   passStyleByIdentity = false,
-  reactNativeMinor?: number
+  reactNativeMinor?: number,
+  normalizeColor?: ReactNativeColorNormalizer
 ) {
   // Grab the up-to-date list of attributes
   const currentAttributes = [...path.node.attributes];
@@ -416,25 +420,27 @@ function processProps(
   }
 
   // --- selectionColor ---
-  // `Text` runs `selectionColor` through `processColor` before handing it to its native host (a CSS color
-  // string / `PlatformColor` becomes the packed value the host expects). We reproduce that single
-  // normalization at runtime via a `processSelectionColor` spread, mirroring the `processTextStyle`
-  // mechanism — any expression flows through unchanged, so no `@boost-force` is needed for a dynamic
-  // value. A spread-carried `selectionColor` bails upstream (`TEXT_SPREAD_GUARD_KEYS`) rather than
-  // forwarding the prop un-normalized.
   const { selectionColorAttribute, selectionColorExpr } = extractSelectionColor(currentAttributes);
-  let selectionColorSpread: t.JSXSpreadAttribute | undefined;
+  let selectionColorReplacement: t.JSXAttribute | t.JSXSpreadAttribute | undefined;
   if (selectionColorExpr) {
-    const selectionColorIdentifier = addFileImportHint({
-      file,
-      nameHint: 'processSelectionColor',
-      path,
-      importName: 'processSelectionColor',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
-    selectionColorSpread = t.jsxSpreadAttribute(
-      t.callExpression(t.identifier(selectionColorIdentifier.name), [selectionColorExpr])
-    );
+    const staticSelectionColor = processStaticSelectionColor(path, selectionColorExpr, platform, normalizeColor);
+    if (staticSelectionColor === undefined) {
+      const selectionColorIdentifier = addFileImportHint({
+        file,
+        nameHint: 'processSelectionColor',
+        path,
+        importName: 'processSelectionColor',
+        moduleName: RUNTIME_MODULE_NAME,
+      });
+      selectionColorReplacement = t.jsxSpreadAttribute(
+        t.callExpression(t.identifier(selectionColorIdentifier.name), [selectionColorExpr])
+      );
+    } else if (staticSelectionColor !== null) {
+      selectionColorReplacement = t.jsxAttribute(
+        t.jsxIdentifier('selectionColor'),
+        t.jsxExpressionContainer(t.numericLiteral(staticSelectionColor))
+      );
+    }
   }
 
   // ============================================
@@ -450,7 +456,7 @@ function processProps(
     // Skip the props we routed through `processTextAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
 
-    // Skip the selectionColor attribute (replaced with a `processSelectionColor` spread)
+    // Skip the selectionColor attribute after preparing its replacement.
     if (selectionColorAttribute && attribute === selectionColorAttribute) continue;
 
     // A build-time `userSelect`-derived `selectable` supersedes a direct `selectable` (RN's rule), so
@@ -482,10 +488,9 @@ function processProps(
   // ============================================
   // `selectableAttribute` and `styleSpread` are emitted AFTER the remaining attributes so style-derived
   // `userSelect` overrides direct or spread-carried `selectable`, mirroring `Text`'s late override.
-  // `selectionColorSpread` writes a disjoint key (`selectionColor`), so its position is free — it leads
-  // for readability.
+  // The selection color writes a disjoint key, so its position is free — it leads for readability.
   path.node.attributes = [
-    selectionColorSpread,
+    selectionColorReplacement,
     accessibilitySpread,
     staticStyleAttribute,
     ...remainingAttributes,
@@ -493,6 +498,57 @@ function processProps(
     styleSpread,
     accessibleAttribute,
   ].filter((attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined);
+}
+
+function processStaticSelectionColor(
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.Expression,
+  platform: string | undefined,
+  normalizeColor: ReactNativeColorNormalizer | undefined,
+  resolved = new Set<string>()
+): number | null | undefined {
+  if ((platform !== 'ios' && platform !== 'android') || !normalizeColor) return undefined;
+
+  if (t.isIdentifier(expression)) {
+    if (expression.name === 'undefined' && !path.scope.getBinding('undefined')) return null;
+    if (resolved.has(expression.name)) return undefined;
+    const binding = path.scope.getBinding(expression.name);
+    if (
+      binding?.kind !== 'const' ||
+      !binding.constant ||
+      !t.isVariableDeclarator(binding.path.node) ||
+      !t.isExpression(binding.path.node.init) ||
+      binding.path.node.start == null ||
+      expression.start == null ||
+      binding.path.node.start > expression.start
+    ) {
+      return undefined;
+    }
+    resolved.add(expression.name);
+    return processStaticSelectionColor(path, binding.path.node.init, platform, normalizeColor, resolved);
+  }
+
+  let color: string | number;
+  if (t.isStringLiteral(expression) || t.isNumericLiteral(expression)) {
+    color = expression.value;
+  } else if (t.isTemplateLiteral(expression) && expression.expressions.length === 0) {
+    color = expression.quasis[0]!.value.cooked!;
+  } else if (
+    t.isUnaryExpression(expression) &&
+    expression.operator === '-' &&
+    t.isNumericLiteral(expression.argument)
+  ) {
+    color = -expression.argument.value;
+  } else if (t.isNullLiteral(expression) || t.isBooleanLiteral(expression)) {
+    return null;
+  } else {
+    return undefined;
+  }
+
+  let processedColor = normalizeColor(color);
+  if (typeof processedColor !== 'number') return null;
+  processedColor = ((processedColor << 24) | (processedColor >>> 8)) >>> 0;
+  return platform === 'android' && processedColor > 0x7f_ff_ff_ff ? processedColor - 0x1_00_00_00_00 : processedColor;
 }
 
 /**

@@ -4,12 +4,12 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { BabelPluginOptions, MetroPluginOptions } from '../plugin/types';
-import { validateMetroOptions } from '../plugin/utils/options';
-import { resolveReactNativeTarget } from '../plugin/utils/react-native-target';
+import type { PluginOptions } from '../plugin/types';
+import { validatePluginOptions } from '../plugin/utils/options';
+import { resolveReactNativeTarget, type ResolvedReactNativeTarget } from '../plugin/utils/react-native-target';
 import type { MetroTransformerManifest } from './types';
 
-export type { MetroPluginOptions } from '../plugin/types';
+export type { PluginOptions } from '../plugin/types';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const transformerDirectory = path.join(os.tmpdir(), 'react-native-boost');
@@ -25,8 +25,8 @@ type MetroConfig = {
   };
 };
 
-export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: MetroPluginOptions = {}): T {
-  const options = validateMetroOptions(rawOptions);
+export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: PluginOptions = {}): T {
+  const options = validatePluginOptions(rawOptions);
   const projectRoot = path.resolve(config.projectRoot ?? process.cwd());
   const delegateRequest = config.transformer?.babelTransformerPath ?? 'metro-babel-transformer';
   if (path.isAbsolute(delegateRequest) && path.dirname(delegateRequest) === transformerDirectory) {
@@ -44,7 +44,7 @@ export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: Me
   if (configuredPackageJson && !targetResolution.target) {
     throw new Error(`[react-native-boost] Cannot read React Native package at ${configuredPackageJson}.`);
   }
-  const pluginOptions = createPluginOptions(options, targetResolution.target?.version);
+  const pluginOptions = createPluginOptions(options, targetResolution.target);
   const injectionId = hash(
     `${projectRoot}:${JSON.stringify(pluginOptions)}:${targetResolution.target?.fingerprint ?? 'unknown'}`
   );
@@ -77,11 +77,14 @@ export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: Me
   };
 }
 
-function createPluginOptions(options: MetroPluginOptions, reactNativeVersion?: string): BabelPluginOptions {
+function createPluginOptions(options: PluginOptions, installedTarget?: ResolvedReactNativeTarget): PluginOptions {
   const { target, ...pluginOptions } = options;
   void target;
-  if (!reactNativeVersion) return pluginOptions;
-  return { ...pluginOptions, target: { reactNative: { version: reactNativeVersion } } };
+  if (!installedTarget) return pluginOptions;
+  return {
+    ...pluginOptions,
+    target: { reactNative: { packageJson: installedTarget.packageJson } },
+  };
 }
 
 // Metro accepts a transformer path, so a deterministic wrapper carries this project's options into its workers.

@@ -55,6 +55,10 @@ export function boostOptimizes(os: PlatformOS, jsxBody: string): boolean {
   return transformBoostCase(os, jsxBody).includes(RUNTIME_MODULE_NAME);
 }
 
+export function boostUsesRuntimeSelectionColor(os: PlatformOS, jsxBody: string, preamble = ''): boolean {
+  return transformBoostCase(os, jsxBody, preamble).includes('processSelectionColor');
+}
+
 /**
  * Transform a JSX body with Boost and render the result with the REAL runtime helpers (the components
  * are mocked to the shared capturers by the test). Returns `{ optimized: false }` when Boost bailed —

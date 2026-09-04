@@ -1,11 +1,11 @@
 import type { PluginObj } from '@babel/core';
 import { declare } from '@babel/helper-plugin-utils';
-import type { BoostOptions, Optimizer, OptimizerState, TargetPlatform } from '../types';
+import type { Optimizer, OptimizerState, PluginOptions, TargetPlatform } from '../types';
 import { createLogger } from './logger';
 
 export const generateTestPlugin = (
   optimizer: Optimizer,
-  options: BoostOptions = {},
+  options: PluginOptions = {},
   platform?: TargetPlatform,
   reactNativeMinor?: number
 ) => {

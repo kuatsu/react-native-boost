@@ -406,7 +406,7 @@ describe('image srcSet output', () => {
     expect(output).not.toContain('_NativeImage');
   });
 
-  it('uses an explicit React Native version from the Babel plugin options', async () => {
+  it('uses an explicit React Native package from the Babel plugin options', async () => {
     const output = await formatTestResult(
       transformSync(`import { Image } from 'react-native';\n<Image srcSet="logo.png 1x,logo@2x.png 2x" />;`, {
         configFile: false,
@@ -419,7 +419,9 @@ describe('image srcSet output', () => {
             boostPlugin,
             {
               logLevel: 'silent',
-              target: { reactNative: { version: '0.87.1' } },
+              target: {
+                reactNative: { packageJson: createRequire(import.meta.url).resolve('react-native/package.json') },
+              },
             },
           ],
         ],

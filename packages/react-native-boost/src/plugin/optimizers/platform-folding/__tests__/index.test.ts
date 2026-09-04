@@ -1,9 +1,12 @@
+import { createRequire } from 'node:module';
 import { transformSync, type TransformCaller } from '@babel/core';
 import { describe, expect, it } from 'vitest';
 import boostPlugin from '../../../index';
 import type { TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { platformFoldingOptimizer } from '..';
+
+const reactNativePackageJson = createRequire(import.meta.url).resolve('react-native/package.json');
 
 function transformPlatform(source: string, platform?: TargetPlatform, filename = '/app/source.js'): string {
   return transformSync(source, {
@@ -29,7 +32,7 @@ function transformWithBoost(
         boostPlugin,
         {
           logLevel: 'silent',
-          target: { reactNative: { version: '0.87.1' } },
+          target: { reactNative: { packageJson: reactNativePackageJson } },
           assumptions: { unknownAncestorsDoNotRenderText: true },
           ...options,
         },

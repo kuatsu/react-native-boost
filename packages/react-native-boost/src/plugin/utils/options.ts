@@ -1,9 +1,7 @@
-import type { BabelPluginOptions, IntegrationState, LogLevel, MetroPluginOptions, OptimizationState } from '../types';
+import type { IntegrationState, LogLevel, OptimizationState, PluginOptions } from '../types';
 import PluginError from './plugin-error';
 
-const sharedOptionKeys = ['optimizations', 'assumptions', 'integrations', 'ignores', 'logLevel'];
-const babelOptionKeys = [...sharedOptionKeys, 'target'];
-const metroOptionKeys = [...sharedOptionKeys, 'target'];
+const optionKeys = ['optimizations', 'assumptions', 'integrations', 'ignores', 'logLevel', 'target'];
 const optimizationKeys = [
   'native-text',
   'native-view',
@@ -37,16 +35,10 @@ const legacyOptimizations: Record<string, string> = {
   activityIndicator: 'Use `native-activity-indicator` instead.',
 };
 
-export function validateBabelOptions(rawOptions: unknown): BabelPluginOptions {
-  const options = validateOptions(rawOptions, babelOptionKeys);
-  if (options.target !== undefined) validateTarget(options.target, true);
-  return options as BabelPluginOptions;
-}
-
-export function validateMetroOptions(rawOptions: unknown): MetroPluginOptions {
-  const options = validateOptions(rawOptions, metroOptionKeys);
-  if (options.target !== undefined) validateTarget(options.target, false);
-  return options as MetroPluginOptions;
+export function validatePluginOptions(rawOptions: unknown): PluginOptions {
+  const options = validateOptions(rawOptions, optionKeys);
+  if (options.target !== undefined) validateTarget(options.target);
+  return options as PluginOptions;
 }
 
 function validateOptions(rawOptions: unknown, keys: string[]): Record<string, unknown> {
@@ -96,20 +88,15 @@ function validateOptions(rawOptions: unknown, keys: string[]): Record<string, un
   return options;
 }
 
-function validateTarget(value: unknown, allowVersion: boolean): void {
+function validateTarget(value: unknown): void {
   const target = readObject(value, '`target`');
   validateKeys(target, ['reactNative'], 'target');
   if (target.reactNative === undefined) return;
 
   const reactNative = readObject(target.reactNative, '`target.reactNative`');
-  validateKeys(reactNative, allowVersion ? ['packageJson', 'version'] : ['packageJson'], '`target.reactNative` option');
-  const hasPackageJson = typeof reactNative.packageJson === 'string';
-  const hasVersion = typeof reactNative.version === 'string';
-  if (hasPackageJson === hasVersion) {
-    throw new PluginError('`target.reactNative` must contain either `packageJson` or `version`.');
-  }
-  if (hasVersion && !/^\d+\.\d+\.\d+(?:-|$)/.test(reactNative.version as string)) {
-    throw new PluginError('`target.reactNative.version` must be a full React Native version.');
+  validateKeys(reactNative, ['packageJson'], '`target.reactNative` option');
+  if (typeof reactNative.packageJson !== 'string' || reactNative.packageJson.length === 0) {
+    throw new PluginError('`target.reactNative.packageJson` must be a non-empty string.');
   }
 }
 
