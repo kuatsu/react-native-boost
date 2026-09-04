@@ -35,10 +35,9 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
         }
         if (objectExpression && t.isObjectExpression(objectExpression)) {
           return objectExpression.properties.some((property) => {
-            if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
-              return blacklist.has(property.key.name);
-            }
-            return false;
+            if (!t.isObjectProperty(property)) return false;
+            if (t.isIdentifier(property.key)) return blacklist.has(property.key.name);
+            return t.isStringLiteral(property.key) && blacklist.has(property.key.value);
           });
         }
       }
