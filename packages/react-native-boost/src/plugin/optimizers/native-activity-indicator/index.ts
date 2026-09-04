@@ -4,7 +4,6 @@ import PluginError from '../../utils/plugin-error';
 import { BailoutCheck, getFirstBailoutReason } from '../../utils/helpers';
 import {
   addFileImportHint,
-  ancestorBailoutChecks,
   createStyleOriginResolver,
   isForcedLine,
   isIgnoredLine,
@@ -27,7 +26,7 @@ const CONSUMED_PROPS = new Set([
   'style',
 ]);
 
-const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, options, platform, unistylesEnabled }) => {
+const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform, unistylesEnabled }) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
@@ -63,7 +62,6 @@ const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, options, 
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
     },
-    ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
 
   if (forced) {
