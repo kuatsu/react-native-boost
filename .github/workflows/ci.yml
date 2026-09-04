@@ -57,33 +57,42 @@ jobs:
         run: pnpm package build
 
   parity-matrix:
-    name: React Native ${{ matrix.react-native }} parity
+    name: React Native ${{ matrix.react-native }} / Metro ${{ matrix.metro }} parity
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        react-native:
-          - '0.83'
-          - '0.84'
-          - '0.85'
-          - '0.86'
-          - '0.87'
+        include:
+          - react-native: '0.83'
+            metro: '0.83.8'
+          - react-native: '0.84'
+            metro: '0.83.8'
+          - react-native: '0.85'
+            metro: '0.84.5'
+          - react-native: '0.86'
+            metro: '0.84.6'
+          - react-native: '0.87'
+            metro: '0.87.0'
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Select React Native version
+      - name: Select React Native and Metro versions
         env:
+          METRO_VERSION: ${{ matrix.metro }}
           REACT_NATIVE_VERSION: ${{ matrix.react-native }}
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const path = 'packages/react-native-boost/package.json';
           const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const version = process.env.REACT_NATIVE_VERSION;
+          const metroVersion = process.env.METRO_VERSION;
+          const reactNativeVersion = process.env.REACT_NATIVE_VERSION;
 
-          packageJson.devDependencies['react-native'] = version;
-          packageJson.devDependencies['@react-native/babel-preset'] = version;
+          packageJson.devDependencies['metro'] = metroVersion;
+          packageJson.devDependencies['metro-config'] = metroVersion;
+          packageJson.devDependencies['react-native'] = reactNativeVersion;
+          packageJson.devDependencies['@react-native/babel-preset'] = reactNativeVersion;
           fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
           NODE
 
@@ -106,6 +115,9 @@ jobs:
 
       - name: Build package
         run: pnpm package build
+
+      - name: Test Metro integration
+        run: pnpm --filter react-native-boost exec vitest run --project unit src/metro/__tests__
 
       - name: Test runtime parity
         run: pnpm package test --run --project parity
