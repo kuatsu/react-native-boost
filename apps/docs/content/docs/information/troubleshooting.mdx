@@ -62,7 +62,7 @@ Options:
 
 ### Skip reason: `has unresolved runtime parent that may render Text`
 
-A root component can be mounted inside a `Text`. Boost keeps a root `Text` wrapper so it can select `NativeText` or `NativeVirtualText`. It also keeps a root `View` with children so the wrapper can reset inherited text context.
+A root component can be mounted inside a `Text`. Boost keeps a root `Text` wrapper so it can select `NativeText` or `NativeVirtualText`. It also keeps a root `View` with children so the wrapper can reset inherited text context. Android 0.83–0.84 Image uses the same check to select its inline host.
 
 Use `@boost-force` only when every use of that component has a non-text parent. The project-wide unknown ancestor assumption also overrides this check.
 
