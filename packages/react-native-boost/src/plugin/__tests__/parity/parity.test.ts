@@ -167,13 +167,11 @@ const ACTIVITY_INDICATOR_CASES: Array<[string, string?]> = [
   ],
   ['<ActivityIndicator {...{ size: "large" }} />'],
   ['<ActivityIndicator>child</ActivityIndicator>'],
-  ['<Text><ActivityIndicator /></Text>'],
 ];
 
 const BAILED_ACTIVITY_INDICATOR_CASES = new Set([
   '<ActivityIndicator {...{ size: "large" }} />',
   '<ActivityIndicator>child</ActivityIndicator>',
-  '<Text><ActivityIndicator /></Text>',
 ]);
 
 const IMAGE_CASES = [
@@ -490,6 +488,15 @@ describe('differential parity', () => {
 
       const boost = await captureBoostHosts(os, jsx, preamble, false);
       expect(boost.optimized).toBe(false);
+    });
+
+    it('optimizes ActivityIndicator when an unknown ancestor provides Text context', async () => {
+      const jsx = '<UnknownTextWrapper><ActivityIndicator /></UnknownTextWrapper>';
+      const wrapper = await captureWrapperHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE);
+      const boost = await captureBoostHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE, false);
+      if (!boost.optimized) throw new Error('expected ActivityIndicator to optimize');
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
     it('optimizes Image when the current wrapper ignores Text context', async () => {
