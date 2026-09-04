@@ -15,7 +15,7 @@ The optimizer can usually replace an `Image` when:
 - The build targets iOS or Android.
 - It has a supported `source`, `src`, or static `srcSet`.
 - Its wrapper-level props can be safely prepared or passed through.
-- It is not inside a `Text`.
+- On Android 0.83–0.84, Boost can prove that it is not inside a `Text`. Boost also requires this proof when it cannot detect the React Native version.
 
 ## When it skips
 
@@ -26,9 +26,11 @@ Boost keeps the `Image` wrapper when it finds:
 - Load callbacks, a `ref`, children, or another prop that requires the wrapper.
 - A spread that might contain Image wrapper props.
 - A `srcSet` combination whose dimensions or styles cannot be resolved safely.
-- A parent or unknown ancestor that might provide a text context.
+- On Android 0.83–0.84, or when the version is unknown, a parent, runtime parent, or unknown ancestor that might provide a text context.
 - A Unistyles style, or a style that might come from Unistyles. Unistyles does not provide a lean Image host.
 - An unknown or unsupported target platform.
+
+Image ancestry does not affect the native host on iOS or Android 0.85 and later, so Boost does not apply these ancestry checks there.
 
 ## Configuration
 

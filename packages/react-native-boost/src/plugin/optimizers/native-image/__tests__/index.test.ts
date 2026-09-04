@@ -148,8 +148,13 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(nativeImageOptimizer, { assumptions: { unknownAncestorsDoNotRenderText: true } }, 'ios'),
-  title: 'image unknown ancestor assumption',
+  plugin: generateTestPlugin(
+    nativeImageOptimizer,
+    { assumptions: { unknownAncestorsDoNotRenderText: true } },
+    'android',
+    84
+  ),
+  title: 'legacy Android Image unknown ancestor assumption',
   babelOptions: {
     plugins: ['@babel/plugin-syntax-jsx'],
   },
@@ -161,6 +166,45 @@ pluginTester({
       outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/dangerous-output.js'),
     },
   ],
+});
+
+describe('Image Text ancestry', () => {
+  const source = `
+    import { Image, Text } from 'react-native';
+    <Text><Image source={{ uri: 'logo.png', width: 16, height: 16 }} /></Text>;
+  `;
+
+  it.each([
+    ['ios', 83, true],
+    ['android', 84, false],
+    ['android', 85, true],
+  ] as const)('handles Text ancestry on %s with React Native 0.%i', async (platform, minor, optimizes) => {
+    const output = await transformImage(source, platform, { reactNativeMinor: minor });
+    expect(output.includes('_NativeImage')).toBe(optimizes);
+  });
+
+  it('lets force override the legacy Android ancestry check', async () => {
+    const forcedSource = `
+      import { Image, Text } from 'react-native';
+      <Text>
+        {/* @boost-force */}
+        <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />
+      </Text>;
+    `;
+    expect(await transformImage(forcedSource, 'android', { reactNativeMinor: 84 })).toContain('_NativeImage');
+  });
+
+  it.each([
+    [84, false],
+    [85, true],
+  ] as const)('handles an unresolved runtime parent on Android 0.%i', async (minor, optimizes) => {
+    const rootSource = `
+      import { Image } from 'react-native';
+      const Avatar = () => <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
+    `;
+    const output = await transformImage(rootSource, 'android', { reactNativeMinor: minor });
+    expect(output.includes('_NativeImage')).toBe(optimizes);
+  });
 });
 
 pluginTester({
