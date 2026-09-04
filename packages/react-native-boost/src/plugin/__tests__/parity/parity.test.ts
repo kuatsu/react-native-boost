@@ -28,6 +28,15 @@ import { normalize, normalizeImage } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
 const REACT_NATIVE_MINOR = reactNativeVersion.minor;
+const UNKNOWN_TEXT_WRAPPER_PREAMBLE = `
+  import React from 'react';
+  import RealText from 'react-native/Libraries/Text/Text';
+  class UnknownTextWrapper extends React.Component {
+    render() {
+      return React.createElement(RealText, null, this.props.children);
+    }
+  }
+`;
 
 const STATIC_SELECTION_COLOR_CASES = [
   '<Text selectionColor="red">hello</Text>',
@@ -194,14 +203,12 @@ const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
-  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
 ];
 
 const BAILED_IMAGE_CASES = new Set([
   '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
-  '<Text><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></Text>',
 ]);
 
 const DYNAMIC_IMAGE_CASES: Array<[string, string]> = [
@@ -483,6 +490,19 @@ describe('differential parity', () => {
 
       const boost = await captureBoostHosts(os, jsx, preamble, false);
       expect(boost.optimized).toBe(false);
+    });
+
+    it('optimizes Image when the current wrapper ignores Text context', async () => {
+      const jsx =
+        '<UnknownTextWrapper><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></UnknownTextWrapper>';
+      const wrapper = await captureWrapperHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE);
+      const boost = await captureBoostHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE, false);
+      if (!boost.optimized) throw new Error('expected Image to optimize');
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      expect(normalize(boost.hosts[0].props)).toEqual(normalize(wrapper[0].props));
+      expect(normalizeImage(boost.hosts[1].props, REACT_NATIVE_MINOR)).toEqual(
+        normalizeImage(wrapper[1].props, REACT_NATIVE_MINOR)
+      );
     });
   });
 });
