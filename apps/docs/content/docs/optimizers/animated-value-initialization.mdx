@@ -1,0 +1,50 @@
+---
+title: Animated Value Initialization
+description: Avoids recreating unused Animated values during component renders.
+---
+
+JavaScript evaluates a hook argument before it calls the hook. This means the common pattern below creates a new `Animated.Value` on every render, even though `useRef` keeps only the first value.
+
+```tsx
+// Before
+const opacity = useRef(new Animated.Value(0)).current;
+
+// After, simplified
+const opacity = useAnimatedValue(0);
+```
+
+Boost also uses `useAnimatedValueXY` and `useAnimatedColor`. For state, it changes an eager value to React's lazy initializer form:
+
+```tsx
+// Before
+const [opacity] = useState(new Animated.Value(0));
+
+// After
+const [opacity] = useState(() => new Animated.Value(0));
+```
+
+This removes construction and garbage collection for values that React would discard after each render.
+
+## When it runs
+
+Boost requires:
+
+- `Animated` from `react-native`.
+- `useRef` or `useState` from `react`.
+- A static, valid constructor input.
+- An iOS or Android build.
+- Immediate `.current` access for `useRef`.
+
+`useAnimatedValue` is supported on React Native 0.83 and later. `useAnimatedValueXY` and `useAnimatedColor` are supported on React Native 0.85 and later.
+
+Boost skips dynamic constructor inputs, ref objects that escape, other Animated implementations, and web builds.
+
+## Configuration
+
+```js
+module.exports = withBoostConfig(config, {
+  optimizations: {
+    'animated-value-initialization': 'off',
+  },
+});
+```

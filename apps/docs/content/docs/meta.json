@@ -14,6 +14,7 @@
     "optimizers/native-view",
     "optimizers/native-image",
     "optimizers/native-activity-indicator",
+    "optimizers/animated-value-initialization",
     "optimizers/animated-wrapper-removal",
     "optimizers/stylesheet-operations",
     "optimizers/platform-folding",
