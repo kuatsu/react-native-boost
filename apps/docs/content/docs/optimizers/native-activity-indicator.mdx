@@ -16,7 +16,6 @@ The optimizer can usually replace an `ActivityIndicator` when:
 - Its props are written directly on the element.
 - It has no children.
 - Moving its props to the two generated native elements keeps their evaluation order safe.
-- It is not inside a `Text`.
 
 ## When it skips
 
@@ -26,7 +25,6 @@ Boost keeps the wrapper when it finds:
 - Spread props.
 - Children.
 - A prop expression with side effects, such as a function call.
-- A parent or unknown ancestor that might provide a text context.
 - A Unistyles style, or a style that might come from Unistyles.
 
 These checks prevent Boost from changing prop precedence, execution order, or style reactivity.

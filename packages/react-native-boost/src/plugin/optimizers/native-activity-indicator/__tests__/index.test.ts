@@ -47,12 +47,8 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(
-    nativeActivityIndicatorOptimizer,
-    { assumptions: { unknownAncestorsDoNotRenderText: true } },
-    'ios'
-  ),
-  title: 'activity indicator unknown ancestor assumption',
+  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, {}, 'ios'),
+  title: 'activity indicator unknown ancestor',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unknown-ancestor'),
   babelOptions,
   formatResult: formatTestResult,
