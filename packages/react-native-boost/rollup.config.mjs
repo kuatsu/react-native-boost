@@ -55,6 +55,12 @@ export default [
     output: { file: 'dist/metro/transformer.js', format: 'cjs', sourcemap: true },
   },
   {
+    input: 'src/metro/worker.ts',
+    external,
+    plugins: nodePlugins,
+    output: { file: 'dist/metro/worker.js', format: 'cjs', sourcemap: true },
+  },
+  {
     input: 'src/runtime/index.ts',
     plugins: [dts()],
     external,

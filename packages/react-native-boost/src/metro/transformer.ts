@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import type { TransformOptions } from '@babel/core';
 import type { MetroTransformerManifest } from './types';
+import { publishAnalysis } from './bridge';
 
 const requireFromTransformer = createRequire(import.meta.url);
 const moduleFilename = fileURLToPath(import.meta.url);
@@ -35,11 +36,15 @@ export function createTransformer(manifest: MetroTransformerManifest) {
 
   return {
     async transform(arguments_: BabelTransformerArgs): Promise<TransformResult> {
-      const result = await delegate.transform({
-        ...arguments_,
-        plugins: [[boostPlugin, pluginOptions], ...(arguments_.plugins ?? [])],
-      });
-      return validateResult(result);
+      const result = validateResult(
+        await delegate.transform({
+          ...arguments_,
+          plugins: [[boostPlugin, pluginOptions], ...(arguments_.plugins ?? [])],
+        })
+      );
+      const metadata = result.metadata?.reactNativeBoost as { injectionId?: unknown; analysis?: unknown } | undefined;
+      if (metadata?.analysis) publishAnalysis(arguments_.filename, metadata);
+      return result;
     },
     getCacheKey(options?: Record<string, unknown>): string {
       const delegateKey = delegate.getCacheKey?.(options) ?? '';

@@ -6,6 +6,7 @@ import { validatePluginOptions } from '../options';
 describe('plugin options', () => {
   it('accepts the current configuration', () => {
     const options = {
+      crossFileAncestorResolution: false,
       optimizations: {
         'native-image': 'off' as const,
         'animated-value-initialization': 'on' as const,
@@ -89,6 +90,7 @@ describe('plugin options', () => {
     [{ optimizations: { unknown: 'on' } }, 'Unknown optimization `unknown`.'],
     [{ assumptions: { unknown: true } }, 'Unknown assumption `unknown`.'],
     [{ integrations: { unknown: 'on' } }, 'Unknown integration `unknown`.'],
+    [{ crossFileAncestorResolution: 'on' }, '`crossFileAncestorResolution` must be a boolean'],
     [{ logLevel: 'verbose' }, '`logLevel` must be one of'],
     [{ optimizations: { 'native-text': true } }, 'must be `on` or `off`'],
     [{ integrations: { unistyles: true } }, 'must be `auto`, `on`, or `off`'],

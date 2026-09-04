@@ -14,7 +14,7 @@ import type {
 } from './types';
 import { createLogger } from './utils/logger';
 import { nativeViewOptimizer } from './optimizers/native-view';
-import { isIgnoredFile } from './utils/common';
+import { analyzeAncestorModule, isIgnoredFile } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
 import { animatedValueInitializationOptimizer } from './optimizers/animated-value-initialization';
@@ -23,6 +23,7 @@ import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operation
 import { platformFoldingOptimizer } from './optimizers/platform-folding';
 import { validatePluginOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
+import { readAncestorImports } from './utils/ancestor-snapshot';
 import {
   getReactNativeMinor,
   loadReactNativeColorNormalizer,
@@ -58,7 +59,9 @@ const optimizers: Optimizer[] = [
 export default declare((api, rawOptions, dirname?: string) => {
   api.assertVersion(7);
 
-  const injectionId = readInternalInjectionId(rawOptions);
+  const injectionId = readInternalString(rawOptions, '__reactNativeBoost');
+  const snapshotPath = readInternalString(rawOptions, '__reactNativeBoostSnapshot');
+  const projectRoot = readInternalString(rawOptions, '__reactNativeBoostProjectRoot');
   const callerData = api.caller((caller) =>
     JSON.stringify({
       bundler: (caller as { bundler?: unknown } | undefined)?.bundler,
@@ -134,6 +137,10 @@ export default declare((api, rawOptions, dirname?: string) => {
       if (injectionId) (file.metadata as Record<string, unknown>).reactNativeBoost = { injectionId };
 
       const hubFile = file as unknown as HubFile;
+      if (snapshotPath) {
+        hubFile.__ancestorImports = readAncestorImports(snapshotPath, projectRoot, hubFile.opts.filename, platform);
+        hubFile.__ancestorReferences = new Map();
+      }
       const ignored = isIgnoredFile(hubFile, options.ignores ?? []);
       const reactNativeMinor = ignored ? undefined : resolveReactNativeMinor(hubFile);
       if (!ignored && !colorNormalizerResolved) {
@@ -143,7 +150,28 @@ export default declare((api, rawOptions, dirname?: string) => {
       this.optimizerContext = { logger, options, platform, unistylesEnabled, reactNativeMinor, normalizeColor };
       this.enabledOptimizations = ignored ? new Set() : getEnabledOptimizations(options, this.optimizerContext);
     },
-    visitor: traverse.visitors.merge(optimizers.map((optimizer) => optimizer.visitor)),
+    visitor: traverse.visitors.merge([
+      ...optimizers.map((optimizer) => optimizer.visitor),
+      {
+        Program: {
+          enter(path) {
+            if (!snapshotPath) return;
+            const file = (path.hub as unknown as { file: HubFile }).file;
+            file.__ancestorAnalysis = analyzeAncestorModule(path);
+          },
+          exit(path) {
+            if (!snapshotPath) return;
+            const file = (path.hub as unknown as { file: HubFile & { metadata: unknown } }).file;
+            const metadata = file.metadata as Record<string, unknown>;
+            const boostMetadata = metadata.reactNativeBoost as Record<string, unknown>;
+            boostMetadata.analysis = {
+              ...file.__ancestorAnalysis,
+              references: [...(file.__ancestorReferences?.values() ?? [])],
+            };
+          },
+        },
+      },
+    ]),
   };
 
   return plugin as unknown as PluginObj;
@@ -172,22 +200,23 @@ function getRequireOrigins(dirname?: string): Array<string | undefined> {
   return [dirname ? path.join(dirname, 'package.json') : undefined, path.join(process.cwd(), 'package.json')];
 }
 
-function readInternalInjectionId(rawOptions: unknown): string | undefined {
+function readInternalString(rawOptions: unknown, key: string): string | undefined {
   const value =
     typeof rawOptions === 'object' && rawOptions !== null && !Array.isArray(rawOptions)
-      ? (rawOptions as Record<string, unknown>).__reactNativeBoost
+      ? (rawOptions as Record<string, unknown>)[key]
       : undefined;
   if (value === undefined) return;
-  if (typeof value !== 'string' || value.length === 0) {
-    throw new PluginError('The Metro integration ID is invalid.');
-  }
+  if (typeof value !== 'string' || value.length === 0) throw new PluginError(`The internal ${key} option is invalid.`);
   return value;
 }
 
 function stripInternalOptions(rawOptions: unknown): unknown {
   if (typeof rawOptions !== 'object' || rawOptions === null || Array.isArray(rawOptions)) return rawOptions;
-  const { __reactNativeBoost, ...options } = rawOptions as Record<string, unknown>;
+  const { __reactNativeBoost, __reactNativeBoostProjectRoot, __reactNativeBoostSnapshot, ...options } =
+    rawOptions as Record<string, unknown>;
   void __reactNativeBoost;
+  void __reactNativeBoostProjectRoot;
+  void __reactNativeBoostSnapshot;
   return options;
 }
 
