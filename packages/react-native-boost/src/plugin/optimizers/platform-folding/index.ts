@@ -23,25 +23,79 @@ const platformFoldingVisitor = {
     path.replaceWith(replacement);
     logger.optimized({ target: 'Platform.select', path });
   },
-  ConditionalExpression(path: NodePath<t.ConditionalExpression>, state: OptimizerState) {
-    const comparison = getPlatformComparison(path);
+  IfStatement(path: NodePath<t.IfStatement>, state: OptimizerState) {
+    const comparison = getPlatformComparison(path, path.node.test);
     if (!comparison) return;
 
-    const { logger, platform } = state.optimizerContext;
-    if (!platform) {
-      logger.skipped({ target: 'Platform.OS', path, reason: 'target platform is unknown' });
+    const platform = getTargetPlatform(path, state);
+    if (!platform) return;
+
+    const matches = platformMatches(comparison, platform);
+    const branch = path.get(matches ? 'consequent' : 'alternate');
+    const discarded = path.get(matches ? 'alternate' : 'consequent');
+    if (discarded.node && hasHoistedDeclaration(discarded as NodePath<t.Statement>)) {
+      path.skip();
       return;
     }
-    if (isIgnoredLine(path)) return;
 
-    const matches = comparison.value === platform;
+    state.optimizerContext.logger.optimized({ target: 'Platform.OS', path });
+    if (branch.node) {
+      const replacement = t.cloneNode(branch.node, true);
+      t.inheritsComments(replacement, path.node);
+      path.replaceWith(replacement);
+    } else {
+      path.remove();
+    }
+  },
+  LogicalExpression(path: NodePath<t.LogicalExpression>, state: OptimizerState) {
+    if (path.node.operator !== '&&' && path.node.operator !== '||') return;
+    const comparison = getPlatformComparison(path, path.node.left);
+    if (!comparison) return;
+
+    const platform = getTargetPlatform(path, state);
+    if (!platform) return;
+
+    const left = platformMatches(comparison, platform);
+    const replacement = (path.node.operator === '&&' ? left : !left)
+      ? t.cloneNode(path.node.right, true)
+      : t.booleanLiteral(left);
+    t.inheritsComments(replacement, path.node);
+    state.optimizerContext.logger.optimized({ target: 'Platform.OS', path });
+    path.replaceWith(replacement);
+  },
+  ConditionalExpression(path: NodePath<t.ConditionalExpression>, state: OptimizerState) {
+    const comparison = getPlatformComparison(path, path.node.test);
+    if (!comparison) return;
+
+    const platform = getTargetPlatform(path, state);
+    if (!platform) return;
+
     const replacement = t.cloneNode(
-      matches === (comparison.operator === '===') ? path.node.consequent : path.node.alternate,
+      platformMatches(comparison, platform) ? path.node.consequent : path.node.alternate,
       true
     );
     t.inheritsComments(replacement, path.node);
+    state.optimizerContext.logger.optimized({ target: 'Platform.OS', path });
     path.replaceWith(replacement);
-    logger.optimized({ target: 'Platform.OS', path });
+  },
+  BinaryExpression(path: NodePath<t.BinaryExpression>, state: OptimizerState) {
+    const comparison = getPlatformComparison(path, path.node);
+    if (!comparison) return;
+
+    const platform = getTargetPlatform(path, state);
+    if (!platform) return;
+
+    state.optimizerContext.logger.optimized({ target: 'Platform.OS', path });
+    path.replaceWith(t.booleanLiteral(platformMatches(comparison, platform)));
+  },
+  MemberExpression(path: NodePath<t.MemberExpression>, state: OptimizerState) {
+    if (!isPlatformOSReference(path, path.node) || !isReadOnly(path)) return;
+
+    const platform = getTargetPlatform(path, state);
+    if (!platform) return;
+
+    state.optimizerContext.logger.optimized({ target: 'Platform.OS', path });
+    path.replaceWith(t.stringLiteral(platform));
   },
 };
 
@@ -66,18 +120,30 @@ function isPlatformSelect(path: NodePath<t.CallExpression>): boolean {
   );
 }
 
-function getPlatformComparison(
-  path: NodePath<t.ConditionalExpression>
-): { operator: '===' | '!=='; value: string } | undefined {
-  const test = path.node.test;
-  if (!t.isBinaryExpression(test) || (test.operator !== '===' && test.operator !== '!==')) return;
+type PlatformComparison = { operator: '===' | '!=='; value: string };
 
-  if (isPlatformOSReference(path, test.left) && t.isStringLiteral(test.right)) {
-    return { operator: test.operator, value: test.right.value };
+function getPlatformComparison(path: NodePath, expression: t.Node): PlatformComparison | undefined {
+  if (!t.isBinaryExpression(expression) || (expression.operator !== '===' && expression.operator !== '!==')) return;
+
+  if (isPlatformOSReference(path, expression.left) && t.isStringLiteral(expression.right)) {
+    return { operator: expression.operator, value: expression.right.value };
   }
-  if (isPlatformOSReference(path, test.right) && t.isStringLiteral(test.left)) {
-    return { operator: test.operator, value: test.left.value };
+  if (isPlatformOSReference(path, expression.right) && t.isStringLiteral(expression.left)) {
+    return { operator: expression.operator, value: expression.left.value };
   }
+}
+
+function platformMatches(comparison: PlatformComparison, platform: TargetPlatform): boolean {
+  return (comparison.value === platform) === (comparison.operator === '===');
+}
+
+function getTargetPlatform(path: NodePath, state: OptimizerState): TargetPlatform | undefined {
+  const { logger, platform } = state.optimizerContext;
+  if (!platform) {
+    logger.skipped({ target: 'Platform.OS', path, reason: 'target platform is unknown' });
+    return;
+  }
+  if (!isIgnoredLine(path)) return platform;
 }
 
 function buildSelectReplacement(path: NodePath<t.CallExpression>, platform: TargetPlatform): t.Expression | undefined {
@@ -112,6 +178,29 @@ function isPlatformOSReference(path: NodePath, expression: t.Node): boolean {
     t.isIdentifier(expression.property, { name: 'OS' }) &&
     isPlatformReference(path, expression.object)
   );
+}
+
+function hasHoistedDeclaration(path: NodePath<t.Statement>): boolean {
+  let found = t.isVariableDeclaration(path.node, { kind: 'var' }) || t.isFunctionDeclaration(path.node);
+  path.traverse({
+    Function(functionPath) {
+      if (functionPath.isFunctionDeclaration()) found = true;
+      functionPath.skip();
+    },
+    VariableDeclaration(variablePath) {
+      if (variablePath.node.kind === 'var') found = true;
+    },
+  });
+  return found;
+}
+
+function isReadOnly(path: NodePath<t.MemberExpression>): boolean {
+  const parent = path.parent;
+  if (!path.isReferenced()) return false;
+  if (path.key === 'value' && t.isObjectProperty(parent) && t.isObjectPattern(path.parentPath.parent)) return false;
+  if (t.isUpdateExpression(parent) || (t.isUnaryExpression(parent) && parent.operator === 'delete')) return false;
+  if ((t.isForInStatement(parent) || t.isForOfStatement(parent)) && parent.left === path.node) return false;
+  return true;
 }
 
 function isPlatformReference(path: NodePath, expression: t.Node): boolean {

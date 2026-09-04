@@ -79,6 +79,98 @@ describe('platform folding optimizer', () => {
     expect(output).not.toContain('<Android');
   });
 
+  it('replaces read-only values and strict comparisons', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        const platform = Platform.OS;
+        const cacheKey = \`${'${Platform.OS}'}-cache\`;
+        const isIOS = 'ios' === Platform.OS;
+        const isAndroid = Platform.OS !== 'ios';
+      `,
+      'ios'
+    );
+
+    expect(output).toMatch(/const platform = ["']ios["'];/);
+    expect(output).toMatch(/const cacheKey = `\$\{["']ios["']}-cache`;/);
+    expect(output).toContain('const isIOS = true;');
+    expect(output).toContain('const isAndroid = false;');
+    expect(output).not.toContain('Platform.OS');
+  });
+
+  it('removes unreachable if branches before dependency collection', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        if (Platform.OS === 'ios') {
+          require('./install-ios');
+        } else {
+          require('./install-android');
+        }
+        if (Platform.OS !== 'ios') require('./not-ios');
+      `,
+      'ios'
+    );
+
+    expect(output).toContain("require('./install-ios')");
+    expect(output).not.toContain('install-android');
+    expect(output).not.toContain('not-ios');
+    expect(output).not.toContain('if (');
+  });
+
+  it('keeps if statements when removing a branch would remove a hoisted binding', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        if (Platform.OS === 'ios') {
+          installIOS();
+        } else {
+          var installer = require('./install-android');
+        }
+        use(installer);
+      `,
+      'ios'
+    );
+
+    expect(output).toContain("if (Platform.OS === 'ios')");
+    expect(output).toContain("require('./install-android')");
+  });
+
+  it('folds short-circuit platform branches without evaluating unreachable operands', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        const accessory = Platform.OS === 'ios' && <Accessory />;
+        const androidAccessory = Platform.OS === 'android' && missing();
+        const fallback = Platform.OS === 'ios' || missing();
+        const androidFallback = Platform.OS === 'android' || <Fallback />;
+      `,
+      'ios'
+    );
+
+    expect(output).toContain('const accessory = <Accessory />;');
+    expect(output).toContain('const androidAccessory = false;');
+    expect(output).toContain('const fallback = true;');
+    expect(output).toContain('const androidFallback = <Fallback />;');
+    expect(output).not.toContain('missing()');
+  });
+
+  it('does not replace writes to Platform.OS', () => {
+    const output = transformPlatform(
+      `
+        import { Platform } from 'react-native';
+        Platform.OS = 'android';
+        Platform.OS++;
+        delete Platform.OS;
+        for (Platform.OS of platforms) {}
+        ({ platform: Platform.OS } = source);
+      `,
+      'ios'
+    );
+
+    expect(output.match(/Platform\.OS/g)).toHaveLength(5);
+  });
+
   it('preserves discarded value evaluations, order, duplicates, and present undefined', () => {
     const output = transformPlatform(
       `
@@ -106,8 +198,9 @@ describe('platform folding optimizer', () => {
     expect(output).not.toContain('Platform.select');
   });
 
-  it('keeps unsafe select specs and unsupported branches unchanged', () => {
-    const output = transformPlatform(`
+  it('keeps unsafe select specs and unsupported Platform members unchanged', () => {
+    const output = transformPlatform(
+      `
       import { Platform } from 'react-native';
       const computed = Platform.select({ [key]: 'computed', ios: 'ios' });
       const spread = Platform.select({ ...spec, ios: 'ios' });
@@ -120,11 +213,13 @@ describe('platform folding optimizer', () => {
       const dynamic = Platform.OS === target ? 'yes' : 'no';
       const version = Platform.Version === 'ios' ? 'yes' : 'no';
       const constants = Platform.constants === 'ios' ? 'yes' : 'no';
-    `);
+    `,
+      'ios'
+    );
 
     expect(output.match(/Platform\.select\(/g)).toHaveLength(7);
-    expect(output).toContain("Platform.OS == 'ios'");
-    expect(output).toContain('Platform.OS === target');
+    expect(output).toMatch(/["']ios["'] == 'ios'/);
+    expect(output).toMatch(/["']ios["'] === target/);
     expect(output).toContain("Platform.Version === 'ios'");
     expect(output).toContain("Platform.constants === 'ios'");
   });
