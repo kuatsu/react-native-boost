@@ -163,6 +163,36 @@ pluginTester({
   ],
 });
 
+pluginTester({
+  plugin: generateTestPlugin(nativeImageOptimizer, {}, 'ios', 86),
+  title: 'image RN 0.86',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-rn-86'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+});
+
+pluginTester({
+  plugin: generateTestPlugin(nativeImageOptimizer, { integrations: { unistyles: 'on' } }, 'ios', 86),
+  title: 'image unistyles',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+});
+
+pluginTester({
+  plugin: generateTestPlugin(nativeImageOptimizer, {}, undefined, 86),
+  title: 'image unknown platform',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-unknown-platform'),
+  babelOptions: {
+    plugins: ['@babel/plugin-syntax-jsx'],
+  },
+  formatResult: formatTestResult,
+});
+
 describe('image android output', () => {
   it('emits Android top-level empty headers for src sources', async () => {
     const output = await transformImage(
@@ -505,133 +535,6 @@ describe('image srcSet output', () => {
     const dimensions = style.elements[0] as t.ObjectExpression;
     expect(getObjectExpressionProperty(dimensions, 'width')).toMatchObject({ value: 24 });
     expect(getObjectExpressionProperty(dimensions, 'height')).toMatchObject({ value: 12 });
-  });
-
-  it.each([
-    ['a dynamic srcSet', '<Image srcSet={sources} />'],
-    ['a source prop', '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />'],
-    ['a dynamic dimension', '<Image srcSet="logo.png 1x" width={width} />'],
-    ['a spread', '<Image srcSet="logo.png 1x" {...{ testID: "logo" }} />'],
-    ['an unsupported descriptor', '<Image srcSet="logo.png 300w" />'],
-    ['a separator unsupported by RN 0.86', '<Image srcSet="logo.png 1x,logo@2x.png 2x" />'],
-    ['a malformed descriptor', '<Image srcSet="logo.png x" />'],
-    ['a dynamic style', '<Image srcSet="logo.png 1x" style={styles.image} />'],
-  ])('bails on %s', async (_reason, element) => {
-    const output = await transformImage(`import { Image } from 'react-native';\n${element};`, 'ios');
-
-    expect(output).not.toContain('_NativeImage');
-    expect(output).toContain('<Image');
-  });
-
-  it.each([
-    ['unsupported props', '<Image source={{ uri: "logo.png" }} onLoad={handleLoad} />'],
-    ['spread props', '<Image source={{ uri: "logo.png" }} {...props} />'],
-    ['children', '<Image source={{ uri: "logo.png" }}><Child /></Image>'],
-    ['dynamic srcSet', '<Image srcSet={sources} />'],
-    ['dynamic srcSet style', '<Image srcSet="logo.png 1x" style={styles.image} />'],
-    ['missing source', '<Image />'],
-  ])('lets @boost-force override the %s bailout', async (_reason, element) => {
-    const output = await transformImage(
-      `import { Image } from 'react-native';\n<>{/* @boost-force */}${element}</>;`,
-      'ios'
-    );
-
-    expect(output).toContain('_NativeImage');
-  });
-});
-
-describe('image unistyles', () => {
-  it('bails on a Unistyles style because there is no lean Image host', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          import { StyleSheet } from 'react-native-unistyles';
-          const styles = StyleSheet.create({ image: { width: 16 } });
-          <Image source={{ uri: 'logo.png' }} style={styles.image} />;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).not.toContain('NativeImage');
-    expect(output).toContain('<Image');
-  });
-
-  it('lifts the Unistyles style bail with @boost-force', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          import { StyleSheet } from 'react-native-unistyles';
-          const styles = StyleSheet.create({ image: { width: 16 } });
-          <>
-            {/* @boost-force */}
-            <Image source={{ uri: 'logo.png' }} style={styles.image} />
-          </>;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).toContain('NativeImage');
-  });
-
-  it('bails on an unresolved style source that may be a Unistyles style', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          <Image source={{ uri: 'logo.png' }} style={props.style} />;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).not.toContain('NativeImage');
-    expect(output).toContain('<Image');
-  });
-
-  it('lifts the unresolved style bail with @boost-force', async () => {
-    const output = await transformImage(
-      `
-          import { Image } from 'react-native';
-          <>
-            {/* @boost-force */}
-            <Image source={{ uri: 'logo.png' }} style={props.style} />
-          </>;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).toContain('NativeImage');
-  });
-
-  it('optimizes an Image with a React Native StyleSheet style in Unistyles mode', async () => {
-    const output = await transformImage(
-      `
-          import { Image, StyleSheet } from 'react-native';
-          const styles = StyleSheet.create({ image: { width: 16 } });
-          <Image source={{ uri: 'logo.png' }} style={styles.image} />;
-        `,
-      'ios',
-      { unistylesEnabled: true }
-    );
-
-    expect(output).toContain('NativeImage');
-  });
-});
-
-describe('image unknown platform output', () => {
-  it('bails because the native Image host prop contract is platform-specific', async () => {
-    const output = await transformImage(
-      `
-        import { Image } from 'react-native';
-        <Image source={{ uri: 'logo.png', width: 16, height: 16 }} />;
-        <>{/* @boost-force */}<Image source={{ uri: 'logo.png' }} /></>;
-      `
-    );
-
-    expect(output).not.toContain('NativeImage');
-    expect(output.match(/<Image/g)).toHaveLength(2);
   });
 });
 
