@@ -26,7 +26,7 @@ export const activityIndicatorStyles = {
   large: { width: 36, height: 36 },
 } as const;
 
-export function processActivityIndicatorStyle(style: ActivityIndicatorProps['style']) {
+export function processActivityIndicatorStyle(style: ActivityIndicatorProps['style']): ActivityIndicatorProps['style'] {
   return style ? [activityIndicatorStyles.container, style] : activityIndicatorStyles.container;
 }
 

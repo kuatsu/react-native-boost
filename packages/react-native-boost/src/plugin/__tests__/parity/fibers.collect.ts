@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { transformSync, type TransformCaller } from '@babel/core';
 import * as React from 'react';
 import { expect, test } from 'vitest';
