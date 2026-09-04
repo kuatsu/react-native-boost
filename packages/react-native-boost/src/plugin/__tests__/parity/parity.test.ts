@@ -22,12 +22,30 @@ vi.mock('../../../runtime/components/native-activity-indicator', async () => {
 });
 
 import { captureWrapper, captureWrapperHosts } from './wrapper';
-import { captureBoost, captureBoostHosts, boostOptimizes } from './boost';
+import { captureBoost, captureBoostHosts, boostOptimizes, boostUsesRuntimeSelectionColor } from './boost';
 import { reactNativeVersion } from './mocks/Platform';
 import { normalize, normalizeImage } from './normalize';
 
 const PLATFORMS = ['ios', 'android'] as const;
 const REACT_NATIVE_MINOR = reactNativeVersion.minor;
+
+const STATIC_SELECTION_COLOR_CASES = [
+  '<Text selectionColor="red">hello</Text>',
+  '<Text selectionColor="transparent">hello</Text>',
+  '<Text selectionColor="#f00">hello</Text>',
+  '<Text selectionColor="#66339980">hello</Text>',
+  '<Text selectionColor="rebeccapurple">hello</Text>',
+  '<Text selectionColor="rgb(102, 51, 153)">hello</Text>',
+  '<Text selectionColor="rgb(102 51 153 / 0.5)">hello</Text>',
+  '<Text selectionColor="rgb(102, 51, 153, 0.5)">hello</Text>',
+  '<Text selectionColor="rgba(102, 51, 153)">hello</Text>',
+  '<Text selectionColor="hsl(270, 50%, 40%)">hello</Text>',
+  '<Text selectionColor="hwb(270 20% 40% / 0.5)">hello</Text>',
+  '<Text selectionColor={0x663399ff}>hello</Text>',
+  '<Text selectionColor="invalid">hello</Text>',
+  '<Text selectionColor={null}>hello</Text>',
+  '<Text selectionColor>hello</Text>',
+];
 
 // `<Text>` cases use a primitive child (string, number, or template literal) so they render to
 // NativeText (not NativeVirtualText).
@@ -53,9 +71,6 @@ const TEXT_CASES = [
   // RN 0.85+ prepends `overflow: 'hidden'`, so the user's own overflow must win.
   '<Text style={{ overflow: "visible" }}>hello</Text>',
   '<Text style={{ color: "red" }} accessibilityLabel="x">hello</Text>',
-  // `selectionColor` runs through `processColor` (a non-identity mock packs "red" → an int), so both
-  // sides must emit the packed value — proving Boost calls processColor, not a raw forward.
-  '<Text selectionColor="red">hello</Text>',
   // Fully static styles are normalized at build time (object literal, no `processTextStyle`). Each
   // exercises a conversion the wrapper does at runtime; the flattened prop bags must still match.
   '<Text style={{ fontWeight: 700 }}>hello</Text>', // numeric fontWeight → string
@@ -358,6 +373,25 @@ describe('differential parity', () => {
         normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
       );
       DYNAMIC_IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props);
+    });
+
+    it.each(STATIC_SELECTION_COLOR_CASES)('Text: precomputes selectionColor: %s', async (jsx) => {
+      expect(boostUsesRuntimeSelectionColor(os, jsx)).toBe(false);
+      const boost = await captureBoost(os, jsx);
+      if (!boost.optimized) throw new Error('expected static Text selectionColor case to optimize');
+      const wrapper = await captureWrapper(os, jsx);
+      expect(boost.which).toBe(wrapper.which);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+    });
+
+    it('Text: dynamic selectionColor uses runtime processing', async () => {
+      const jsx = '<Text selectionColor={accent}>hello</Text>';
+      const preamble = 'const accent = getAccent(); function getAccent() { return "red"; }';
+      expect(boostUsesRuntimeSelectionColor(os, jsx, preamble)).toBe(true);
+      const boost = await captureBoost(os, jsx, preamble);
+      if (!boost.optimized) throw new Error('expected Text dynamic selectionColor case to optimize');
+      const wrapper = await captureWrapper(os, jsx, preamble);
+      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
     });
 
     it('Text: mixed dynamic style preserves userSelect flatten order', async () => {

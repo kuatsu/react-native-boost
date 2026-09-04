@@ -53,7 +53,6 @@ const basenameRedirects: Array<[RegExp, string]> = [
   [/(^|[./])usePressability$/, u('./mocks/usePressability.ts')],
   [/(^|[./])PressabilityDebug$/, u('./mocks/PressabilityDebug.ts')],
   [/(^|[./])ReactNativeFeatureFlags$/, u('./mocks/ReactNativeFeatureFlags.ts')],
-  [/(^|[./])processColor$/, u('./mocks/processColor.ts')],
 ];
 
 export default defineConfig({
@@ -72,6 +71,18 @@ export default defineConfig({
       },
       transform(code, id) {
         if (!RN_SRC.test(id)) return null;
+        // Vite cannot intercept these CommonJS requires, so expose them to its resolver as imports.
+        if (id.endsWith('/StyleSheet/processColor.js')) {
+          code = code
+            .replace(
+              "const Platform = require('../Utilities/Platform').default;",
+              "import Platform from '../Utilities/Platform';"
+            )
+            .replace(
+              "const normalizeColor = require('./normalizeColor').default;",
+              "import normalizeColor from './normalizeColor';"
+            );
+        }
         if (id.endsWith('/ActivityIndicator/ActivityIndicator.js')) {
           // The real wrapper binds its platform host at module load. The parity suite changes platforms
           // in one process, so select at render time while leaving the wrapper's prop logic unchanged.

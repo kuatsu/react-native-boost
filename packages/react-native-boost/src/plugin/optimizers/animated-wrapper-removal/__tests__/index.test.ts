@@ -1,9 +1,21 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { transformSync, type TransformCaller } from '@babel/core';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import boostPlugin from '../../../index';
 import { animatedWrapperRemovalOptimizer } from '..';
 import type { TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
+
+const targetDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'react-native-boost-animated-'));
+afterAll(() => fs.rmSync(targetDirectory, { recursive: true, force: true }));
+
+function targetPackageJson(minor: number): string {
+  const packageJson = path.join(targetDirectory, `${minor}.json`);
+  fs.writeFileSync(packageJson, JSON.stringify({ name: 'react-native', version: `0.${minor}.0` }));
+  return packageJson;
+}
 
 function transformAnimated(source: string, platform: TargetPlatform = 'ios'): string {
   return transformSync(source, {
@@ -24,7 +36,7 @@ function transformWithBoost(source: string, reactNativeMinor = 86, animatedWrapp
         boostPlugin,
         {
           logLevel: 'silent',
-          target: { reactNative: { version: `0.${reactNativeMinor}.0` } },
+          target: { reactNative: { packageJson: targetPackageJson(reactNativeMinor) } },
           assumptions: { unknownAncestorsDoNotRenderText: true },
           optimizations: animatedWrapperRemoval ? { 'animated-wrapper-removal': animatedWrapperRemoval } : undefined,
         },

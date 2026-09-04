@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { getReactNativeMinor, resolveReactNativeTarget } from '../react-native-target';
+import { getReactNativeMinor, loadReactNativeColorNormalizer, resolveReactNativeTarget } from '../react-native-target';
 
 const temporaryDirectories: string[] = [];
 
@@ -36,8 +36,23 @@ describe('React Native target resolution', () => {
     expect(resolution.versions).toEqual(['0.86.0', '0.87.1']);
   });
 
-  it('accepts an explicit version when no package can be resolved', () => {
-    expect(resolveReactNativeTarget({ version: '0.85.2' }, []).target?.version).toBe('0.85.2');
+  it('loads the color normalizer from the selected React Native package', () => {
+    const project = createProject('0.83.0');
+    const packageJson = path.join(project, 'node_modules/react-native/package.json');
+    const normalizerDirectory = path.join(
+      project,
+      'node_modules/react-native/node_modules/@react-native/normalize-colors'
+    );
+    fs.mkdirSync(normalizerDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(normalizerDirectory, 'index.js'),
+      'module.exports = color => color === "red" ? 42 : null;'
+    );
+
+    const normalizeColor = loadReactNativeColorNormalizer(packageJson);
+
+    expect(normalizeColor?.('red')).toBe(42);
+    expect(normalizeColor?.('invalid')).toBeNull();
   });
 });
 
