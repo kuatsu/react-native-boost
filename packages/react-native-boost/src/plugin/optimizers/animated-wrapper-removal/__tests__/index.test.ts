@@ -2,11 +2,30 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { transformSync, type TransformCaller } from '@babel/core';
+import { pluginTester } from 'babel-plugin-tester';
 import { afterAll, describe, expect, it } from 'vitest';
 import boostPlugin from '../../../index';
-import { animatedWrapperRemovalOptimizer } from '..';
-import type { TargetPlatform } from '../../../types';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
+import { formatTestResult } from '../../../utils/format-test-result';
+import { animatedWrapperRemovalOptimizer } from '..';
+
+const babelOptions = { plugins: ['@babel/plugin-syntax-jsx'] };
+
+pluginTester({
+  plugin: generateTestPlugin(animatedWrapperRemovalOptimizer, {}, 'ios'),
+  title: 'animated wrapper removal',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures'),
+  babelOptions,
+  formatResult: formatTestResult,
+});
+
+pluginTester({
+  plugin: generateTestPlugin(animatedWrapperRemovalOptimizer, {}, 'web'),
+  title: 'animated wrapper removal web',
+  fixtures: path.resolve(import.meta.dirname, 'fixtures-web'),
+  babelOptions,
+  formatResult: formatTestResult,
+});
 
 const targetDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'react-native-boost-animated-'));
 afterAll(() => fs.rmSync(targetDirectory, { recursive: true, force: true }));
@@ -15,14 +34,6 @@ function targetPackageJson(minor: number): string {
   const packageJson = path.join(targetDirectory, `${minor}.json`);
   fs.writeFileSync(packageJson, JSON.stringify({ name: 'react-native', version: `0.${minor}.0` }));
   return packageJson;
-}
-
-function transformAnimated(source: string, platform: TargetPlatform = 'ios'): string {
-  return transformSync(source, {
-    configFile: false,
-    babelrc: false,
-    plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(animatedWrapperRemovalOptimizer, {}, platform)],
-  })!.code!;
 }
 
 function transformWithBoost(source: string, reactNativeMinor = 86, animatedWrapperRemoval?: 'on' | 'off'): string {
@@ -46,57 +57,8 @@ function transformWithBoost(source: string, reactNativeMinor = 86, animatedWrapp
 }
 
 const source = (element: string) => `import { Animated } from 'react-native';\n${element};`;
-const bailoutCases = [
-  ['dynamic style', '<Animated.View style={{ opacity: value }} />'],
-  ['Animated event', '<Animated.ScrollView onScroll={Animated.event([], { useNativeDriver: true })} />'],
-  ['spread props', '<Animated.View {...props} />'],
-  ['ref', '<Animated.View ref={ref} />'],
-  ['passthrough values', '<Animated.View passthroughAnimatedPropExplicitValues={{ style: { opacity: 1 } }} />'],
-  ['dynamic child', '<Animated.Text>{value}</Animated.Text>'],
-  ['ScrollView refresh control', '<Animated.ScrollView refreshControl={<RefreshControl />} />'],
-];
 
-describe('animated wrapper removal optimizer', () => {
-  it('removes the Animated wrapper from Animated.View and reproduces style flattening', () => {
-    const output = transformAnimated(
-      source(
-        '<Animated.View collapsable={true} testID="card" style={[{ width: 12, opacity: 1 }, null, false, [{ opacity: 0.5 }]]} />'
-      )
-    );
-
-    expect(output).not.toContain('<Animated.View');
-    expect(output).toContain('<_AnimatedWrapperRemovalView testID="card" collapsable={false}');
-    expect(output).toMatch(/style=\{\{\s*width: 12,\s*opacity: 0\.5\s*\}\}/);
-  });
-
-  it('preserves the hidden style and ScrollView defaults', () => {
-    const output = transformAnimated(
-      source(
-        '<><Animated.View /><Animated.Text style={null}>x</Animated.Text><Animated.ScrollView /><Animated.ScrollView scrollEventThrottle={16} /></>'
-      )
-    );
-
-    expect(output.match(/style=\{undefined\}/g)).toHaveLength(4);
-    expect(output.match(/scrollEventThrottle=\{0\.0001\}/g)).toHaveLength(1);
-    expect(output.match(/scrollEventThrottle=\{16\}/g)).toHaveLength(1);
-    expect(output.match(/collapsable=\{false\}/g)).toHaveLength(4);
-  });
-
-  it('accepts aliases, static objects, JSX children, and proven function callbacks', () => {
-    const output = transformAnimated(`
-      import { Animated as Motion } from 'react-native';
-      function onLayout() {}
-      <Motion.View accessibilityState={{ disabled: false }} onLayout={onLayout}>
-        <Child />
-      </Motion.View>;
-    `);
-
-    expect(output).toContain('<_AnimatedWrapperRemovalView accessibilityState={{');
-    expect(output).toContain('onLayout={onLayout}');
-    expect(output).toContain('<Child />');
-    expect(output).not.toContain('<Motion.View');
-  });
-
+describe('animated wrapper removal integration', () => {
   it('feeds lowered components into the native host optimizers', () => {
     const output = transformWithBoost(`
       import { Animated } from 'react-native';
@@ -130,24 +92,6 @@ describe('animated wrapper removal optimizer', () => {
     expect(output).toContain('<Text>nested</Text>');
   });
 
-  it.each(bailoutCases)('bails on %s', (_, element) => {
-    expect(transformAnimated(source(element))).toContain('<Animated.');
-  });
-
-  it.each(bailoutCases)('lets @boost-force override the %s bailout', (_, element) => {
-    expect(transformAnimated(source(`<>{/* @boost-force */}${element}</>`))).not.toContain('<Animated.');
-  });
-
-  it('ignores local and deep Animated bindings', () => {
-    const local = transformAnimated(`const Animated = library; <Animated.View />;`);
-    const deep = transformAnimated(
-      `import Animated from 'react-native/Libraries/Animated/Animated'; <Animated.View />;`
-    );
-
-    expect(local).toContain('<Animated.View');
-    expect(deep).toContain('<Animated.View');
-  });
-
   it('defaults on only for RN 0.83 through 0.86 and honors overrides', () => {
     const input = source('<Animated.View />');
     const forcedInput = source('<>{/* @boost-force */}<Animated.View /></>');
@@ -160,11 +104,5 @@ describe('animated wrapper removal optimizer', () => {
     expect(transformWithBoost(input, 87, 'on')).not.toContain('<Animated.View');
     expect(transformWithBoost(input, 86, 'off')).toContain('<Animated.View');
     expect(transformWithBoost(forcedInput, 86, 'off')).toContain('<Animated.View');
-  });
-
-  it('respects @boost-ignore and unsupported platforms', () => {
-    expect(transformAnimated(source('<>{/* @boost-ignore */}<Animated.View /></>'))).toContain('<Animated.View');
-    expect(transformAnimated(source('<Animated.View />'), 'web')).toContain('<Animated.View');
-    expect(transformAnimated(source('<>{/* @boost-force */}<Animated.View /></>'), 'web')).toContain('<Animated.View');
   });
 });
