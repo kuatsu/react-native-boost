@@ -49,9 +49,7 @@ translates (`aria-*`, `tabIndex`, `id`).
 
 ### Skip reason: `has unresolved ancestor that may render Text`
 
-A component is inside an ancestor React Native Boost cannot statically classify. Boost cannot prove that the
-ancestor does not render a `Text` around its children. That context can require a different native host. A common
-case is a `Text` inside a third-party wrapper such as `expo-router`'s `Link`.
+A component is inside an ancestor React Native Boost cannot statically classify. Boost follows local and imported wrappers through Metro, but unsupported component patterns remain unknown. Boost also treats React Native components other than parity-proven hosts such as `View` and `Text` as unknown.
 
 Options:
 

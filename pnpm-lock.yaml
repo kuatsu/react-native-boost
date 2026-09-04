@@ -310,6 +310,9 @@ importers:
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0
+      metro:
+        specifier: 0.87.0
+        version: 0.87.0(supports-color@8.1.1)
       metro-config:
         specifier: 0.87.0
         version: 0.87.0(supports-color@8.1.1)

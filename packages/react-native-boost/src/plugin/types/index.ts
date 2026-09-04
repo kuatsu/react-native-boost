@@ -1,5 +1,6 @@
 import type { NodePath, PluginObj, PluginPass } from '@babel/core';
 import { types as t } from '@babel/core';
+import type { ComponentAncestorClassification, ModuleAncestorAnalysis } from '../../ancestor-types';
 
 export type OptimizationState = 'on' | 'off';
 
@@ -63,6 +64,13 @@ export interface PluginIntegrationOptions {
 export type LogLevel = 'silent' | 'warn' | 'info' | 'debug';
 
 export interface PluginOptions {
+  /**
+   * Resolves imported component ancestors through Metro's module graph. This uses private/internal Metro APIs until Metro supports cross-file transform inputs (https://github.com/react/metro/issues/1902).
+   * Set this to `false` to use same-file ancestor analysis only.
+   *
+   * @default true in supported Metro versions
+   */
+  crossFileAncestorResolution?: boolean;
   /** Configures individual optimizations. */
   optimizations?: PluginOptimizationOptions;
   /** Declares project-wide facts that enable additional optimizations. */
@@ -143,6 +151,9 @@ export type HubFile = t.File & {
   opts: {
     filename: string;
   };
+  __ancestorAnalysis?: ModuleAncestorAnalysis;
+  __ancestorImports?: Record<string, Record<string, ComponentAncestorClassification>>;
+  __ancestorReferences?: Map<string, { source: string; imported: string }>;
   __hasImports?: Record<string, t.Identifier>;
   __optimized?: boolean;
   __staticImageSourceDeclaration?: t.VariableDeclaration;

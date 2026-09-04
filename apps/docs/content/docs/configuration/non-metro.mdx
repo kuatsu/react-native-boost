@@ -36,3 +36,5 @@ module.exports = {
 Boost reads this package to select version-specific behavior and matching build-time processors.
 
 The target is optional. Without it, the Babel plugin tries to find the installed React Native package automatically and logs a warning. If detection fails, Boost skips version-dependent work and uses runtime fallbacks where available.
+
+Cross-file ancestor resolution needs Metro's resolved module graph. Non-Metro builds can therefore only safely use same-file ancestor analysis, which leads to lower optimization coverage.

@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { withBoostConfig } from '..';
 
 const requireFromProject = createRequire(import.meta.url);
+const metroRequire = createRequire(requireFromProject.resolve('metro'));
+const metroWorkerPath = metroRequire.resolve('metro-transform-worker');
 const temporaryDirectories: string[] = [];
 const acceptsMetroConfig = (config: ConfigT) => withBoostConfig(config);
 void acceptsMetroConfig;
@@ -21,18 +23,39 @@ describe('Metro integration', () => {
     const config = withBoostConfig(
       {
         projectRoot: process.cwd(),
-        transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
+        transformerPath: metroWorkerPath,
+        transformer: { babelTransformerPath: metroRequire.resolve('metro-babel-transformer') },
       },
       { logLevel: 'silent', optimizations: { 'native-text': 'off' } }
     );
     const wrapper = fs.readFileSync(config.transformer.babelTransformerPath, 'utf8');
+    const workerPath = (config as typeof config & { transformerPath: string }).transformerPath;
+    const worker = fs.readFileSync(workerPath, 'utf8');
     const reactNativePackageJson = fs.realpathSync(requireFromProject.resolve('react-native/package.json'));
 
     expect(wrapper).toContain('createTransformer');
-    expect(wrapper).toContain(JSON.stringify(requireFromProject.resolve('metro-babel-transformer')));
+    expect(worker).toContain('createWorker');
+    expect(wrapper).toContain(JSON.stringify(metroRequire.resolve('metro-babel-transformer')));
     expect(wrapper).not.toContain('module.parent');
     expect(wrapper).toContain(`"packageJson":${JSON.stringify(reactNativePackageJson)}`);
     expect(wrapper).toContain('"native-text":"off"');
+  });
+
+  it('preserves the Metro worker and cache when cross-file resolution is disabled', () => {
+    const cacheStore = { get: () => null, set: () => {} };
+    const transformerPath = '/custom/metro-worker.js';
+    const config = withBoostConfig(
+      {
+        projectRoot: process.cwd(),
+        cacheStores: [cacheStore],
+        transformerPath,
+        transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
+      },
+      { crossFileAncestorResolution: false, logLevel: 'silent' }
+    );
+
+    expect(config.transformerPath).toBe(transformerPath);
+    expect(config.cacheStores).toEqual([cacheStore]);
   });
 
   it('resolves a named Babel transformer from the project', () => {
@@ -109,10 +132,13 @@ describe('Metro integration', () => {
     fs.writeFileSync(path.join(projectRoot, 'node_modules/react-native/package.json'), '{}');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    withBoostConfig({
-      projectRoot,
-      transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
-    });
+    withBoostConfig(
+      {
+        projectRoot,
+        transformer: { babelTransformerPath: requireFromProject.resolve('metro-babel-transformer') },
+      },
+      { crossFileAncestorResolution: false }
+    );
 
     expect(warn).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('React Native could not be detected'));

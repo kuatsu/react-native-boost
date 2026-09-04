@@ -1,7 +1,15 @@
 import type { IntegrationState, LogLevel, OptimizationState, PluginOptions } from '../types';
 import PluginError from './plugin-error';
 
-const optionKeys = ['optimizations', 'assumptions', 'integrations', 'ignores', 'logLevel', 'target'];
+const optionKeys = [
+  'crossFileAncestorResolution',
+  'optimizations',
+  'assumptions',
+  'integrations',
+  'ignores',
+  'logLevel',
+  'target',
+];
 const optimizationKeys = [
   'native-text',
   'native-view',
@@ -38,6 +46,9 @@ const legacyOptimizations: Record<string, string> = {
 
 export function validatePluginOptions(rawOptions: unknown): PluginOptions {
   const options = validateOptions(rawOptions, optionKeys);
+  if (options.crossFileAncestorResolution !== undefined && typeof options.crossFileAncestorResolution !== 'boolean') {
+    throw new PluginError('`crossFileAncestorResolution` must be a boolean.');
+  }
   if (options.target !== undefined) validateTarget(options.target);
   return options as PluginOptions;
 }
