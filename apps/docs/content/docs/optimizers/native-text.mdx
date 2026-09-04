@@ -27,6 +27,10 @@ The optimizer can usually replace a `Text` when:
 
 Direct accessibility props, `id`, `numberOfLines`, `selectionColor`, and supported text styles are normalized before the wrapper is removed.
 
+<Callout type="warn" title="Do not mutate dynamic styles">
+  Boost caches dynamic `Text` style processing by object identity. Pass a new style object when values change (which is best practice anyway), or use [`@boost-ignore`](/docs/configuration/boost-decorator#boost-ignore) for mutable styles.
+</Callout>
+
 ## When it skips
 
 Boost keeps the `Text` wrapper when it finds:
