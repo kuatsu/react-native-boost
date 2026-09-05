@@ -145,6 +145,7 @@ export interface OptimizerContext {
 export interface OptimizerState extends PluginPass {
   enabledOptimizations: Set<OptimizationName>;
   optimizerContext: OptimizerContext;
+  ancestorSources?: Map<string, { source?: t.StringLiteral | null }>;
 }
 
 export interface Optimizer {

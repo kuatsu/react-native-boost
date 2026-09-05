@@ -310,6 +310,9 @@ importers:
       '@typescript/typescript6':
         specifier: ^6.0.2
         version: 6.0.2
+      babel-plugin-react-compiler:
+        specifier: 1.0.0
+        version: 1.0.0
       babel-plugin-tester:
         specifier: ^12.0.0
         version: 12.0.0(@babel/core@7.29.7(supports-color@8.1.1))

@@ -156,7 +156,7 @@ function resolveImport(
   injectionId: string,
   visiting: Set<string>
 ): ComponentAncestorClassification {
-  const targetPath = findDependency(graph.dependencies.get(modulePath), source);
+  const targetPath = findDependency(graph.dependencies.get(modulePath), source, injectionId);
   return targetPath ? resolveExport(graph, targetPath, imported, injectionId, visiting).value : 'unknown';
 }
 
@@ -186,7 +186,7 @@ function resolveExport(
 
   const matches = analysis.exportAll
     .map((source) => {
-      const targetPath = findDependency(graph.dependencies.get(modulePath), source);
+      const targetPath = findDependency(graph.dependencies.get(modulePath), source, injectionId);
       return targetPath
         ? resolveExport(graph, targetPath, exported, injectionId, visiting)
         : { found: false, value: 'unknown' as const };
@@ -214,7 +214,8 @@ function evaluateSummary(
   return values.every((value) => value === values[0]) ? values[0]! : 'context';
 }
 
-function findDependency(module: MetroModule | undefined, source: string): string | undefined {
+function findDependency(module: MetroModule | undefined, source: string, injectionId: string): string | undefined {
+  source = getAnalysis(module, injectionId)?.sources?.[source] ?? source;
   let resolved: string | undefined;
   for (const dependency of module?.dependencies.values() ?? []) {
     if (dependency.data.name !== source || !dependency.absolutePath) continue;
