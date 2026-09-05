@@ -1,4 +1,5 @@
 export const View = () => 'View';
+export const unstable_TextAncestorContext = undefined;
 export const Text = () => 'Text';
 export const Image = Object.assign(() => 'Image', {
   resolveAssetSource: <T>(source: T): T => source,

@@ -247,7 +247,7 @@ function classifyJSXElementAsAncestor(path: NodePath<t.JSXElement>, context: Anc
   if (isReactFragmentElement(path)) return 'transparent';
 
   const markedComponent = getMarkedReactNativeComponent(path.node.openingElement);
-  if (markedComponent) return markedComponent === 'Text' ? 'text' : 'safe';
+  if (markedComponent) return markedComponent === 'Text' ? 'text' : markedComponent === 'View' ? 'safe' : 'unknown';
 
   const openingElementName = path.node.openingElement.name;
 
@@ -350,7 +350,7 @@ function classifyOptimizedHostAncestor(source: string, binding: ScopeBinding): A
   if (source === RUNTIME_MODULE_NAME && t.isImportSpecifier(binding.path.node)) {
     const importedName = getImportSpecifierImportedName(binding.path.node);
     if (importedName === 'NativeText') return 'text';
-    if (importedName === 'NativeView') return 'safe';
+    if (importedName === 'NativeView' || importedName === 'NativeViewWithContext') return 'safe';
   }
 
   return undefined;

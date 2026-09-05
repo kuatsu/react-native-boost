@@ -83,5 +83,6 @@ export * from './utils/constants';
 /* eslint-disable @typescript-eslint/no-require-imports,unicorn/prefer-module */
 export const NativeText = require('react-native').Text;
 export const NativeView = require('react-native').View;
+export const NativeViewWithContext = NativeView;
 export const NativeImage = require('react-native').Image;
 /* eslint-enable @typescript-eslint/no-require-imports,unicorn/prefer-module */

@@ -20,30 +20,7 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
       return true;
     }
 
-    // Check spread attributes (e.g., {...props})
-    if (t.isJSXSpreadAttribute(attribute)) {
-      if (t.isIdentifier(attribute.argument)) {
-        const binding = path.scope.getBinding(attribute.argument.name);
-        let objectExpression: t.ObjectExpression | undefined;
-        if (binding) {
-          // If the binding node is a VariableDeclarator, use its initializer
-          if (t.isVariableDeclarator(binding.path.node)) {
-            objectExpression = binding.path.node.init as t.ObjectExpression;
-          } else if (t.isObjectExpression(binding.path.node)) {
-            objectExpression = binding.path.node;
-          }
-        }
-        if (objectExpression && t.isObjectExpression(objectExpression)) {
-          return objectExpression.properties.some((property) => {
-            if (!t.isObjectProperty(property)) return false;
-            if (t.isIdentifier(property.key)) return blacklist.has(property.key.name);
-            return t.isStringLiteral(property.key) && blacklist.has(property.key.value);
-          });
-        }
-      }
-      // Bail if we can't resolve the spread attribute
-      return true;
-    }
+    if (t.isJSXSpreadAttribute(attribute)) return spreadMayContainProperty(path, attribute.argument, blacklist);
 
     // For other attribute types, assume no blacklisting
     return false;
@@ -61,37 +38,37 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
  * @param keys - The set of guarded keys.
  * @returns true if any spread attribute could contribute one of `keys`.
  */
-export const hasBlacklistedPropertyInSpread = (path: NodePath<t.JSXOpeningElement>, keys: Set<string>): boolean => {
-  return path.node.attributes.some((attribute) => {
-    if (!t.isJSXSpreadAttribute(attribute)) return false;
+export const hasBlacklistedPropertyInSpread = (path: NodePath<t.JSXOpeningElement>, keys: Set<string>): boolean =>
+  path.node.attributes.some(
+    (attribute) => t.isJSXSpreadAttribute(attribute) && spreadMayContainProperty(path, attribute.argument, keys)
+  );
 
-    if (t.isIdentifier(attribute.argument)) {
-      const binding = path.scope.getBinding(attribute.argument.name);
-      let objectExpression: t.ObjectExpression | undefined;
-      if (binding) {
-        if (t.isVariableDeclarator(binding.path.node)) {
-          objectExpression = binding.path.node.init as t.ObjectExpression;
-        } else if (t.isObjectExpression(binding.path.node)) {
-          objectExpression = binding.path.node;
-        }
-      }
-      if (objectExpression && t.isObjectExpression(objectExpression)) {
-        return objectExpression.properties.some((property) => {
-          if (t.isObjectProperty(property) && t.isIdentifier(property.key)) {
-            return keys.has(property.key.name);
-          }
-          if (t.isObjectProperty(property) && t.isStringLiteral(property.key)) {
-            return keys.has(property.key.value);
-          }
-          return false;
-        });
-      }
-    }
-
-    // Bail if we can't resolve the spread attribute.
+function spreadMayContainProperty(
+  path: NodePath<t.JSXOpeningElement>,
+  argument: t.Expression,
+  keys: Set<string>
+): boolean {
+  if (!t.isIdentifier(argument)) return true;
+  const binding = path.scope.getBinding(argument.name);
+  if (
+    !binding?.constant ||
+    !binding.path.isVariableDeclarator() ||
+    !t.isObjectExpression(binding.path.node.init) ||
+    binding.referencePaths.some((reference) => !reference.parentPath?.isJSXSpreadAttribute())
+  ) {
     return true;
-  });
-};
+  }
+  return binding.path.node.init.properties.some(
+    (property) =>
+      !t.isObjectProperty(property) ||
+      property.computed ||
+      (t.isIdentifier(property.key)
+        ? keys.has(property.key.name)
+        : t.isStringLiteral(property.key)
+          ? keys.has(property.key.value)
+          : true)
+  );
+}
 
 /**
  * Mirrors the `Text` wrapper's `id ?? nativeID` precedence: renames a direct `id` JSX attribute to

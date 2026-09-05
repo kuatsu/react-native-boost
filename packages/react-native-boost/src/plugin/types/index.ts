@@ -98,6 +98,7 @@ export type ReactNativeColorNormalizer = (color: string | number) => number | nu
 export interface OptimizationLogPayload {
   target: string;
   path: NodePath;
+  note?: string;
 }
 
 export interface SkippedOptimizationLogPayload extends OptimizationLogPayload {

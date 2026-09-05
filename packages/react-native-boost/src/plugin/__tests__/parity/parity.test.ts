@@ -476,18 +476,25 @@ describe('differential parity', () => {
       expect(boost.optimized).toBe(false);
     });
 
-    it('keeps View children outside the inherited Text context', async () => {
-      const jsx = '<RealText><Box><Label /></Box></RealText>';
+    it.each(['RealText', 'RealView'])('preserves root View context under %s', async (parent) => {
+      const jsx = `<${parent}><Box><Label /></Box></${parent}>`;
       const preamble = `
         import RealText from 'react-native/Libraries/Text/Text';
-        const Box = ({ children }) => <View>{children}</View>;
+        import RealView from 'react-native/Libraries/Components/View/View';
+        const Box = ({ children }) => <View aria-label="box" style={{ flex: 1 }}>{children}</View>;
         const Label = () => <RealText>label</RealText>;
       `;
       const wrapper = await captureWrapperHosts(os, jsx, preamble);
-      expect(wrapper.map((host) => host.which)).toEqual(['NativeText', 'NativeView', 'NativeText']);
+      expect(wrapper.map((host) => host.which)).toEqual([
+        parent === 'RealText' ? 'NativeText' : 'NativeView',
+        'NativeView',
+        'NativeText',
+      ]);
 
       const boost = await captureBoostHosts(os, jsx, preamble, false);
-      expect(boost.optimized).toBe(false);
+      if (!boost.optimized) throw new Error('expected a context-preserving View');
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
     it('optimizes ActivityIndicator when an unknown ancestor provides Text context', async () => {
