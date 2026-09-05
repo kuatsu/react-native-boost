@@ -1,8 +1,8 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { transformSync, type TransformCaller } from '@babel/core';
+import { transformSync, type PluginObj, type TransformCaller } from '@babel/core';
 import { pluginTester } from 'babel-plugin-tester';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, type MockInstance } from 'vitest';
 import boostPlugin from '../../../index';
 import { generateTestPlugin } from '../../../utils/generate-test-plugin';
 import { formatTestResult } from '../../../utils/format-test-result';
@@ -56,6 +56,31 @@ function transformWithBoost(source: string, options: Record<string, unknown> = {
 }
 
 describe('platform folding semantics and integration', () => {
+  it.each([
+    [`import { View } from 'react-native'; const value = <View />;`, false],
+    [`import { Platform as Target } from 'react-native'; const value = Target.OS;`, true],
+    [`import * as Native from 'react-native'; const value = Native.Platform.OS;`, true],
+    [`const Platform = { OS: 'custom' }; const value = Platform.OS;`, false],
+  ])('only traverses modules with a supported Platform import: %s', (source, traversed) => {
+    let visits: MockInstance | undefined;
+    transformSync(source, {
+      configFile: false,
+      babelrc: false,
+      plugins: [
+        '@babel/plugin-syntax-jsx',
+        (): PluginObj => ({
+          visitor: {
+            Program(program) {
+              visits = vi.spyOn(program, 'traverse');
+            },
+          },
+        }),
+        generateTestPlugin(platformFoldingOptimizer, {}, 'ios'),
+      ],
+    });
+    expect(visits).toHaveBeenCalledTimes(traversed ? 1 : 0);
+  });
+
   it('preserves discarded value evaluations, order, duplicates, and present undefined', () => {
     const output = transformPlatform(`
       import { Platform } from 'react-native';

@@ -104,6 +104,14 @@ export const platformFoldingOptimizer: Optimizer = {
   visitor: {
     Program(path, state) {
       if (!state.enabledOptimizations.has('platform-folding')) return;
+      if (
+        !Object.values(path.scope.bindings).some(
+          (binding) =>
+            isModuleImportBinding(binding, 'react-native', t.isImportSpecifier, 'Platform') ||
+            isModuleImportBinding(binding, 'react-native', t.isImportNamespaceSpecifier)
+        )
+      )
+        return;
       // Fold before JSXOpeningElement optimizers inspect their attributes and children.
       path.traverse(platformFoldingVisitor, state);
     },

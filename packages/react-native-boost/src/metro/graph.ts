@@ -29,7 +29,7 @@ type ConsumerImports = Record<string, Record<string, Record<string, ComponentAnc
 
 type ResolvedGraph = {
   consumers: ConsumerImports;
-  values: Map<string, string>;
+  staleConsumers: string[];
 };
 
 type Adapter = {
@@ -42,7 +42,7 @@ type Adapter = {
 
 type Patch = {
   adapters: Adapter[];
-  graphs: WeakMap<MetroGraph, { adapter: Adapter; resolved: ResolvedGraph }>;
+  graphs: WeakMap<MetroGraph, Adapter>;
   initial: InitialTraverse;
   traverse: Traverse;
 };
@@ -102,44 +102,35 @@ async function updateAncestors(
   result: MetroDelta,
   transformOptions: unknown
 ): Promise<MetroDelta> {
-  const adapter = patch.graphs.get(graph)?.adapter ?? findAdapter(patch.adapters, graph);
+  const adapter = patch.graphs.get(graph) ?? findAdapter(patch.adapters, graph);
   if (!adapter) return result;
+  patch.graphs.set(graph, adapter);
 
   return runExclusive(adapter, async () => {
-    let previous = patch.graphs.get(graph)?.resolved;
-    const changed = new Set([...result.added.keys(), ...result.modified.keys()]);
-
     while (true) {
-      const resolved = resolveGraph(graph, adapter.injectionId);
-      writeSnapshot(adapter, graph.transformOptions?.platform, resolved.consumers);
-      const consumers = [...resolved.values]
-        .filter(([consumer, value]) => changed.has(consumer) || previous?.values.get(consumer) !== value)
-        .map(([consumer]) => consumer);
-      if (consumers.length === 0) {
-        patch.graphs.set(graph, { adapter, resolved });
-        return result;
-      }
+      const { consumers, staleConsumers } = resolveGraph(graph, adapter.injectionId);
+      writeSnapshot(adapter, graph.transformOptions?.platform, consumers);
+      if (staleConsumers.length === 0) return result;
 
-      markTransformResultsStale(graph, consumers, adapter.revision);
-      const next = await patch.traverse.call(graph, consumers, transformOptions);
+      markTransformResultsStale(graph, staleConsumers, adapter.revision);
+      const next = await patch.traverse.call(graph, staleConsumers, transformOptions);
       result = mergeDeltas(graph, result, next);
-      previous = resolved;
-      changed.clear();
     }
   });
 }
 
 export function resolveGraph(graph: MetroGraph, injectionId: string): ResolvedGraph {
   const consumers: ConsumerImports = {};
-  const values = new Map<string, string>();
+  const staleConsumers: string[] = [];
 
   for (const [consumerPath, module] of graph.dependencies) {
     const analysis = getAnalysis(module, injectionId);
     if (!analysis || analysis.references.length === 0) continue;
 
     const imports = Object.create(null) as ConsumerImports[string];
+    let stale = false;
     for (const reference of analysis.references) {
-      (imports[reference.source] ??= {})[reference.imported] = resolveImport(
+      const classification = resolveImport(
         graph,
         consumerPath,
         reference.source,
@@ -147,12 +138,14 @@ export function resolveGraph(graph: MetroGraph, injectionId: string): ResolvedGr
         injectionId,
         new Set()
       );
+      (imports[reference.source] ??= {})[reference.imported] = classification;
+      if (classification !== reference.classification) stale = true;
     }
     consumers[consumerPath] = imports;
-    values.set(consumerPath, JSON.stringify(imports));
+    if (stale) staleConsumers.push(consumerPath);
   }
 
-  return { consumers, values };
+  return { consumers, staleConsumers };
 }
 
 function resolveImport(
