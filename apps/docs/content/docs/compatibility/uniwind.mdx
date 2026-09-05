@@ -1,24 +1,40 @@
 ---
 title: Uniwind Support
-description: Why React Native Boost and Uniwind are currently incompatible.
+description: Keep Uniwind styling working on Boost-optimized components.
 ---
 
-<Callout type="warn" title="Currently incompatible">
-  React Native Boost and [Uniwind](https://uniwind.dev) are currently incompatible. Enabling Boost in a Uniwind project drops `className` styling from optimized components entirely.
-</Callout>
+React Native Boost supports Uniwind version 1.6.2 and up through its Metro integration. Uniwind Pro has not been tested and is not supported.
 
-## What happens
+Optimized components retain `className` styles and Uniwind subscriptions.
 
-Uniwind resolves `className` to styles inside its own `Text`/`View` wrappers, which it swaps in via a
-Metro resolver. Boost rewrites `Text`/`View` to their native counterparts **before** that swap, so `className` is left as an unknown prop on the raw native component.
+## Setup
 
-## What breaks
+Keep your existing Uniwind CSS setup. Apply `withBoostConfig` **after** `withUniwindConfig` and set the Uniwind integration flag to `on`:
 
-Any `Text`/`View` with a `className` (or a `*ClassName` prop such as `selectionColorClassName`):
+```js
+// metro.config.js
 
-- All Tailwind styling is dropped, the element renders with no styles
-- Uniwind extras are lost too (press state, `selectionColorClassName`, line-clamp)
+const { getDefaultConfig } = require('expo/metro-config');
+const { withUniwindConfig } = require('uniwind/metro');
+const { withBoostConfig } = require('react-native-boost/metro');
 
-## Roadmap
+module.exports = withBoostConfig(
+  withUniwindConfig(getDefaultConfig(__dirname), {
+    cssEntryFile: './global.css',
+  }),
+  {
+    integrations: { uniwind: 'on' },
+  }
+);
+```
 
-Feasibility for Uniwind support is still being investigated.
+The default `auto` setting detects an active Uniwind Metro configuration. It does not enable the integration just because the package is installed. Set `on` to require that configuration. Set `off` only when transformed code does not use Uniwind.
+
+Wrapper order matters. Boost must keep Uniwind's worker and resolver inside its own integration. This also keeps Metro's cross-file ancestor analysis available on supported Metro versions.
+
+## Limits
+
+- The integration requires Metro. A Babel-only setup does not install required runtime components.
+- Uniwind 1.6.1 and lower are not supported. Boost uses version-specific Uniwind hooks for component state and accent colors. The Metro config rejects other package versions and will disable the integration.
+- Uniwind Pro has not been tested and is not supported.
+- Elements with Unistyles styles keep their original wrappers when both integrations are active at the same time.

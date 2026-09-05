@@ -30,6 +30,7 @@ type MetroConfig = {
   cacheStores?: unknown;
   transformer?: {
     babelTransformerPath?: string;
+    uniwind?: unknown;
   };
   resolver?: {
     extraNodeModules?: Record<string, string>;
@@ -44,8 +45,17 @@ type MetroIntegration = {
 };
 
 export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: PluginOptions = {}): T {
-  const options = validatePluginOptions(rawOptions);
+  let options = validatePluginOptions(rawOptions);
   const projectRoot = path.resolve(config.projectRoot ?? process.cwd());
+  const uniwindEnabled =
+    options.integrations?.uniwind === 'on' ||
+    (options.integrations?.uniwind !== 'off' && config.transformer?.uniwind !== undefined);
+  if (uniwindEnabled && config.transformer?.uniwind === undefined) {
+    throw new Error('[react-native-boost] Apply withBoostConfig after withUniwindConfig.');
+  }
+  if (uniwindEnabled || options.integrations?.uniwind !== undefined) {
+    options = { ...options, integrations: { ...options.integrations, uniwind: uniwindEnabled ? 'on' : 'off' } };
+  }
   const delegateRequest = config.transformer?.babelTransformerPath ?? 'metro-babel-transformer';
   if (
     (path.isAbsolute(delegateRequest) && path.dirname(delegateRequest) === transformerDirectory) ||
@@ -65,6 +75,17 @@ export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: Pl
   if (configuredPackageJson && !targetResolution.target) {
     throw new Error(`[react-native-boost] Cannot read React Native package at ${configuredPackageJson}.`);
   }
+
+  if (uniwindEnabled) {
+    const uniwindRoot = path.dirname(resolveModule('uniwind/package.json', projectRoot, 'Uniwind'));
+    options = {
+      ...options,
+      ignores: [...(options.ignores ?? []), `${uniwindRoot}/**`, `${path.resolve(moduleDirectory, '../runtime')}/**`],
+    };
+  }
+  const resolver = uniwindEnabled
+    ? createUniwindResolver(config, projectRoot, targetResolution.target)
+    : config.resolver;
 
   const requestedCrossFileResolution = options.crossFileAncestorResolution !== false;
   const metro = requestedCrossFileResolution
@@ -121,6 +142,7 @@ export function withBoostConfig<T extends MetroConfig>(config: T, rawOptions: Pl
 
   return {
     ...config,
+    resolver,
     ...(crossFileResolution && metro
       ? {
           cacheStores: wrapCacheStores(config.cacheStores as CacheStores | undefined, injectionId),
@@ -292,4 +314,42 @@ function hasCrossFileAnalysis(value: unknown, injectionId: string): boolean {
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function createUniwindResolver(config: MetroConfig, projectRoot: string, target?: ResolvedReactNativeTarget) {
+  const packageJson = resolveModule('uniwind/package.json', projectRoot, 'Uniwind');
+  const manifest = JSON.parse(fs.readFileSync(packageJson, 'utf8')) as {
+    name: string;
+    version: string;
+    license: string;
+  };
+  if (manifest.name !== 'uniwind' || !manifest.version.startsWith('1.12.') || manifest.license !== 'MIT') {
+    throw new Error('[react-native-boost] The Uniwind integration supports free Uniwind 1.12.x. Pro is not supported.');
+  }
+  if (!target) throw new Error('[react-native-boost] Uniwind requires a resolved React Native target.');
+  const root = path.dirname(packageJson);
+  const runtimeRoot = path.resolve(moduleDirectory, '../runtime') + path.sep;
+  const reactNativeIndex = path.join(path.dirname(target.packageJson), 'index.js');
+  const hooks: Record<string, string> = {
+    'react-native-boost/uniwind/useStyle': path.join(root, 'src/components/native/useStyle.ts'),
+    'react-native-boost/uniwind/useAccentColor': path.join(root, 'src/components/native/useAccentColor.ts'),
+  };
+  for (const filename of Object.values(hooks)) {
+    if (!fs.existsSync(filename)) throw new Error(`[react-native-boost] Missing Uniwind runtime hook: ${filename}`);
+  }
+  const delegate = config.resolver?.resolveRequest as
+    | NonNullable<import('metro-config').ConfigT['resolver']['resolveRequest']>
+    | undefined;
+  const resolveRequest: NonNullable<import('metro-config').ConfigT['resolver']['resolveRequest']> = (
+    context,
+    name,
+    platform
+  ) => {
+    if (platform !== 'web' && context.originModulePath.startsWith(runtimeRoot)) {
+      if (name === 'react-native') return context.resolveRequest(context, reactNativeIndex, platform);
+      if (hooks[name]) return context.resolveRequest(context, hooks[name], platform);
+    }
+    return (delegate ?? context.resolveRequest)(context, name, platform);
+  };
+  return { ...config.resolver, resolveRequest };
 }

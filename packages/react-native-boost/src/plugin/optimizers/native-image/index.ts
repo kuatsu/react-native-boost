@@ -179,6 +179,16 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
     throw new PluginError('No file found in Babel hub');
   }
 
+  if (options?.integrations?.uniwind === 'on') {
+    if (srcSetAttribute) {
+      logger.skipped({ target: 'Image', path, reason: 'Uniwind srcSet requires the Image wrapper' });
+      return;
+    }
+    logger.optimized({ target: 'Image', path });
+    replaceWithNativeComponent(path, parent, file, 'NativeImage', { moduleName: 'react-native-boost/uniwind' });
+    return;
+  }
+
   const nativeSource = staticSrcSetSource ?? buildStaticNativeSource(path.node.attributes, platform);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 

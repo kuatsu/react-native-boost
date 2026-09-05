@@ -10,6 +10,7 @@ import {
   isReactNativeComponent,
   isStaticLiteralTree,
   makeAttribute,
+  replaceWithNativeComponent,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { createJSXOptimizer } from '../../utils/optimizer';
@@ -26,7 +27,7 @@ const CONSUMED_PROPS = new Set([
   'style',
 ]);
 
-const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform, unistylesEnabled }) => {
+const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform, unistylesEnabled, options }) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
@@ -84,6 +85,14 @@ const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform,
   const hub = path.hub as unknown;
   const file = typeof hub === 'object' && hub !== null && 'file' in hub ? (hub.file as HubFile) : undefined;
   if (!file) throw new PluginError('No file found in Babel hub');
+
+  if (options?.integrations?.uniwind === 'on') {
+    replaceWithNativeComponent(path, parent, file, 'NativeActivityIndicator', {
+      moduleName: 'react-native-boost/uniwind',
+    });
+    logger.optimized({ target: 'ActivityIndicator', path });
+    return;
+  }
 
   const view = addRuntimeImport(path, file, 'NativeView');
   const styles = addRuntimeImport(path, file, 'activityIndicatorStyles');

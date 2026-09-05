@@ -21,7 +21,7 @@ const optimizationKeys = [
   'platform-folding',
 ];
 const assumptionKeys = ['unknownAncestorsDoNotRenderText'];
-const integrationKeys = ['unistyles'];
+const integrationKeys = ['unistyles', 'uniwind'];
 const optimizationStates: OptimizationState[] = ['on', 'off'];
 const integrationStates: IntegrationState[] = ['auto', 'on', 'off'];
 const logLevels: LogLevel[] = ['silent', 'warn', 'info', 'debug'];
@@ -92,8 +92,10 @@ function validateOptions(rawOptions: unknown, keys: string[]): Record<string, un
   if (options.integrations !== undefined) {
     const integrations = readObject(options.integrations, '`integrations`');
     validateKeys(integrations, integrationKeys, 'integration');
-    if (integrations.unistyles !== undefined && !integrationStates.some((state) => state === integrations.unistyles)) {
-      throw new PluginError('`integrations.unistyles` must be `auto`, `on`, or `off`.');
+    for (const name of integrationKeys) {
+      if (integrations[name] !== undefined && !integrationStates.some((state) => state === integrations[name])) {
+        throw new PluginError(`\`integrations.${name}\` must be \`auto\`, \`on\`, or \`off\`.`);
+      }
     }
   }
 
