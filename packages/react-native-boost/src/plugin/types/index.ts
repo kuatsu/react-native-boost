@@ -52,6 +52,13 @@ export type IntegrationState = 'auto' | 'on' | 'off';
 
 export interface PluginIntegrationOptions {
   /**
+   * Preserves free Uniwind 1.12.x styles on optimized components. Requires Metro.
+   * `auto` detects an active `withUniwindConfig`. Apply `withBoostConfig` after it.
+   * `on` requires that configuration. Use `off` only when transformed code does not use Uniwind.
+   * @default 'auto'
+   */
+  uniwind?: IntegrationState;
+  /**
    * Keeps `react-native-unistyles` reactivity working on optimized elements.
    *
    * `auto` detects an installed `react-native-unistyles` package and logs a warning when found. Use `on`

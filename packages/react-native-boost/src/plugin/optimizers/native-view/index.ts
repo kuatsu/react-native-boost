@@ -60,7 +60,8 @@ const VIEW_CHILDREN_PROP = new Set(['children']);
 const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected']);
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
-const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnabled }) => {
+const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnabled, platform }) => {
+  if (platform === 'web' && options?.integrations?.uniwind === 'on') return;
   if (!isReactNativeComponent(path, 'View')) return;
 
   const forced = isForcedLine(path);
@@ -149,6 +150,11 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     throw new PluginError('No file found in Babel hub');
   }
 
+  if (options?.integrations?.uniwind === 'on' && getStyleOrigin() !== 'plain') {
+    logger.skipped({ target: 'View', path, reason: 'Uniwind cannot flatten a Unistyles style' });
+    return;
+  }
+
   const preservesTextContext = !forced && needsRuntimeTextContext();
   logger.optimized({
     target: 'View',
@@ -157,6 +163,16 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
   });
 
   const parent = path.parent as t.JSXElement;
+
+  if (options?.integrations?.uniwind === 'on') {
+    const name = preservesTextContext ? 'NativeViewWithContext' : 'NativeView';
+    replaceWithNativeComponent(path, parent, file, 'NativeView', {
+      moduleName: 'react-native-boost/uniwind',
+      importName: name,
+      nameHint: `Uniwind${name}`,
+    });
+    return;
+  }
 
   processViewProps(path, file);
 

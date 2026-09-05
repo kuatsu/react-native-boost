@@ -332,7 +332,10 @@ function classifyOptimizedHostAncestor(source: string, binding: ScopeBinding): A
   if (source === UNISTYLES_NATIVE_TEXT_MODULE) return 'text';
   if (source === UNISTYLES_NATIVE_VIEW_MODULE) return 'safe';
 
-  if (source === RUNTIME_MODULE_NAME && t.isImportSpecifier(binding.path.node)) {
+  if (
+    (source === RUNTIME_MODULE_NAME || source === 'react-native-boost/uniwind') &&
+    t.isImportSpecifier(binding.path.node)
+  ) {
     const importedName = getImportSpecifierImportedName(binding.path.node);
     if (importedName === 'NativeText') return 'text';
     if (importedName === 'NativeView' || importedName === 'NativeViewWithContext') return 'safe';
@@ -630,6 +633,13 @@ function classifyImportedAncestor(source: string, imported: string, context: Anc
   if (source === 'react-native') return classifyReactNativeAncestor(imported, context.platform);
   // Reanimated's named exports are not members of its default Animated object.
   if (source === 'react-native-reanimated') return 'unknown';
+  if (source === 'uniwind' && ['ScopedTheme', 'ScopedVariables', 'LayoutDirection'].includes(imported))
+    return 'transparent';
+  if (source === 'uniwind/components' || source.startsWith('uniwind/components/')) {
+    const component = source === 'uniwind/components' ? imported : source.slice('uniwind/components/'.length);
+    if (component === 'Text') return 'text';
+    if (component === 'View') return 'safe';
+  }
   if (context.symbolic) return { kind: 'import', source, imported };
 
   const key = `${source}\0${imported}`;

@@ -90,6 +90,7 @@ const optimizeNativeText: JSXOptimizer = (
   path,
   { logger, options, platform, unistylesEnabled, reactNativeMinor, normalizeColor }
 ) => {
+  if (platform === 'web' && options?.integrations?.uniwind === 'on') return;
   if (!isReactNativeComponent(path, 'Text')) return;
 
   const parent = path.parent as t.JSXElement;
@@ -162,10 +163,20 @@ const optimizeNativeText: JSXOptimizer = (
     throw new PluginError('No file found in Babel hub');
   }
 
+  if (options?.integrations?.uniwind === 'on' && getStyleOrigin() !== 'plain') {
+    logger.skipped({ target: 'Text', path, reason: 'Uniwind cannot flatten a Unistyles style' });
+    return;
+  }
+
   logger.optimized({
     target: 'Text',
     path,
   });
+
+  if (options?.integrations?.uniwind === 'on') {
+    replaceWithNativeComponent(path, parent, file, 'NativeText', { moduleName: 'react-native-boost/uniwind' });
+    return;
+  }
 
   const routeToUnistyles = getStyleOrigin() === 'unistyles';
 

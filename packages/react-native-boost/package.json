@@ -21,6 +21,10 @@
     "./metro": {
       "types": "./dist/metro/index.d.ts",
       "default": "./dist/metro/index.js"
+    },
+    "./uniwind": {
+      "types": "./dist/runtime/uniwind.d.ts",
+      "default": "./dist/runtime/uniwind.js"
     }
   },
   "typesVersions": {
@@ -98,6 +102,7 @@
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
+    "@types/react-test-renderer": "^19.1.0",
     "@typescript/typescript6": "^6.0.2",
     "babel-plugin-tester": "^12.0.0",
     "fast-check": "^4.9.0",
@@ -106,11 +111,13 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-native": "0.87.1",
+    "react-test-renderer": "19.2.8",
     "release-it": "^21.0.2",
     "rollup": "^4.63.1",
     "rollup-plugin-dts": "^6.5.1",
     "rollup-plugin-esbuild": "^6.2.1",
     "typescript": "~7.0.2",
+    "uniwind": "1.12.0",
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
