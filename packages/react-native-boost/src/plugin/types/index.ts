@@ -162,7 +162,7 @@ export type HubFile = t.File & {
   };
   __ancestorAnalysis?: ModuleAncestorAnalysis;
   __ancestorImports?: Record<string, Record<string, ComponentAncestorClassification>>;
-  __ancestorReferences?: Map<string, { source: string; imported: string }>;
+  __ancestorReferences?: Map<string, ModuleAncestorAnalysis['references'][number]>;
   __hasImports?: Record<string, t.Identifier>;
   __optimized?: boolean;
   __staticImageSourceDeclaration?: t.VariableDeclaration;

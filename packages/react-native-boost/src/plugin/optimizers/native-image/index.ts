@@ -10,7 +10,6 @@ import {
   isIgnoredLine,
   isForcedLine,
   isReactNativeComponent,
-  inheritsTextContextFromRuntimeParent,
   isStaticLiteralTree,
   makeAttribute,
   replaceWithNativeComponent,
@@ -140,15 +139,7 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
     },
     // Android through 0.84 selects its inline Image host from the inherited Text context.
     ...(platform === 'android' && (reactNativeMinor === undefined || reactNativeMinor <= 84)
-      ? [
-          {
-            reason: 'has unresolved runtime parent that may render Text',
-            shouldBail: () =>
-              options?.assumptions?.unknownAncestorsDoNotRenderText !== true &&
-              inheritsTextContextFromRuntimeParent(path),
-          },
-          ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
-        ]
+      ? ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true)
       : []),
   ];
 

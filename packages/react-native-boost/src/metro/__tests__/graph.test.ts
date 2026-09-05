@@ -6,6 +6,7 @@ import { transformSync, types as t, type TransformCaller } from '@babel/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { installMetroGraphPatch } from '../graph';
 import boostPlugin from '../../plugin';
+import type { PluginOptions } from '../../plugin/types';
 
 const requireFromTest = createRequire(import.meta.url);
 const temporaryDirectories: string[] = [];
@@ -126,6 +127,82 @@ describe('private Metro graph integration', () => {
     expect(project.transforms.get('Screen.js')).toBe(count);
   });
 
+  it('does not retransform unknown ancestors, but still tracks them for edits', async () => {
+    const sources = {
+      'Screen.js': `import { Text } from 'react-native'; import { Card } from './Card'; export default () => <Card><Text>Hello</Text></Card>;`,
+      'Card.js': `export const Card = unknownFactory();`,
+    };
+    const project = createGraph(sources);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.transforms.get('Screen.js')).toBe(1);
+    expect(project.code()).toContain('<Text>Hello</Text>');
+
+    sources['Card.js'] =
+      `import { View } from 'react-native'; export const Card = ({ children }) => <View>{children}</View>;`;
+    await project.graph.traverseDependencies([project.filename('Card.js')], project.options);
+    expect(project.transforms.get('Screen.js')).toBe(2);
+    expect(project.code()).toContain('<_NativeText');
+
+    sources['Card.js'] = `export const Card = unknownFactory();`;
+    await project.graph.traverseDependencies([project.filename('Card.js')], project.options);
+    expect(project.transforms.get('Screen.js')).toBe(3);
+    expect(project.code()).toContain('<Text>Hello</Text>');
+  });
+
+  it('does not resolve ancestors for elements that already fail a prop safety check', async () => {
+    const sources = {
+      'Screen.js': `import { View } from 'react-native'; import { Card } from './Card'; export default (props) => <Card><View {...props} /></Card>;`,
+      'Card.js': `import { View } from 'react-native'; export const Card = ({ children }) => <View>{children}</View>;`,
+    };
+    const project = createGraph(sources);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.transforms.get('Screen.js')).toBe(1);
+    expect(project.code()).toContain('<View {...props}');
+
+    sources['Screen.js'] = sources['Screen.js'].replace('{...props}', 'testID="target"');
+    await project.graph.traverseDependencies([project.filename('Screen.js')], project.options);
+    expect(project.code()).toContain('<_NativeView testID="target"');
+  });
+
+  it('still analyzes exports in ignored files', async () => {
+    const project = createGraph(
+      {
+        'Screen.js': `import { Text } from 'react-native'; import { Card } from './Card'; export default () => <Card><Text>Hello</Text></Card>;`,
+        'Card.js': `import { View } from 'react-native'; export const Card = ({ children }) => <View>{children}</View>;`,
+      },
+      'Screen.js',
+      { ignores: ['**/Card.js'] }
+    );
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('<_NativeText');
+    expect(project.graph.dependencies.get(project.filename('Card.js'))!.output[0].data.code).toContain('<View>');
+  });
+
+  it('does not repeat a consumer edit that already used the resolved snapshot', async () => {
+    const sources = {
+      'Screen.js': `import { Text } from 'react-native'; import { Card } from './Card'; export default () => <Card><Text>Hello</Text></Card>;`,
+      'Card.js': `import { View } from 'react-native'; export const Card = ({ children }) => <View>{children}</View>;`,
+    };
+    const project = createGraph(sources);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.transforms.get('Screen.js')).toBe(2);
+
+    sources['Screen.js'] = sources['Screen.js'].replace('Hello', 'Edited');
+    await project.graph.traverseDependencies([project.filename('Screen.js')], project.options);
+    expect(project.transforms.get('Screen.js')).toBe(3);
+    expect(project.code()).toContain('<_NativeText');
+    expect(project.code()).toContain('Edited');
+
+    sources['Screen.js'] = sources['Screen.js'].replace('Edited', 'Together');
+    sources['Card.js'] =
+      `import { Text } from 'react-native'; export const Card = ({ children }) => <Text>{children}</Text>;`;
+    await project.graph.traverseDependencies(
+      [project.filename('Screen.js'), project.filename('Card.js')],
+      project.options
+    );
+    expect(project.code()).toContain('<Text>Together</Text>');
+  });
+
   it('resolves consumers with an external entry', async () => {
     const sources = {
       '../entry.js': `import './app/Screen';`,
@@ -196,7 +273,7 @@ describe('private Metro graph integration', () => {
                       ? {
                           exports: {},
                           exportAll: [],
-                          references: [{ source: './Card', imported: 'Card' }],
+                          references: [{ source: './Card', imported: 'Card', classification: resolved }],
                         }
                       : { exports: { Card: componentSummary }, exportAll: [], references: [] },
                 },
@@ -226,7 +303,7 @@ describe('private Metro graph integration', () => {
   });
 });
 
-function createGraph(sources: Record<string, string>, entry = 'Screen.js') {
+function createGraph(sources: Record<string, string>, entry = 'Screen.js', pluginOptions: PluginOptions = {}) {
   const graphPath = requireFromTest.resolve('metro/private/DeltaBundler/Graph');
   const { Graph } = requireFromTest(graphPath) as {
     Graph: new (options: { entryPoints: Set<string>; transformOptions: { platform: string } }) => MetroGraph;
@@ -252,6 +329,7 @@ function createGraph(sources: Record<string, string>, entry = 'Screen.js') {
       transforms.set(name, (transforms.get(name) ?? 0) + 1);
       const source = sources[name]!;
       const result = transformSync(source, {
+        cwd: projectRoot,
         filename: absoluteFilename,
         babelrc: false,
         configFile: false,
@@ -262,6 +340,7 @@ function createGraph(sources: Record<string, string>, entry = 'Screen.js') {
           [
             boostPlugin,
             {
+              ...pluginOptions,
               logLevel: 'silent',
               target: { reactNative: { packageJson: requireFromTest.resolve('react-native/package.json') } },
               __reactNativeBoost: injectionId,

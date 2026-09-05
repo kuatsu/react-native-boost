@@ -7,7 +7,7 @@ import type {
 } from '../../../ancestor-types';
 import { ensureArray, BailoutCheck } from '../helpers';
 import { HubFile } from '../../types';
-import { minimatch } from 'minimatch';
+import { Minimatch } from 'minimatch';
 import nodePath from 'node:path';
 import {
   UNISTYLES_MODULE_NAME,
@@ -19,24 +19,23 @@ import { getMarkedReactNativeComponent } from './optimized-host';
 import { extractStyleAttribute } from './attributes';
 import { classifyAnimatedAncestor, classifyReactNativeAncestor } from './intrinsic-ancestors';
 
-/** Checks if a file matches one of the configured ignore patterns. */
-export const isIgnoredFile = (file: HubFile, ignores: string[]): boolean => {
-  const fileName = file.opts.filename;
-  const baseDirectory = 'cwd' in file.opts ? (file.opts.cwd as string) : process.cwd();
-
-  // Iterate through the ignore patterns.
-  for (const pattern of ignores) {
-    // If the pattern is not absolute, join it with the baseDir
-    const absolutePattern = nodePath.isAbsolute(pattern) ? pattern : nodePath.join(baseDirectory, pattern);
-
-    // Check if the file name matches the glob pattern.
-    if (minimatch(fileName, absolutePattern, { dot: true })) {
-      return true;
+/** Compiles ignore patterns once per Babel working directory. */
+export function createFileIgnoreMatcher(ignores: string[]): (file: Pick<HubFile, 'opts'>) => boolean {
+  let cachedDirectory: string | undefined;
+  let matchers: Minimatch[] = [];
+  return (file) => {
+    if (ignores.length === 0) return false;
+    const directory = 'cwd' in file.opts ? (file.opts.cwd as string) : process.cwd();
+    if (directory !== cachedDirectory) {
+      matchers = ignores.map(
+        (pattern) =>
+          new Minimatch(nodePath.isAbsolute(pattern) ? pattern : nodePath.join(directory, pattern), { dot: true })
+      );
+      cachedDirectory = directory;
     }
-  }
-
-  return false;
-};
+    return matchers.some((matcher) => matcher.match(file.opts.filename));
+  };
+}
 
 export const isForcedLine = (path: NodePath): boolean => hasDecoratorComment(path, '@boost-force');
 
@@ -150,21 +149,18 @@ type AncestorAnalysisContext = {
   componentCache: WeakMap<t.Node, AncestorSummary>;
   componentInProgress: WeakSet<t.Node>;
   imports?: Record<string, Record<string, ComponentAncestorClassification>>;
-  references?: Map<string, { source: string; imported: string }>;
+  references?: HubFile['__ancestorReferences'];
   symbolic?: boolean;
   platform?: string;
 };
 
 type TextContextSource = AncestorClassification | 'runtime';
 
-export const getAncestorClassification = (path: NodePath<t.JSXOpeningElement>): AncestorClassification => {
-  const source = getTextContextSource(path);
-  return source === 'runtime' ? 'safe' : source;
-};
-
-/** Whether an element has no JSX ancestor that determines its runtime text context. */
-export const inheritsTextContextFromRuntimeParent = (path: NodePath<t.JSXOpeningElement>): boolean =>
-  getTextContextSource(path) === 'runtime';
+/** Resolves once during an element's safety checks, before its AST can change. */
+export function createTextContextSourceResolver(path: NodePath<t.JSXOpeningElement>): () => TextContextSource {
+  let source: TextContextSource | undefined;
+  return () => (source ??= getTextContextSource(path));
+}
 
 function getTextContextSource(path: NodePath<t.JSXOpeningElement>): TextContextSource {
   const file = (path.hub as unknown as { file: HubFile }).file;
@@ -211,10 +207,13 @@ export const ancestorBailoutChecks = (
   path: NodePath<t.JSXOpeningElement>,
   unknownAncestorsDoNotRenderText: boolean
 ): BailoutCheck[] => {
-  let classification: AncestorClassification | undefined;
-  const classify = () => (classification ??= getAncestorClassification(path));
+  const classify = createTextContextSourceResolver(path);
 
   return [
+    {
+      reason: 'has unresolved runtime parent that may render Text',
+      shouldBail: () => !unknownAncestorsDoNotRenderText && classify() === 'runtime',
+    },
     {
       reason: 'has Text ancestor',
       shouldBail: () => classify() === 'text' || classify() === 'context',
@@ -643,8 +642,9 @@ function classifyImportedAncestor(source: string, imported: string, context: Anc
   if (context.symbolic) return { kind: 'import', source, imported };
 
   const key = `${source}\0${imported}`;
-  context.references?.set(key, { source, imported });
-  return context.imports?.[source]?.[imported] ?? 'unknown';
+  const classification = context.imports?.[source]?.[imported] ?? 'unknown';
+  context.references?.set(key, { source, imported, classification });
+  return classification;
 }
 
 function getBindingImportedName(binding: ScopeBinding): string | undefined {
