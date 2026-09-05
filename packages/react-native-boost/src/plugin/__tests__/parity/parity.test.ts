@@ -585,18 +585,11 @@ describe('differential parity', () => {
       expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
-    it('optimizes Image only when the current wrapper ignores Text context', async () => {
+    it('keeps Image under an unknown ancestor that could inject props', async () => {
       const jsx =
         '<UnknownTextWrapper><Image source={{ uri: "logo.png", width: 16, height: 16 }} /></UnknownTextWrapper>';
-      const wrapper = await captureWrapperHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE);
       const boost = await captureBoostHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE, false);
-      expect(boost.optimized).toBe(os !== 'android' || REACT_NATIVE_MINOR >= 85);
-      if (!boost.optimized) return;
-      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
-      expect(normalize(boost.hosts[0].props)).toEqual(normalize(wrapper[0].props));
-      expect(normalizeImage(boost.hosts[1].props, REACT_NATIVE_MINOR)).toEqual(
-        normalizeImage(wrapper[1].props, REACT_NATIVE_MINOR)
-      );
+      expect(boost.optimized).toBe(false);
     });
   });
 });
