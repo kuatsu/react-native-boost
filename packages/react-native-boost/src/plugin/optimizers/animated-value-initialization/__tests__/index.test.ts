@@ -17,11 +17,23 @@ pluginTester({
   formatResult: formatTestResult,
 });
 
-function transformWithOptimizer(source: string, platform: 'ios' | 'web', reactNativeMinor: number): string {
+function transformWithOptimizer(
+  source: string,
+  platform: 'ios' | 'web',
+  reactNativeMinor: number,
+  uniwind: 'on' | 'off' = 'off'
+): string {
   return transformSync(source, {
     configFile: false,
     babelrc: false,
-    plugins: [generateTestPlugin(animatedValueInitializationOptimizer, {}, platform, reactNativeMinor)],
+    plugins: [
+      generateTestPlugin(
+        animatedValueInitializationOptimizer,
+        { integrations: { uniwind } },
+        platform,
+        reactNativeMinor
+      ),
+    ],
   })!.code!;
 }
 
@@ -48,15 +60,19 @@ const source = `
   import { Animated } from 'react-native';
   const value = useRef(new Animated.Value(0)).current;
   const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const color = useRef(new Animated.Color('red')).current;
   const [statePosition] = useState(new Animated.ValueXY());
 `;
 
 describe('animated value initialization integration', () => {
-  it('uses only hooks available in the target React Native version', () => {
-    const output = transformWithOptimizer(source, 'ios', 84);
+  it.each(['on', 'off'] as const)('uses only available hooks with Uniwind %s', (uniwind) => {
+    const output = transformWithOptimizer(source, 'ios', 84, uniwind);
 
     expect(output).toContain('_useAnimatedValue(0)');
     expect(output).toContain('useRef(new Animated.ValueXY({');
+    expect(output).toContain("useRef(new Animated.Color('red')).current");
+    expect(output).not.toContain('useAnimatedValueXY');
+    expect(output).not.toContain('useAnimatedColor');
     expect(output).toContain('useState(() => new Animated.ValueXY())');
   });
 
