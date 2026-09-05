@@ -6,7 +6,7 @@ import {
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   numberOfLines={_clampNumberOfLines(lineCount)}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
@@ -14,7 +14,7 @@ import { Text } from 'react-native';
   identifier
 </_NativeText>;
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   numberOfLines={_clampNumberOfLines(getLines())}
   allowFontScaling={true}
   ellipsizeMode={'tail'}

@@ -25,7 +25,7 @@ const Root = () => (
   <Pressable>
     <_NativeView>
       <_NativeText
-        style={_getDefaultTextStyle()}
+        style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
         allowFontScaling={true}
         ellipsizeMode={'tail'}
         accessible={_getDefaultTextAccessible()}>
@@ -38,7 +38,7 @@ const Pass = () => (
   <RefreshControl>
     <_NativeViewWithContext>
       <_NativeText
-        style={_getDefaultTextStyle()}
+        style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
         allowFontScaling={true}
         ellipsizeMode={'tail'}
         accessible={_getDefaultTextAccessible()}>
@@ -50,7 +50,7 @@ const Pass = () => (
 <Text>
   <Pressable>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -59,7 +59,7 @@ const Pass = () => (
   </Pressable>
   <TouchableOpacity>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -68,7 +68,7 @@ const Pass = () => (
   </TouchableOpacity>
   <TouchableHighlight>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -77,7 +77,7 @@ const Pass = () => (
   </TouchableHighlight>
   <KeyboardAvoidingView>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -86,7 +86,7 @@ const Pass = () => (
   </KeyboardAvoidingView>
   <ImageBackground>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -95,7 +95,7 @@ const Pass = () => (
   </ImageBackground>
   <Modal>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -104,7 +104,7 @@ const Pass = () => (
   </Modal>
   <DrawerLayoutAndroid>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -113,7 +113,7 @@ const Pass = () => (
   </DrawerLayoutAndroid>
   <Native.Pressable>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -127,7 +127,7 @@ const Pass = () => (
 <_NativeView>
   <RefreshControl>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>

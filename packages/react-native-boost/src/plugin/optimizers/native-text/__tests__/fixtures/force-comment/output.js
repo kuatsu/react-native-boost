@@ -13,7 +13,7 @@ import { Text } from 'react-native';
   </Text>
   {/* @boost-force */}
   <_NativeText
-    style={_getDefaultTextStyle()}
+    style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
     onPress={() => {
       console.log('pressed');
     }}

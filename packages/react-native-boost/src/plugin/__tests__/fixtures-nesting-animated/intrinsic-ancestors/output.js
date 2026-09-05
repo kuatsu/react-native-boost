@@ -12,34 +12,58 @@ const AnimatedView = Reanimated.View;
 const Custom = Reanimated.createAnimatedComponent(Unknown);
 <Text>
   <NativeAnimated.View style={dynamicStyle}>
-    <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+    <_NativeText
+      style={[_textDefaultOverflowStyle, void 0]}
+      allowFontScaling={true}
+      ellipsizeMode={'tail'}
+      accessible={true}>
       native animated
     </_NativeText>
   </NativeAnimated.View>
   <Native.Animated.View style={dynamicStyle}>
-    <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+    <_NativeText
+      style={[_textDefaultOverflowStyle, void 0]}
+      allowFontScaling={true}
+      ellipsizeMode={'tail'}
+      accessible={true}>
       namespace native animated
     </_NativeText>
   </Native.Animated.View>
   <Reanimated.View entering={animation}>
     <_NativeView>
-      <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+      <_NativeText
+        style={[_textDefaultOverflowStyle, void 0]}
+        allowFontScaling={true}
+        ellipsizeMode={'tail'}
+        accessible={true}>
         reanimated
       </_NativeText>
     </_NativeView>
   </Reanimated.View>
   <Motion.default.View>
-    <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+    <_NativeText
+      style={[_textDefaultOverflowStyle, void 0]}
+      allowFontScaling={true}
+      ellipsizeMode={'tail'}
+      accessible={true}>
       namespace reanimated
     </_NativeText>
   </Motion.default.View>
   <AnimatedPressable>
-    <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+    <_NativeText
+      style={[_textDefaultOverflowStyle, void 0]}
+      allowFontScaling={true}
+      ellipsizeMode={'tail'}
+      accessible={true}>
       factory
     </_NativeText>
   </AnimatedPressable>
   <AnimatedView>
-    <_NativeText style={_textDefaultOverflowStyle} allowFontScaling={true} ellipsizeMode={'tail'} accessible={true}>
+    <_NativeText
+      style={[_textDefaultOverflowStyle, void 0]}
+      allowFontScaling={true}
+      ellipsizeMode={'tail'}
+      accessible={true}>
       alias
     </_NativeText>
   </AnimatedView>

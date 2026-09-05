@@ -5,7 +5,7 @@ import {
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   nativeID="y"
   allowFontScaling={true}
   ellipsizeMode={'tail'}

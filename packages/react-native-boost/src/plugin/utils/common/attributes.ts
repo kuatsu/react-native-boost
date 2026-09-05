@@ -322,6 +322,7 @@ export function extractStyleAttribute(attributes: Array<t.JSXAttribute | t.JSXSp
 } {
   for (const attribute of attributes) {
     if (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'style' })) {
+      if (t.isStringLiteral(attribute.value)) return { styleAttribute: attribute, styleExpr: attribute.value };
       if (
         attribute.value &&
         t.isJSXExpressionContainer(attribute.value) &&
@@ -369,69 +370,11 @@ export function extractSelectionColor(attributes: Array<t.JSXAttribute | t.JSXSp
 
 type SelectableExtraction = { value: boolean | undefined };
 
-const isUserSelectProperty = (property: t.ObjectProperty): boolean =>
-  t.isIdentifier(property.key, { name: 'userSelect' }) ||
-  (t.isStringLiteral(property.key) && property.key.value === 'userSelect');
-
-const isNullishExpression = (expression: t.Expression): boolean =>
-  t.isNullLiteral(expression) || t.isIdentifier(expression, { name: 'undefined' });
-
-const canResolveUserSelect = (expression: t.Expression): boolean =>
-  t.isStringLiteral(expression) || t.isNumericLiteral(expression) || t.isBooleanLiteral(expression);
-
-const removeUserSelectProperties = (objectExpr: t.ObjectExpression) => {
-  objectExpr.properties = objectExpr.properties.filter(
-    (property) => !t.isObjectProperty(property) || !isUserSelectProperty(property)
-  );
-};
-
-/**
- * Attempts to statically extract the final flattened `userSelect` style value from a style expression.
- *
- * A non-null `userSelect` always overrides the direct `selectable` prop in RN, even when the value is
- * unknown to RN's map and therefore resolves to `undefined`. Dynamic/nullish values are left for the
- * runtime helper so it can preserve RN's `processedStyle.userSelect != null` check.
- */
-export function extractSelectableAndUpdateStyle(styleExpr: t.Expression): SelectableExtraction | undefined {
-  const candidates: Array<{ object: t.ObjectExpression; value: t.Expression }> = [];
-  let hasUnresolvedStylePart = false;
-
-  const collect = (objectExpr: t.ObjectExpression) => {
-    for (const property of objectExpr.properties) {
-      if (!t.isObjectProperty(property) || property.computed) {
-        hasUnresolvedStylePart = true;
-        continue;
-      }
-      if (isUserSelectProperty(property) && t.isExpression(property.value)) {
-        candidates.push({ object: objectExpr, value: property.value });
-      }
-    }
-  };
-
-  const visitStyle = (expr: t.Expression | t.SpreadElement | null) => {
-    if (expr == null) return;
-    if (t.isObjectExpression(expr)) {
-      collect(expr);
-      return;
-    }
-    if (t.isArrayExpression(expr)) {
-      for (const element of expr.elements) visitStyle(element);
-      return;
-    }
-    if (!isSkippableFalsyElement(expr)) hasUnresolvedStylePart = true;
-  };
-
-  visitStyle(styleExpr);
-  if (hasUnresolvedStylePart) return undefined;
-
-  const last = candidates.at(-1);
-  if (!last || isNullishExpression(last.value) || !canResolveUserSelect(last.value)) return undefined;
-
-  for (const { object } of candidates) removeUserSelectProperties(object);
-
-  return {
-    value: t.isStringLiteral(last.value) ? USER_SELECT_STYLE_TO_SELECTABLE_PROP[last.value.value] : undefined,
-  };
+/** Reads the final static userSelect without removing values observed by style preprocessors. */
+export function extractStaticTextSelectable(styleExpr: t.Expression): SelectableExtraction | undefined {
+  const value = tryFlattenStaticStyle(styleExpr, false)?.get('userSelect');
+  if (!value || t.isNullLiteral(value)) return undefined;
+  return { value: t.isStringLiteral(value) ? USER_SELECT_STYLE_TO_SELECTABLE_PROP[value.value] : undefined };
 }
 
 /**
@@ -514,52 +457,35 @@ export function tryFlattenStaticStyle(
   return collect(styleExpression) ? flattened : undefined;
 }
 
-/**
- * Attempts to reproduce, at build time, exactly what the runtime `processTextStyle` helper would
- * compute for a `style` value — but only when the value is fully static. On success it returns a
- * single normalized `ObjectExpression` (the merged, converted style) the caller emits as a direct
- * `style={...}` attribute, dropping the per-render helper call. On any dynamic or uncertain input it
- * returns `undefined`, leaving the caller to fall back to `{...processTextStyle(styleExpr)}`.
- *
- * The merge mirrors `StyleSheet.flatten` (top-level array flattened left-to-right, last key wins;
- * nested value arrays/objects kept verbatim; falsy literal elements skipped) followed by the helper's
- * three conversions (numeric `fontWeight` → string, `verticalAlign` → `textAlignVertical`,
- * `userSelect` already lifted to `selectable` upstream). It biases toward bailing: any case it cannot
- * prove equivalent to the runtime result yields `undefined`. It never mutates `styleExpr` (it builds
- * fresh nodes), so a late bail still hands the original expression to the helper.
- */
-export function tryBuildStaticTextStyle(styleExpr: t.Expression): t.ObjectExpression | undefined {
-  const merged = tryFlattenStaticStyle(styleExpr);
+/** Appends RN's overrides to a static style, preserving renderer traversal and reset keys. */
+export function tryBuildStaticTextStyle(styleExpr: t.Expression): t.Expression | undefined {
+  const merged = tryFlattenStaticStyle(styleExpr, false);
   if (!merged) return undefined;
-
-  // `userSelect` is removed from literals by `extractSelectableAndUpdateStyle` before this runs. If a
-  // key remains, the extractor could not resolve its value, so the style is not fully static — bail.
-  if (merged.has('userSelect')) return undefined;
-
+  const overrides: t.ObjectProperty[] = [];
   const fontWeight = merged.get('fontWeight');
-  if (fontWeight) {
-    if (t.isNumericLiteral(fontWeight)) {
-      merged.set('fontWeight', t.stringLiteral(String(fontWeight.value)));
-    } else if (t.isUnaryExpression(fontWeight) && fontWeight.operator === '-') {
-      return undefined; // negative weight is implausible; bail rather than guess
-    }
-    // A string-literal `fontWeight` is already in its native form and is left untouched.
+  if (t.isNumericLiteral(fontWeight)) {
+    overrides.push(t.objectProperty(t.identifier('fontWeight'), t.stringLiteral(String(fontWeight.value))));
+  } else if (t.isUnaryExpression(fontWeight)) {
+    return undefined;
   }
-
+  const userSelect = merged.get('userSelect');
+  if (userSelect && !t.isNullLiteral(userSelect)) {
+    overrides.push(t.objectProperty(t.identifier('userSelect'), t.unaryExpression('void', t.numericLiteral(0))));
+  }
   const verticalAlign = merged.get('verticalAlign');
-  if (verticalAlign !== undefined) {
-    if (!t.isStringLiteral(verticalAlign)) return undefined;
-    const mapped = VERTICAL_ALIGN_TO_TEXT_ALIGN_VERTICAL[verticalAlign.value];
-    if (mapped === undefined) return undefined; // unknown key → defer to the runtime map
-    merged.delete('verticalAlign');
-    merged.set('textAlignVertical', t.stringLiteral(mapped));
+  if (verticalAlign && !t.isNullLiteral(verticalAlign)) {
+    const mapped = t.isStringLiteral(verticalAlign)
+      ? VERTICAL_ALIGN_TO_TEXT_ALIGN_VERTICAL[verticalAlign.value]
+      : undefined;
+    overrides.push(
+      t.objectProperty(
+        t.identifier('textAlignVertical'),
+        mapped === undefined ? t.unaryExpression('void', t.numericLiteral(0)) : t.stringLiteral(mapped)
+      ),
+      t.objectProperty(t.identifier('verticalAlign'), t.unaryExpression('void', t.numericLiteral(0)))
+    );
   }
-
-  const properties = [...merged].map(([key, value]) =>
-    t.objectProperty(VALID_JS_IDENTIFIER.test(key) ? t.identifier(key) : t.stringLiteral(key), value)
-  );
-
-  return t.objectExpression(properties);
+  return overrides.length > 0 ? t.arrayExpression([styleExpr, t.objectExpression(overrides)]) : styleExpr;
 }
 
 /**

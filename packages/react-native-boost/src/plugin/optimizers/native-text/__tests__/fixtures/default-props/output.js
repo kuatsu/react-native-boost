@@ -5,14 +5,14 @@ import {
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}>
   Hello
 </_NativeText>;
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   allowFontScaling={false}
   ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}>
@@ -23,7 +23,7 @@ const partialProps = {
   ellipsizeMode: 'clip',
 };
 <_NativeText
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   {...partialProps}
   allowFontScaling={true}
   accessible={_getDefaultTextAccessible()}>

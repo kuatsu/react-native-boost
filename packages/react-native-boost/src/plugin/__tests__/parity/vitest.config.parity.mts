@@ -83,6 +83,18 @@ export default defineConfig({
               "import normalizeColor from './normalizeColor';"
             );
         }
+        if (id.endsWith('/StyleSheet/processBackgroundImage.js')) {
+          code = code.replace(
+            "const processColor = require('./processColor').default;",
+            "import processColor from './processColor';"
+          );
+        }
+        if (id.endsWith('/StyleSheet/processTransform.js')) {
+          code = code.replace(
+            "const stringifySafe = require('../Utilities/stringifySafe').default;",
+            "import stringifySafe from '../Utilities/stringifySafe';"
+          );
+        }
         if (id.endsWith('/ActivityIndicator/ActivityIndicator.js')) {
           // The real wrapper binds its platform host at module load. The parity suite changes platforms
           // in one process, so select at render time while leaving the wrapper's prop logic unchanged.
@@ -120,7 +132,7 @@ const PlatformActivityIndicator = props =>
     environment: 'node',
     setupFiles: [u('./setup.ts')],
     // fibers.collect.ts is a benchmark collector that no-ops unless BENCH_FIBERS_OUT is set.
-    include: [u('./parity.test.ts'), u('./fibers.collect.ts'), u('./fuzz/fuzz.test.ts')],
+    include: [u('./parity.test.ts'), u('./text-raw.test.ts'), u('./fibers.collect.ts'), u('./fuzz/fuzz.test.ts')],
     server: { deps: { inline: [/react-native/] } }, // force RN source through the transform pipeline
   },
 });
