@@ -91,7 +91,12 @@ for (const platform of ['ios', 'android'] as const) {
       }
     });
 
-    it.each([false, true])('keeps function identity, own keys, and renderer patches (compiler=%s)', async (compile) => {
+    it.each([
+      [false, false],
+      [true, false],
+      [false, true],
+      [true, true],
+    ])('keeps function identity, own keys, and renderer patches (compiler=%s, spread=%s)', async (compile, spread) => {
       const state = { handler: undefined as unknown, events: [] as unknown[] };
       vi.stubGlobal('imageCallbackState', state);
       const preamble = `const load = event => globalThis.imageCallbackState.events.push(event);
@@ -99,7 +104,8 @@ for (const platform of ['ios', 'android'] as const) {
       let previousExpected = {};
       let previousActual = {};
       for (const value of ['load', '() => {}', 'null', 'undefined']) {
-        const jsx = `<View><Image source={{uri:'logo.png'}} ${callbacks.map((name) => `${name}={${value}}`).join(' ')} /></View>`;
+        const source = spread ? "{...{source:{uri:'logo.png'}}}" : "source={{uri:'logo.png'}}";
+        const jsx = `<View><Image ${source} ${callbacks.map((name) => `${name}={${value}}`).join(' ')} /></View>`;
         const expectedHosts = await captureWrapperHosts(platform, jsx, preamble);
         const expected = eventProps(expectedHosts[1].props);
         const expectedHandler = state.handler;

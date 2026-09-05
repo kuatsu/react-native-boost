@@ -91,17 +91,14 @@ const TEXT_CASES = [
   '<Text id="x">hello</Text>',
   '<Text id="x" nativeID="y">hello</Text>',
   '<Text nativeID="y">hello</Text>',
-  // Bailed (deferred to the wrapper): `id`/`nativeID` via spread, and a dynamic `id` alongside `nativeID`.
+  // A dynamic `id` alongside `nativeID` still needs the wrapper.
   '<Text {...{ id: "x" }}>hello</Text>',
   '<Text id={dynamicId} nativeID="y">hello</Text>',
 ];
 
 // Text cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
 // a silent loss of optimization — from masquerading as a passing parity test.
-const BAILED_TEXT_CASES = new Set([
-  '<Text {...{ id: "x" }}>hello</Text>',
-  '<Text id={dynamicId} nativeID="y">hello</Text>',
-]);
+const BAILED_TEXT_CASES = new Set(['<Text id={dynamicId} nativeID="y">hello</Text>']);
 
 const ANIMATED_WRAPPER_REMOVAL_CASES = [
   '<Animated.View testID="card" style={[{ width: 12, opacity: 1 }, null, { opacity: 0.5 }]} />',
@@ -149,7 +146,7 @@ const VIEW_CASES = [
 
 // View cases Boost is expected to bail on. Asserting the bail explicitly stops an unexpected bailout —
 // a silent loss of optimization — from masquerading as a passing parity test.
-const BAILED_VIEW_CASES = new Set(['<View {...{ id: "x" }} />', '<View id={dynamicId} nativeID="y" />']);
+const BAILED_VIEW_CASES = new Set(['<View id={dynamicId} nativeID="y" />']);
 
 const ACTIVITY_INDICATOR_CASES: Array<[string, string?]> = [
   ['<ActivityIndicator />'],
@@ -169,10 +166,7 @@ const ACTIVITY_INDICATOR_CASES: Array<[string, string?]> = [
   ['<ActivityIndicator>child</ActivityIndicator>'],
 ];
 
-const BAILED_ACTIVITY_INDICATOR_CASES = new Set([
-  '<ActivityIndicator {...{ size: "large" }} />',
-  '<ActivityIndicator>child</ActivityIndicator>',
-]);
+const BAILED_ACTIVITY_INDICATOR_CASES = new Set(['<ActivityIndicator>child</ActivityIndicator>']);
 
 const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} />',
@@ -205,7 +199,6 @@ const IMAGE_CASES = [
 
 const BAILED_IMAGE_CASES = new Set([
   '<Image source={{ uri: "fallback.png" }} srcSet="logo.png 1x" />',
-  '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ alt: "Logo" }} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} {...{ source: { uri: "override.png" } }} />',
 ]);
 

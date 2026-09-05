@@ -33,6 +33,81 @@ const wrapper = (props: Record<string, unknown>) => renderAndCaptureSingle(creat
 
 for (const platform of ['ios', 'android'] as const) {
   describe(`raw Text parity (${platform})`, () => {
+    it('keeps literal spread string whitespace and entities', async () => {
+      for (const component of ['Text', 'View']) {
+        const jsx = `<${component} {...{id:"a\\n b &amp;", testID:"a\\n b &amp;"}} />`;
+        const expected = await captureWrapperHosts(platform, jsx);
+        const result = await captureBoostHosts(platform, jsx);
+        if (!result.optimized) throw new Error(`${component} must optimize`);
+        expect(result.hosts[0].props.nativeID).toBe(expected[0].props.nativeID);
+        expect(result.hosts[0].props.testID).toBe(expected[0].props.testID);
+      }
+    });
+
+    it.each([false, true])(
+      'preserves literal spread host payloads and preprocessing (compiler=%s)',
+      async (compile) => {
+        const observations: unknown[] = [];
+        for (const key of ['color', 'fontWeight', 'userSelect', 'opacity']) {
+          StyleSheet.setStyleAttributePreprocessor(key, (value) => {
+            observations.push([key, value]);
+            return `${key}:${String(value)}:${observations.length}`;
+          });
+        }
+        const validAttributes = {
+          style: attributes,
+          nativeID: true,
+          selectable: true,
+          accessibilityState: { busy: true, checked: true, disabled: true, expanded: true, selected: true },
+          animating: true,
+          size: true,
+          source: true,
+          resizeMode: true,
+        };
+        for (const component of ['Text', 'View', 'Image', 'ActivityIndicator']) {
+          let previousExpected = {};
+          let previousActual = {};
+          for (const color of ['red', 'blue']) {
+            const props =
+              component === 'Text'
+                ? `id:"winner", disabled:false, accessibilityState:{disabled:true}, style:[{color:"${color}",fontWeight:400},{fontWeight:700,userSelect:"text"}]`
+                : component === 'Image'
+                  ? `source:{uri:"logo.png",width:20,height:30}, style:[{opacity:0.2},{opacity:0.8}]`
+                  : component === 'ActivityIndicator'
+                    ? `size:"large", animating:false, style:[{opacity:0.2},{opacity:0.8}]`
+                    : `id:"winner", style:[{opacity:0.2},{opacity:0.8}]`;
+            const jsx = `<${component} {...{${props}}} />`;
+            const expected = await captureWrapperHosts(platform, jsx);
+            const result = await captureBoostHosts(platform, jsx, '', true, compile);
+            expect(result.optimized).toBe(true);
+            if (!result.optimized) throw new Error(`${component} must optimize`);
+            expect(result.hosts.length).toBe(expected.length);
+            for (let index = 0; index < expected.length; index++) {
+              const expectedProps = expected[index].props;
+              const actualProps = result.hosts[index].props;
+              expect(actualProps.style).toStrictEqual(expectedProps.style);
+              if (component === 'Text')
+                expect(actualProps.accessibilityState).toStrictEqual(expectedProps.accessibilityState);
+              observations.length = 0;
+              const expectedPayload = create(expectedProps, validAttributes);
+              const expectedCalls = [...observations];
+              observations.length = 0;
+              expect(create(actualProps, validAttributes)).toStrictEqual(expectedPayload);
+              expect(observations).toStrictEqual(expectedCalls);
+              observations.length = 0;
+              const patch = diff(previousExpected, expectedProps, validAttributes);
+              const updateCalls = [...observations];
+              observations.length = 0;
+              expect(diff(previousActual, actualProps, validAttributes)).toStrictEqual(patch);
+              expect(observations).toStrictEqual(updateCalls);
+              previousExpected = expectedProps;
+              previousActual = actualProps;
+            }
+          }
+        }
+      }
+    );
+
     it.each([null, undefined, false, true])('preserves aria-hidden %s and native own keys', (hidden) => {
       setPlatformOS(platform);
       const props = { 'aria-hidden': hidden, 'accessibilityElementsHidden': true, 'importantForAccessibility': null };

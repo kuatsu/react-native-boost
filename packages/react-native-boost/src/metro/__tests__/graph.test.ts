@@ -17,6 +17,23 @@ afterEach(() => {
 });
 
 describe('private Metro graph integration', () => {
+  it.each([false, true])('rechecks literal spread ancestry after graph edits (compiler: %s)', async (compile) => {
+    const safe = `export {View as Box} from 'react-native';`;
+    const sources = {
+      'Screen.js': `import {Text} from 'react-native'; import {Box} from './Box'; export function Screen() { return <Box><Text {...{id:'label', style:[{color:'red'},{color:'blue'}]}}>Hello</Text></Box>; }`,
+      'Box.js': safe,
+    };
+    const project = createGraph(sources, 'Screen.js', {}, compile ? [compiler] : []);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('NativeText');
+    sources['Box.js'] = `export {Text as Box} from 'react-native';`;
+    await project.graph.traverseDependencies([project.filename('Box.js')], project.options);
+    expect(project.code()).not.toContain('NativeText');
+    expect(project.code()).toMatch(/<Text\s+\{\.\.\./);
+    sources['Box.js'] = safe;
+    await project.graph.traverseDependencies([project.filename('Box.js')], project.options);
+    expect(project.code()).toContain('NativeText');
+  });
   it.each([false, true])('invalidates spread keys across re-exports (compiler: %s)', async (compile) => {
     const safe = `export function props(enabled, index) { if (!enabled) return {}; const result = {role: 'cell'}; if (index !== undefined) result['aria-colindex'] = index; return result; }`;
     const sources = {
