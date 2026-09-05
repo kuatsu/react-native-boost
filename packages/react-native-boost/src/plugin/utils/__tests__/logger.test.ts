@@ -19,6 +19,18 @@ describe('logger', () => {
     expect(String(consoleSpy.mock.calls[0][0])).toContain('Optimized Text in /app/screens/LoginScreen.tsx:42');
   });
 
+  it('identifies context-preserving optimizations without changing the target', () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    createLogger().optimized({
+      target: 'View',
+      path: createMockPath('/app/Box.tsx', 2),
+      note: 'preserves runtime Text context',
+    });
+    expect(String(consoleSpy.mock.calls[0][0])).toContain(
+      'Optimized View in /app/Box.tsx:2 (preserves runtime Text context)'
+    );
+  });
+
   it('logs skipped targets and reasons at the debug level', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const logger = createLogger('debug');

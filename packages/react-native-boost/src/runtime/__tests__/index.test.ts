@@ -51,6 +51,7 @@ vi.mock('react-native', () => {
   };
   return {
     View: () => 'View',
+    unstable_TextAncestorContext: undefined,
     Text: () => 'Text',
     Image: Object.assign(() => 'Image', {
       resolveAssetSource: <T>(source: T): T => source,

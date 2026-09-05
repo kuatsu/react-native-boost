@@ -129,7 +129,10 @@
   },
   "overrides": [
     {
-      "files": ["packages/react-native-boost/src/plugin/__tests__/parity/mocks/*"],
+      "files": [
+        "packages/react-native-boost/src/plugin/__tests__/parity/mocks/*",
+        "packages/react-native-time-to-render/src/*Native*.ts"
+      ],
       "rules": {
         "unicorn/filename-case": "off"
       }
