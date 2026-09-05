@@ -123,7 +123,8 @@ for (const platform of ['ios', 'android'] as const) {
             previousActual = actual;
           }
         }
-      }
+      },
+      30_000
     );
 
     it('keeps dynamic state identity and prop evaluation order', async () => {

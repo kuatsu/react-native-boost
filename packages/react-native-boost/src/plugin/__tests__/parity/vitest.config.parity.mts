@@ -50,6 +50,7 @@ const basenameRedirects: Array<[RegExp, string]> = [
   [/(^|[./])StyleSheet$/, u('./mocks/StyleSheet.ts')],
   [/(^|[./])resolveAssetSource$/, u('./mocks/resolveAssetSource.ts')],
   [/(^|[./])Platform$/, u('./mocks/Platform.ts')],
+  [/(^|[./])PixelRatio$/, u('./mocks/PixelRatio.ts')],
   [/(^|[./])usePressability$/, u('./mocks/usePressability.ts')],
   [/(^|[./])PressabilityDebug$/, u('./mocks/PressabilityDebug.ts')],
   [/(^|[./])ReactNativeFeatureFlags$/, u('./mocks/ReactNativeFeatureFlags.ts')],
@@ -72,6 +73,17 @@ export default defineConfig({
       transform(code, id) {
         if (!RN_SRC.test(id)) return null;
         // Vite cannot intercept these CommonJS requires, so expose them to its resolver as imports.
+        if (id.endsWith('/StyleSheet/StyleSheetExports.js')) {
+          code = code
+            .replace(
+              /const ReactNativeStyleAttributes =\s*require\('\.\.\/Components\/View\/ReactNativeStyleAttributes'\)\.default;/,
+              "import ReactNativeStyleAttributes from '../Components/View/ReactNativeStyleAttributes';"
+            )
+            .replace(
+              /^const PixelRatio = require\('\.\.\/Utilities\/PixelRatio'\)\.default;/m,
+              "import PixelRatio from '../Utilities/PixelRatio';"
+            );
+        }
         if (id.endsWith('/StyleSheet/processColor.js')) {
           code = code
             .replace(
