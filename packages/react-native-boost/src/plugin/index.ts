@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { traverse, type PluginObj } from '@babel/core';
+import { traverse, type BabelFile, type PluginObj } from '@babel/core';
 import { declare } from '@babel/helper-plugin-utils';
 import { nativeTextOptimizer } from './optimizers/native-text';
 import { nativeImageOptimizer } from './optimizers/native-image';
@@ -45,14 +45,18 @@ export type {
 
 const warnings = new Set<string>();
 
-const optimizers: Optimizer[] = [
-  platformFoldingOptimizer,
-  animatedValueInitializationOptimizer,
+const ancestorOptimizers: Optimizer[] = [
   animatedWrapperRemovalOptimizer,
   nativeTextOptimizer,
   nativeViewOptimizer,
   nativeImageOptimizer,
   nativeActivityIndicatorOptimizer,
+];
+const ancestorVisitor = traverse.visitors.merge(ancestorOptimizers.map((optimizer) => optimizer.visitor));
+const optimizers: Optimizer[] = [
+  platformFoldingOptimizer,
+  animatedValueInitializationOptimizer,
+  ...ancestorOptimizers,
   stylesheetOperationsOptimizer,
 ];
 
@@ -150,6 +154,8 @@ export default declare((api, rawOptions, dirname?: string) => {
       }
       this.optimizerContext = { logger, options, platform, unistylesEnabled, reactNativeMinor, normalizeColor };
       this.enabledOptimizations = ignored ? new Set() : getEnabledOptimizations(options, this.optimizerContext);
+
+      configureReactCompilerPass(file, this, snapshotPath !== undefined);
     },
     visitor: traverse.visitors.merge([
       ...optimizers.map((optimizer) => optimizer.visitor),
@@ -158,15 +164,20 @@ export default declare((api, rawOptions, dirname?: string) => {
           enter(path) {
             if (!snapshotPath) return;
             const file = (path.hub as unknown as { file: HubFile }).file;
-            file.__ancestorAnalysis = analyzeAncestorModule(path);
+            file.__ancestorAnalysis ??= analyzeAncestorModule(path);
           },
-          exit(path) {
+          exit(path, state) {
             if (!snapshotPath) return;
             const file = (path.hub as unknown as { file: HubFile & { metadata: unknown } }).file;
             const metadata = file.metadata as Record<string, unknown>;
             const boostMetadata = metadata.reactNativeBoost as Record<string, unknown>;
             boostMetadata.analysis = {
               ...file.__ancestorAnalysis,
+              ...(state.ancestorSources && {
+                sources: Object.fromEntries(
+                  [...state.ancestorSources].map(([source, statement]) => [source, statement.source!.value])
+                ),
+              }),
               references: [...(file.__ancestorReferences?.values() ?? [])],
             };
           },
@@ -177,6 +188,33 @@ export default declare((api, rawOptions, dirname?: string) => {
 
   return plugin as unknown as PluginObj;
 });
+
+function configureReactCompilerPass(file: BabelFile, state: OptimizerState, analyzeExports: boolean): void {
+  const hubFile = file as unknown as HubFile;
+  const wrapVisitor = file.opts.wrapPluginVisitorMethod;
+  file.opts.wrapPluginVisitorMethod = (key, phase, visitor) => {
+    const wrapped = wrapVisitor ? wrapVisitor(key, phase, visitor) : visitor;
+    if (key !== 'react-forget' || phase !== 'enter') return wrapped;
+    return function (this: unknown, path, visitorState) {
+      if (path.isProgram()) {
+        path.scope.crawl();
+        if (analyzeExports) {
+          hubFile.__ancestorAnalysis = analyzeAncestorModule(path);
+          state.ancestorSources = new Map();
+          for (const statement of path.node.body) {
+            if ('source' in statement && statement.source) {
+              state.ancestorSources.set(statement.source.value, statement);
+            }
+          }
+        }
+        // Decide before compiler hoisting hides parents; never retry failed JSX after lowering.
+        path.traverse(ancestorVisitor, state);
+        for (const optimizer of ancestorOptimizers) state.enabledOptimizations.delete(optimizer.name);
+      }
+      return wrapped.call(this, path, visitorState);
+    };
+  };
+}
 
 function getEnabledOptimizations(options: PluginOptions, context: OptimizerContext): Set<OptimizationName> {
   return new Set(

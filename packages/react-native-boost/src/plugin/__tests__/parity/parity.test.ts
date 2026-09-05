@@ -517,6 +517,24 @@ describe('differential parity', () => {
       expect(wrapper.at(-1)?.which).toBe('NativeText');
     });
 
+    it.each([
+      '<View><View aria-label="box"><Text>label</Text></View></View>',
+      '<Text><View aria-label="box"><Text>label</Text></View></Text>',
+      '<Text><Box><Text>label</Text></Box></Text>',
+      '<View><Inspect><View aria-label="original"><Text>label</Text></View></Inspect></View>',
+    ])('preserves hosts and props with React Compiler: %s', async (jsx) => {
+      const preamble = `
+        import React from 'react';
+        function Box({children}) { return <View>{children}</View>; }
+        function Inspect({children}) { return React.cloneElement(children, {'aria-label': children.type.displayName}); }
+      `;
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      const boost = await captureBoostHosts(os, jsx, preamble, false, true);
+      if (!boost.optimized) throw new Error('expected an optimized outer View');
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
+    });
+
     it('preserves View context directly under Text', async () => {
       const jsx = '<Text><View aria-label="box"><Text>label</Text></View></Text>';
       const wrapper = await captureWrapperHosts(os, jsx);

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import { transformSync, types as t, type TransformCaller } from '@babel/core';
+import { transformSync, types as t, type TransformCaller, type PluginItem, type PluginObj } from '@babel/core';
+import compiler from 'babel-plugin-react-compiler';
 import { afterEach, describe, expect, it } from 'vitest';
 import { installMetroGraphPatch } from '../graph';
 import boostPlugin from '../../plugin';
@@ -16,6 +17,40 @@ afterEach(() => {
 });
 
 describe('private Metro graph integration', () => {
+  it('preserves compiler summaries and resolved import paths across incremental edits', async () => {
+    const resolveAliases: PluginObj = {
+      visitor: {
+        Program(path) {
+          path.traverse({
+            StringLiteral(child) {
+              if (child.node.value.startsWith('@app/')) child.node.value = child.node.value.replace('@app/', './');
+            },
+          });
+        },
+      },
+    };
+    const sources = {
+      'Screen.js': `import {View, Text} from 'react-native'; import {Box} from '@app/Barrel'; export function Screen() { return <Box><View testID="target"><Text>hello</Text></View></Box>; }`,
+      'Barrel.js': `export {Box} from '@app/Box';`,
+      'Box.js': `import {View} from 'react-native'; export function Box({children}) { return <View>{children}</View>; }`,
+    };
+    const project = createGraph(sources, 'Screen.js', {}, [compiler, resolveAliases]);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('react/compiler-runtime');
+    expect(project.code()).toContain('<_NativeView testID="target">');
+
+    sources['Box.js'] =
+      `import {Text} from 'react-native'; export function Box({children}) { return <Text>{children}</Text>; }`;
+    await project.graph.traverseDependencies([project.filename('Box.js')], project.options);
+    expect(project.code()).toContain('<_NativeViewWithContext testID="target">');
+
+    sources['Box.js'] =
+      `import React from 'react'; export function Box({children}) { return React.cloneElement(children, {testID: children.type.name}); }`;
+    await project.graph.traverseDependencies([project.filename('Box.js')], project.options);
+    expect(project.code()).toContain('<View testID="target">');
+    expect(project.code()).not.toContain('NativeViewWithContext');
+  });
+
   it.each([
     [`export { Pressable as Card } from 'react-native';`, `export { Text as Card } from 'react-native';`],
     [
@@ -303,7 +338,12 @@ describe('private Metro graph integration', () => {
   });
 });
 
-function createGraph(sources: Record<string, string>, entry = 'Screen.js', pluginOptions: PluginOptions = {}) {
+function createGraph(
+  sources: Record<string, string>,
+  entry = 'Screen.js',
+  pluginOptions: PluginOptions = {},
+  babelPlugins: PluginItem[] = []
+) {
   const graphPath = requireFromTest.resolve('metro/private/DeltaBundler/Graph');
   const { Graph } = requireFromTest(graphPath) as {
     Graph: new (options: { entryPoints: Set<string>; transformOptions: { platform: string } }) => MetroGraph;
@@ -337,6 +377,7 @@ function createGraph(sources: Record<string, string>, entry = 'Screen.js', plugi
         caller: { name: 'metro', platform: 'ios' } as TransformCaller,
         plugins: [
           '@babel/plugin-syntax-jsx',
+          ...babelPlugins,
           [
             boostPlugin,
             {
@@ -351,13 +392,16 @@ function createGraph(sources: Record<string, string>, entry = 'Screen.js', plugi
         ],
       })!;
       const imports = result.ast!.program.body.filter(
-        (statement): statement is t.ImportDeclaration =>
-          t.isImportDeclaration(statement) && statement.source.value.startsWith('.')
+        (statement): statement is t.ImportDeclaration | t.ExportNamedDeclaration | t.ExportAllDeclaration =>
+          (t.isImportDeclaration(statement) ||
+            t.isExportNamedDeclaration(statement) ||
+            t.isExportAllDeclaration(statement)) &&
+          statement.source?.value.startsWith('.') === true
       );
       return {
-        dependencies: imports.map(({ source: { value: name } }) => ({
-          name,
-          data: { key: name, asyncType: null, isESMImport: true, isOptional: false, locs: [] },
+        dependencies: imports.map(({ source }) => ({
+          name: source!.value,
+          data: { key: source!.value, asyncType: null, isESMImport: true, isOptional: false, locs: [] },
         })),
         output: [{ type: 'js/module', data: { code: result.code!, ...result.metadata } }],
         getSource: () => Buffer.from(source),
