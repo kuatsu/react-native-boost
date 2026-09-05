@@ -20,6 +20,7 @@ export default defineConfig({
         },
       },
       parityConfig,
+      fileURLToPath(new URL('src/plugin/__tests__/parity/uniwind/vitest.config.mts', import.meta.url)),
     ],
   },
 });

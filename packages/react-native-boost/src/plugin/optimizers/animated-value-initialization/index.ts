@@ -48,7 +48,10 @@ export const animatedValueInitializationOptimizer: Optimizer = {
         nameHint: hookName,
         path,
         importName: hookName,
-        moduleName: 'react-native',
+        moduleName:
+          state.optimizerContext.options?.integrations?.uniwind === 'on'
+            ? 'react-native-boost/uniwind'
+            : 'react-native',
       });
       const replacement = t.callExpression(
         hook,

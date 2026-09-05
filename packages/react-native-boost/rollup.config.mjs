@@ -16,6 +16,18 @@ const nodePlugins = [resolve({ extensions }), esbuild({ target: 'esnext', tsconf
 
 export default [
   {
+    input: 'src/runtime/uniwind.ts',
+    external,
+    plugins: commonPlugins,
+    output: { file: 'dist/runtime/uniwind.js', format: 'cjs', sourcemap: true },
+  },
+  {
+    input: 'src/runtime/uniwind.ts',
+    external,
+    plugins: [dts()],
+    output: { file: 'dist/runtime/uniwind.d.ts', format: 'esm' },
+  },
+  {
     input: 'src/runtime/index.ts',
     external,
     plugins: commonPlugins,
