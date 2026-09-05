@@ -41,6 +41,120 @@ const transformImage = async (
   );
 };
 
+describe('Image load callbacks', () => {
+  for (const platform of ['ios', 'android'] as const) {
+    it.each([83, 84, 85, 86, 87])(
+      `forwards functions and matches notification defaults (${platform}, RN %s)`,
+      async (minor) => {
+        const output = await transformImage(
+          `import {Image, View} from 'react-native';
+        const load = () => {};
+        <View><Image source={{uri:'logo.png'}} onLoad={load} onError={() => {}} onLoadStart={null} onLoadEnd={undefined} /></View>;`,
+          platform,
+          { reactNativeMinor: minor }
+        );
+        const [attributes] = getNativeImageAttributes(output);
+        expect(attributes).toBeDefined();
+        const names = getAttributeNames(attributes);
+        expect(names.has('onLoad')).toBe(true);
+        expect(names.has('onError')).toBe(true);
+        expect(names.has('onLoadStart')).toBe(platform === 'ios' || minor <= 84);
+        expect(names.has('onLoadEnd')).toBe(platform === 'ios' || minor <= 84);
+        expect(names.has('shouldNotifyLoadEvents')).toBe(platform === 'android');
+        if (platform === 'android')
+          expect(getAttributeExpression(attributes!, 'shouldNotifyLoadEvents')).toMatchObject({ value: true });
+      }
+    );
+
+    it.each([
+      'handler',
+      'props.onLoad',
+      'makeHandler()',
+      'enabled ? () => {} : null',
+      'false',
+      '0',
+      '""',
+      '{}',
+      'void 0',
+    ])('rejects unproved callback %s', async (value) => {
+      const output = await transformImage(
+        `import {Image, View} from 'react-native';
+        function Case({handler, props, enabled}) { return <View><Image source={{uri:'logo.png'}} onLoad={${value}} /></View>; }`,
+        platform
+      );
+      expect(output).not.toContain('_NativeImage');
+    });
+
+    it.each([
+      'ref={null}',
+      'onProgress={() => {}}',
+      'onPartialLoad={() => {}}',
+      '{...{testID:"image"}}',
+      'shouldNotifyLoadEvents={false}',
+      'onLoad={null}',
+      'testID={record()}',
+    ])('retains guards for %s', async (extra) => {
+      const output = await transformImage(
+        `import {Image, View} from 'react-native';
+        <View><Image source={{uri:'logo.png'}} onLoad={() => {}} ${extra} /></View>;`,
+        platform
+      );
+      expect(output).not.toContain('_NativeImage');
+    });
+
+    it.each(['<Unknown>IMAGE</Unknown>', 'inspect(IMAGE)', 'IMAGE'])(
+      'rejects inspection or injection at %s even with the Text assumption',
+      async (body) => {
+        const image = '<Image source={{uri:"logo.png"}} onLoad={() => {}} />';
+        const output = await transformImage(
+          `import {Image} from 'react-native'; import Unknown from './unknown';
+        function Case(){ return ${body.replace('IMAGE', image)}; }`,
+          platform,
+          { unknownAncestorsDoNotRenderText: true }
+        );
+        expect(output).not.toContain('_NativeImage');
+      }
+    );
+  }
+
+  it('keeps platform, version, binding, and Unistyles limits', async () => {
+    const source = `import {Image, View} from 'react-native'; <View><Image source={{uri:'logo.png'}} onLoad={() => {}} /></View>;`;
+    for (const platform of ['web', undefined] as const)
+      expect(await transformImage(source, platform)).not.toContain('_NativeImage');
+    expect(await transformImage(source, 'android', { reactNativeMinor: null })).not.toContain('_NativeImage');
+    expect(await transformImage(source, 'ios', { unistylesEnabled: true })).toContain('_NativeImage');
+    expect(
+      await transformImage(source.replace('onLoad=', 'style={styles.image} onLoad='), 'ios', { unistylesEnabled: true })
+    ).not.toContain('_NativeImage');
+    expect(
+      await transformImage(
+        `import {Image, View} from 'react-native'; function Case(undefined) { return <View><Image source={{uri:'logo.png'}} onLoad={undefined} /></View>; }`,
+        'ios'
+      )
+    ).not.toContain('_NativeImage');
+    expect(
+      await transformImage(
+        `import {Image, View} from 'react-native'; let load = () => {}; load = null; <View><Image source={{uri:'logo.png'}} onLoad={load} /></View>;`,
+        'ios'
+      )
+    ).not.toContain('_NativeImage');
+  });
+
+  it.each([83, 84, 85, 86, 87])('keeps Android nullish-only notification omission (RN %s)', async (minor) => {
+    const output = await transformImage(
+      `import {Image, View} from 'react-native';
+      <View><Image source={{uri:'logo.png'}} onLoad={null} onError={undefined} /></View>;`,
+      'android',
+      { reactNativeMinor: minor }
+    );
+    const [attributes] = getNativeImageAttributes(output);
+    expect(attributes).toBeDefined();
+    expect(getAttributeNames(attributes).has('shouldNotifyLoadEvents')).toBe(minor <= 84);
+    if (minor <= 84)
+      expect(getAttributeExpression(attributes!, 'shouldNotifyLoadEvents')).toMatchObject({ value: false });
+  });
+});
+
 const getNativeImageAttributes = (source: string): t.JSXAttribute[][] => {
   const ast = parseSync(source, {
     configFile: false,
@@ -161,9 +275,9 @@ pluginTester({
   formatResult: formatTestResult,
   tests: [
     {
-      title: 'optimizes Image inside unresolved ancestor when enabled',
+      title: 'does not treat the Text assumption as proof against injected Image props',
       fixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/code.js'),
-      outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/dangerous-output.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/output.js'),
     },
   ],
 });

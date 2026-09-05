@@ -15,9 +15,12 @@ import {
   replaceWithNativeComponent,
   ancestorBailoutChecks,
   createStyleOriginResolver,
+  createTextContextSourceResolver,
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { createJSXOptimizer } from '../../utils/optimizer';
+
+const IMAGE_LOAD_CALLBACKS = new Set(['onLoadStart', 'onLoad', 'onLoadEnd', 'onError']);
 
 const IMAGE_BAILOUT_PROPS = new Set([
   'aria-live',
@@ -30,10 +33,6 @@ const IMAGE_BAILOUT_PROPS = new Set([
   'id',
   'internal_analyticTag',
   'loadingIndicatorSource',
-  'onError',
-  'onLoad',
-  'onLoadEnd',
-  'onLoadStart',
   'onPartialLoad',
   'onProgress',
   'ref',
@@ -52,6 +51,7 @@ const IMAGE_REQUEST_HEADER_PROPS = new Set(['crossOrigin', 'referrerPolicy']);
 
 const IMAGE_SPREAD_GUARD_PROPS = new Set([
   ...IMAGE_BAILOUT_PROPS,
+  ...IMAGE_LOAD_CALLBACKS,
   ...IMAGE_REQUEST_HEADER_PROPS,
   ...IMAGE_ARIA_STATE_PROPS,
   'accessible',
@@ -94,6 +94,41 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
+  const loadCallbacks = path.node.attributes.filter(
+    (attribute): attribute is t.JSXAttribute =>
+      t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && IMAGE_LOAD_CALLBACKS.has(attribute.name.name)
+  );
+  const callbackKinds = loadCallbacks.map((attribute) =>
+    classifyLoadCallback(path, getAttributeValueExpression(attribute))
+  );
+  const getAncestor = createTextContextSourceResolver(path);
+
+  // Text-context assumptions do not prove that a parent cannot inspect or inject callbacks.
+  if (
+    !forced &&
+    loadCallbacks.length > 0 &&
+    (getAncestor() !== 'safe' ||
+      callbackKinds.includes(undefined) ||
+      (platform === 'android' && reactNativeMinor === undefined) ||
+      (options?.integrations?.uniwind === 'on' && callbackKinds.includes('nullish')) ||
+      findAttribute(path.node.attributes, 'shouldNotifyLoadEvents') ||
+      path.node.attributes.some(
+        (attribute) =>
+          t.isJSXSpreadAttribute(attribute) ||
+          (t.isJSXAttribute(attribute) &&
+            !loadCallbacks.includes(attribute) &&
+            t.isJSXExpressionContainer(attribute.value) &&
+            !path.scope.isPure(attribute.value.expression))
+      ) ||
+      getDirectAttributeNames(path.node.attributes).size !== path.node.attributes.length)
+  ) {
+    logger.skipped({
+      target: 'Image',
+      path,
+      reason: 'load callbacks require proved values, evaluation, and parent safety',
+    });
+    return;
+  }
 
   // In Unistyles mode, classify the direct `style` origin (lazily, once). A `style` carried by a
   // resolvable spread already bails (`style` is in {@link IMAGE_SPREAD_GUARD_PROPS}), as does an
@@ -105,6 +140,10 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
     : undefined;
 
   const bailoutChecks: BailoutCheck[] = [
+    {
+      reason: 'has an unresolved ancestor that may inspect or change children',
+      shouldBail: () => getAncestor() === 'unknown',
+    },
     {
       reason: 'has a Unistyles style and there is no lean Image host to route to',
       shouldBail: () => getStyleOrigin() === 'unistyles',
@@ -190,8 +229,39 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
   } else {
     processRuntimeImageProps(path, file, platform);
   }
+  if (platform === 'android' && loadCallbacks.length > 0) {
+    const legacy = reactNativeMinor !== undefined && reactNativeMinor <= 84;
+    if (!legacy) {
+      path.node.attributes = path.node.attributes.filter((attribute) => {
+        const index = t.isJSXAttribute(attribute) ? loadCallbacks.indexOf(attribute) : -1;
+        return index < 0 || callbackKinds[index] !== 'nullish';
+      });
+    }
+    if (legacy || callbackKinds.includes('function')) {
+      path.node.attributes.push(
+        makeAttribute('shouldNotifyLoadEvents', t.booleanLiteral(callbackKinds.includes('function')))
+      );
+    }
+  }
   replaceWithNativeComponent(path, parent, file, 'NativeImage');
 };
+
+function classifyLoadCallback(
+  path: NodePath<t.JSXOpeningElement>,
+  expression: t.Expression
+): 'function' | 'nullish' | undefined {
+  if (t.isNullLiteral(expression)) return 'nullish';
+  if (t.isArrowFunctionExpression(expression) || t.isFunctionExpression(expression)) return 'function';
+  if (!t.isIdentifier(expression)) return;
+  const binding = path.scope.getBinding(expression.name);
+  if (expression.name === 'undefined' && !binding) return 'nullish';
+  if (!binding?.constant) return;
+  if (binding.path.isFunctionDeclaration()) return 'function';
+  if (binding.kind === 'const' && binding.path.isVariableDeclarator()) {
+    const initializer = binding.path.node.init;
+    if (t.isArrowFunctionExpression(initializer) || t.isFunctionExpression(initializer)) return 'function';
+  }
+}
 
 export const nativeImageOptimizer = createJSXOptimizer('native-image', optimizeNativeImage);
 

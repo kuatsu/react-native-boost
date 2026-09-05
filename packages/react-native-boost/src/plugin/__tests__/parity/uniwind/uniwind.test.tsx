@@ -126,6 +126,37 @@ async function compile(jsx: string, platform = 'ios', options = {}) {
 }
 
 describe('free Uniwind native parity', () => {
+  it('preserves Image callback references and keeps nullable callbacks on the wrapper', async () => {
+    const load = vi.fn();
+    const props = {
+      source: { uri: 'logo.png' },
+      className: 'image',
+      onLoad: load,
+      onLoadStart: load,
+      onLoadEnd: load,
+      onError: load,
+    };
+    for (const platform of ['ios', 'android'] as const) {
+      setPlatformOS(platform);
+      const expected = renderAndCaptureAll(React.createElement(original.NativeImage, props))[0].props;
+      const actual = renderAndCaptureAll(React.createElement(optimized.NativeImage, props))[0].props;
+      for (const name of ['onLoadStart', 'onLoad', 'onLoadEnd', 'onError', 'shouldNotifyLoadEvents']) {
+        expect(Object.hasOwn(actual, name)).toBe(Object.hasOwn(expected, name));
+        expect(actual[name]).toBe(expected[name]);
+      }
+      const result = await compile(
+        '<View><Image source={{uri:"logo.png"}} className="image" onLoad={() => {}} /></View>',
+        platform
+      );
+      expect(result.code).toContain('NativeImage');
+      const captured = renderAndCaptureAll(React.createElement(result.Component));
+      expect(captured[1].props.onLoad).toBeTypeOf('function');
+      const nullable = await compile('<View><Image source={{uri:"logo.png"}} onLoad={null} /></View>', platform);
+      expect(nullable.code).not.toContain('NativeImage');
+    }
+    setPlatformOS('ios');
+  });
+
   it.each([
     ['NativeView', { 'className': 'box selected', 'data-selected': true, 'style': { width: 20 }, 'aria-label': 'Box' }],
     [
