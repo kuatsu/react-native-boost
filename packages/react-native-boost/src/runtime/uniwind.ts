@@ -19,7 +19,10 @@ import {
   processActivityIndicatorSize,
 } from './index';
 
-export { useAnimatedValue, useAnimatedValueXY, useAnimatedColor } from 'react-native';
+export { useAnimatedValue } from 'react-native';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore These exports require RN 0.85; the optimizer checks the target version before using them.
+export { useAnimatedValueXY, useAnimatedColor } from 'react-native';
 
 type ClassProps = { className?: string };
 
