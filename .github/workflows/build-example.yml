@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v2
     paths: &paths
       - 'apps/example/**'
       - 'packages/react-native-boost/**'
