@@ -208,29 +208,34 @@ describe('free Uniwind native parity', () => {
     }
   );
 
-  it('compiles every native optimizer and retains generated class styles', async () => {
-    const { code, Component } = await compile(
-      '<View className="box"><Text className="text">hello</Text><Image className="image" source={{uri:"logo.png"}}/><ActivityIndicator className="box" colorClassName="accent"/></View>'
-    );
-    expect(code).toContain('react-native-boost/uniwind');
-    for (const name of ['NativeView', 'NativeText', 'NativeImage', 'NativeActivityIndicator'])
-      expect(code).toContain(name);
-    const hosts = capture(Component, {});
-    expect(hosts.map((host) => host.which)).toEqual([
-      'NativeView',
-      'NativeText',
-      'NativeImage',
-      'NativeView',
-      'NativeActivityIndicator',
-    ]);
-    expect(hosts[0].props.style.width).toBe(40);
-    expect(hosts[1].props.style.fontWeight).toBe('700');
-    expect(hosts[1].props.numberOfLines).toBe(2);
-    expect(hosts[2].props.resizeMode).toBe('contain');
-    expect(hosts[2].props.style.width).toBe(70);
-    expect(hosts[3].props.style.padding).toBe(8);
-    expect(hosts[4].props.color).toBe('#ff0000');
-  });
+  it.each([false, true])(
+    'compiles every native optimizer and retains generated class styles (spread=%s)',
+    async (spread) => {
+      const { code, Component } = await compile(
+        spread
+          ? '<View {...{className:"box"}}><Text {...{className:"text"}}>hello</Text><Image {...{className:"image",source:{uri:"logo.png"}}}/><ActivityIndicator {...{className:"box",colorClassName:"accent"}}/></View>'
+          : '<View className="box"><Text className="text">hello</Text><Image className="image" source={{uri:"logo.png"}}/><ActivityIndicator className="box" colorClassName="accent"/></View>'
+      );
+      expect(code).toContain('react-native-boost/uniwind');
+      for (const name of ['NativeView', 'NativeText', 'NativeImage', 'NativeActivityIndicator'])
+        expect(code).toContain(name);
+      const hosts = capture(Component, {});
+      expect(hosts.map((host) => host.which)).toEqual([
+        'NativeView',
+        'NativeText',
+        'NativeImage',
+        'NativeView',
+        'NativeActivityIndicator',
+      ]);
+      expect(hosts[0].props.style.width).toBe(40);
+      expect(hosts[1].props.style.fontWeight).toBe('700');
+      expect(hosts[1].props.numberOfLines).toBe(2);
+      expect(hosts[2].props.resizeMode).toBe('contain');
+      expect(hosts[2].props.style.width).toBe(70);
+      expect(hosts[3].props.style.padding).toBe(8);
+      expect(hosts[4].props.color).toBe('#ff0000');
+    }
+  );
 
   it('retains wrappers for pressable Text and unsupported Image srcSet', async () => {
     const { code } = await compile(

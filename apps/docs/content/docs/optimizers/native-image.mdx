@@ -38,7 +38,7 @@ Boost supports `onLoadStart`, `onLoad`, `onLoadEnd`, and `onError` at proved saf
 
 On Android 0.85–0.87, Boost removes nullish callbacks and adds `shouldNotifyLoadEvents={true}` only when a supported callback is non-null. With no such callback, it omits the flag. Android 0.83–0.84 keeps authored nullish callback keys and emits a boolean flag. iOS forwards the callbacks unchanged. Function references remain unchanged; Boost does not add an event wrapper.
 
-Callback sites need a proved safe parent, such as a direct `View`. A Text-context assumption does not prove that an unknown parent cannot inject callbacks. Callback sites also skip optimization for an unknown Android version, spreads, duplicate props, an explicit `shouldNotifyLoadEvents`, or impure prop expressions. Parameters, imported handlers, member reads, conditional handlers, and handler factory calls stay on the wrapper.
+Callback sites need a proved safe parent, such as a direct `View`. A Text-context assumption does not prove that an unknown parent cannot inject callbacks. Callback sites also skip optimization for an unknown Android version, spreads that cannot be [opened safely](/docs/optimizers#literal-jsx-spreads), duplicate props, an explicit `shouldNotifyLoadEvents`, or impure prop expressions. Parameters, imported handlers, member reads, conditional handlers, and handler factory calls stay on the wrapper.
 
 Uniwind supports the proved function subset and keeps nullish callback sites on the wrapper. The existing Unistyles style restrictions still apply. Web keeps the public `Image`.
 

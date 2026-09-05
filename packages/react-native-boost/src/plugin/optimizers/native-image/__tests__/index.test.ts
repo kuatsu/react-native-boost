@@ -89,7 +89,7 @@ describe('Image load callbacks', () => {
       'ref={null}',
       'onProgress={() => {}}',
       'onPartialLoad={() => {}}',
-      '{...{testID:"image"}}',
+      '{...props}',
       'shouldNotifyLoadEvents={false}',
       'onLoad={null}',
       'testID={record()}',

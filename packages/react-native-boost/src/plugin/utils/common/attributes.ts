@@ -209,11 +209,13 @@ export const addDefaultProperty = (path: NodePath<t.JSXOpeningElement>, key: str
 };
 
 /**
- * Builds a JSX attribute, emitting a string literal directly as the value (`name="x"`) and wrapping
- * any other expression in a container (`name={expr}`).
+ * Builds a JSX attribute. Strings with line breaks stay in containers to avoid JSX whitespace normalization.
  */
 export function makeAttribute(name: string, value: t.Expression): t.JSXAttribute {
-  return t.jsxAttribute(t.jsxIdentifier(name), t.isStringLiteral(value) ? value : t.jsxExpressionContainer(value));
+  return t.jsxAttribute(
+    t.jsxIdentifier(name),
+    t.isStringLiteral(value) && !/[\r\n]/.test(value.value) ? value : t.jsxExpressionContainer(value)
+  );
 }
 
 /**

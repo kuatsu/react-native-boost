@@ -27,6 +27,24 @@ for (const compilerFirst of [true, false]) {
   describe(`React Compiler ${compilerFirst ? 'before' : 'after'} Boost`, () => {
     const plugins: PluginItem[] = compilerFirst ? [compiler, boostPlugin] : [boostPlugin, compiler];
 
+    it('opens literal spreads before hoisting but never retries rejected ancestors', () => {
+      const code = transform(
+        `import {View, Text, Image, ActivityIndicator} from 'react-native';
+        import Parent from './unknown';
+        export function Screen() { return <View>
+          <Text {...{style:[{color:'red'},{color:'blue'}]}}>label</Text>
+          <Image {...{src:'logo.png'}} onLoad={() => {}} />
+          <ActivityIndicator {...{size:'large'}} />
+          <Parent><Text {...{id:'keep'}}>label</Text><Image {...{src:'keep.png'}} /></Parent>
+        </View>; }`,
+        plugins
+      );
+      expect(code).toContain('react/compiler-runtime');
+      for (const host of ['NativeText', 'NativeImage', 'NativeActivityIndicator']) expect(code).toContain(host);
+      expect(code).toMatch(/<Text\s+\{\.\.\./);
+      expect(code).toMatch(/<Image\s+\{\.\.\./);
+    });
+
     it('uses raw hosts inside a View but keeps context at the component boundary', () => {
       const code = transform(
         `
