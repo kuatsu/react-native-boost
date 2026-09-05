@@ -1,4 +1,4 @@
-import { NativeView as _NativeView } from 'react-native-boost/runtime';
+import { NativeView as _NativeView, NativeViewWithContext as _NativeViewWithContext } from 'react-native-boost/runtime';
 import { Text, View } from 'react-native';
 const Custom = ({ children }) => {
   return <Text>{children}</Text>;
@@ -8,8 +8,8 @@ const Custom = ({ children }) => {
     <Optimized />
   </_NativeView>
   <Custom>
-    <View>
+    <_NativeViewWithContext>
       <NotOptimized />
-    </View>
+    </_NativeViewWithContext>
   </Custom>
 </>;
