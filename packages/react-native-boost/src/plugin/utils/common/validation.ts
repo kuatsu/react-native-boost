@@ -17,6 +17,7 @@ import {
 } from '../constants';
 import { getMarkedReactNativeComponent } from './optimized-host';
 import { extractStyleAttribute } from './attributes';
+import { analyzeSpreadExports } from '../returned-props';
 import { classifyAnimatedAncestor, classifyReactNativeAncestor } from './intrinsic-ancestors';
 
 /** Compiles ignore patterns once per Babel working directory. */
@@ -721,7 +722,12 @@ export function analyzeAncestorModule(path: NodePath<t.Program>): ModuleAncestor
     }
   }
 
-  return { exports, exportAll, references: [...(file.__ancestorReferences?.values() ?? [])] };
+  return {
+    exports,
+    exportAll,
+    spreadExports: analyzeSpreadExports(path),
+    references: [...(file.__ancestorReferences?.values() ?? [])],
+  };
 }
 
 function classifyDefaultExport(

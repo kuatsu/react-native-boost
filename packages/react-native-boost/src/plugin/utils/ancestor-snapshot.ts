@@ -1,17 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AncestorSnapshot, ComponentAncestorClassification } from '../../ancestor-types';
+import type { AncestorSnapshot } from '../../ancestor-types';
 
 let cachedMtime: bigint | undefined;
 let cachedPath: string | undefined;
 let cachedSnapshot: AncestorSnapshot | undefined;
 
-export function readAncestorImports(
+export function readModuleImports(
   snapshotPath: string | undefined,
   projectRoot: string | undefined,
   filename: string,
   platform: string | undefined
-): Record<string, Record<string, ComponentAncestorClassification>> | undefined {
+) {
   if (!snapshotPath || !projectRoot) return;
 
   try {
@@ -27,5 +27,8 @@ export function readAncestorImports(
 
   if (cachedSnapshot?.version !== 1) return;
   const absoluteFilename = path.resolve(projectRoot, filename);
-  return cachedSnapshot.platforms[platform ?? '']?.[absoluteFilename];
+  return {
+    ancestors: cachedSnapshot.platforms[platform ?? '']?.[absoluteFilename],
+    spreads: cachedSnapshot.spreadPlatforms?.[platform ?? '']?.[absoluteFilename],
+  };
 }
