@@ -23,7 +23,7 @@ import { stylesheetOperationsOptimizer } from './optimizers/stylesheet-operation
 import { platformFoldingOptimizer } from './optimizers/platform-folding';
 import { validatePluginOptions } from './utils/options';
 import PluginError from './utils/plugin-error';
-import { readAncestorImports } from './utils/ancestor-snapshot';
+import { readModuleImports } from './utils/ancestor-snapshot';
 import {
   getReactNativeMinor,
   loadReactNativeColorNormalizer,
@@ -144,8 +144,11 @@ export default declare((api, rawOptions, dirname?: string) => {
       const hubFile = file as unknown as HubFile;
       const ignored = isIgnoredFile(hubFile);
       if (snapshotPath && !ignored) {
-        hubFile.__ancestorImports = readAncestorImports(snapshotPath, projectRoot, hubFile.opts.filename, platform);
+        const imports = readModuleImports(snapshotPath, projectRoot, hubFile.opts.filename, platform);
+        hubFile.__ancestorImports = imports?.ancestors;
+        hubFile.__spreadImports = imports?.spreads;
         hubFile.__ancestorReferences = new Map();
+        hubFile.__spreadReferences = new Map();
       }
       const reactNativeMinor = ignored ? undefined : resolveReactNativeMinor(hubFile);
       if (!ignored && !colorNormalizerResolved) {
@@ -179,6 +182,7 @@ export default declare((api, rawOptions, dirname?: string) => {
                 ),
               }),
               references: [...(file.__ancestorReferences?.values() ?? [])],
+              spreadReferences: [...(file.__spreadReferences?.values() ?? [])],
             };
           },
         },

@@ -305,9 +305,12 @@ function hasCrossFileAnalysis(value: unknown, injectionId: string): boolean {
   return Boolean(
     output?.some(({ data }) => {
       const metadata = data?.reactNativeBoost as
-        | { injectionId?: unknown; analysis?: { references?: unknown[] } }
+        | { injectionId?: unknown; analysis?: { references?: unknown[]; spreadReferences?: unknown[] } }
         | undefined;
-      return metadata?.injectionId === injectionId && Boolean(metadata.analysis?.references?.length);
+      return (
+        metadata?.injectionId === injectionId &&
+        Boolean(metadata.analysis?.references?.length || metadata.analysis?.spreadReferences?.length)
+      );
     })
   );
 }

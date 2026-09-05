@@ -6,7 +6,6 @@ import {
   addFileImportHint,
   buildPropertiesFromAttributes,
   hasAmbiguousIdNativeID,
-  hasBlacklistedProperty,
   hasBlacklistedPropertyInSpread,
   isForcedLine,
   isIgnoredLine,
@@ -97,10 +96,11 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
         ) &&
         path.node.attributes.some(
           (attribute) =>
-            t.isJSXAttribute(attribute) &&
-            t.isJSXExpressionContainer(attribute.value) &&
-            t.isExpression(attribute.value.expression) &&
-            !path.scope.isPure(attribute.value.expression)
+            (t.isJSXSpreadAttribute(attribute) && !path.scope.isPure(attribute.argument)) ||
+            (t.isJSXAttribute(attribute) &&
+              t.isJSXExpressionContainer(attribute.value) &&
+              t.isExpression(attribute.value.expression) &&
+              !path.scope.isPure(attribute.value.expression))
         ),
     },
     {
@@ -188,7 +188,13 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
 export const nativeViewOptimizer = createJSXOptimizer('native-view', optimizeNativeView);
 
 function hasChildren(path: NodePath<t.JSXOpeningElement>): boolean {
-  if (hasBlacklistedProperty(path, VIEW_CHILDREN_PROP)) return true;
+  if (
+    path.node.attributes.some(
+      (attribute) => t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'children' })
+    ) ||
+    hasBlacklistedPropertyInSpread(path, VIEW_CHILDREN_PROP)
+  )
+    return true;
 
   const parent = path.parent;
   return (

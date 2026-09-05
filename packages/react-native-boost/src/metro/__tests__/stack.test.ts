@@ -139,6 +139,38 @@ describe('Metro and Babel stack', () => {
     expect(getCode(changed)).not.toContain('react-native-boost/runtime');
   });
 
+  it('does not cache a consumer that depends only on spread keys', async () => {
+    const project = createProject();
+    fs.writeFileSync(
+      path.join(project.root, 'Screen.js'),
+      `import {View} from 'react-native'; import {props} from './Props'; export default () => <View {...props()} />;`
+    );
+    const helper = path.join(project.root, 'Props.js');
+    fs.writeFileSync(helper, `export function props() { return {testID: 'cell'}; }`);
+    const values = new Map<string, unknown>();
+    let cachedConsumer = false;
+    const store: CacheStore = {
+      get: (key) => values.get(key.toString('hex')) ?? null,
+      set: (key, value) => {
+        const output = (
+          value as { output?: Array<{ data?: { reactNativeBoost?: { analysis?: { spreadReferences?: unknown[] } } } }> }
+        ).output;
+        if (output?.some(({ data }) => data?.reactNativeBoost?.analysis?.spreadReferences?.length)) {
+          cachedConsumer = true;
+          return;
+        }
+        values.set(key.toString('hex'), value);
+      },
+    };
+    expect(getCode(await buildGraph(project, 1, 'ios', true, undefined, [store]))).toContain('NativeView');
+    expect(cachedConsumer).toBe(false);
+    fs.writeFileSync(helper, `export function props() { return {'aria-label': 'changed'}; }`);
+    expect(getCode(await buildGraph(project, 1, 'ios', true, undefined, [store]))).not.toContain(
+      'react-native-boost/runtime'
+    );
+    expect(cachedConsumer).toBe(false);
+  });
+
   it('uses Metro custom-resolver edges', async () => {
     const project = createProject();
     fs.writeFileSync(
