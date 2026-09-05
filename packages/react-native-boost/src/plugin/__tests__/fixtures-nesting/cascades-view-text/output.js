@@ -1,4 +1,5 @@
 import {
+  NativeViewWithContext as _NativeViewWithContext,
   getDefaultTextStyle as _getDefaultTextStyle,
   getDefaultTextAccessible as _getDefaultTextAccessible,
   NativeText as _NativeText,
@@ -6,7 +7,7 @@ import {
 } from 'react-native-boost/runtime';
 import { Text, View } from 'react-native';
 const C = () => (
-  <View
+  <_NativeViewWithContext
     style={{
       flex: 1,
     }}>
@@ -29,5 +30,5 @@ const C = () => (
         deep
       </_NativeText>
     </_NativeView>
-  </View>
+  </_NativeViewWithContext>
 );

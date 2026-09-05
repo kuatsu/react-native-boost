@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(scriptDirectory, '..');
 
-const canonicalSources = ['src/screens/trading-demo/components/rows.tsx'];
+const canonicalSources = ['src/screens/trading-demo/components/rows.tsx', 'src/screens/view-context-benchmark/box.tsx'];
 
 const header = (sourceRelativePath) =>
   [

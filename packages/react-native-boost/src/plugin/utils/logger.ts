@@ -23,7 +23,8 @@ export const createLogger = (logLevel: LogLevel = 'info'): PluginLogger => {
   return {
     optimized(payload) {
       if (logLevel === 'warn') return;
-      writeLog('optimized', `Optimized ${payload.target} in ${formatPathLocation(payload.path)}`);
+      const note = payload.note ? ` (${payload.note})` : '';
+      writeLog('optimized', `Optimized ${payload.target} in ${formatPathLocation(payload.path)}${note}`);
     },
     skipped(payload) {
       if (logLevel !== 'debug') return;

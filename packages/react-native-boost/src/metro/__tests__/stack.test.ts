@@ -192,7 +192,7 @@ function createProject(): { root: string; reactNativePackageJson: string } {
   );
   fs.writeFileSync(
     path.join(boostDirectory, 'runtime.js'),
-    "exports.NativeText = 'NativeText'; exports.NativeView = 'NativeView';"
+    "exports.NativeText = 'NativeText'; exports.NativeView = 'NativeView'; exports.NativeViewWithContext = 'NativeViewWithContext';"
   );
   fs.writeFileSync(
     path.join(root, 'babel.config.js'),
@@ -277,9 +277,9 @@ async function createMetroConfig(
 }
 
 function getCode(graph: MetroGraph): string {
-  return [...graph.dependencies.values()]
-    .flatMap((module) => module.output.map((output) => output.data.code))
-    .join('\n');
+  const screen = [...graph.dependencies].find(([filename]) => path.basename(filename) === 'Screen.js')?.[1];
+  if (!screen) throw new Error('Missing Screen.js in Metro graph');
+  return screen.output.map((output) => output.data.code).join('\n');
 }
 
 type MetroConfig = Record<string, unknown> & {

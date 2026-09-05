@@ -1,3 +1,4 @@
+// React Native Codegen requires the NativeComponent suffix.
 import { codegenNativeComponent, type ViewProps } from 'react-native';
 import { DirectEventHandler, Double } from 'react-native/Libraries/Types/CodegenTypes';
 

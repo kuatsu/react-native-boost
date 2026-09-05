@@ -1,5 +1,5 @@
-import TimeToRender from './native-time-to-render';
-export { default as TimeToRenderView } from './time-to-render-native-component';
+import TimeToRender from './NativeTimeToRender';
+export { default as TimeToRenderView } from './TimeToRenderNativeComponent';
 
 export type ThermalLevel = 'nominal' | 'fair' | 'serious' | 'critical' | 'unknown';
 

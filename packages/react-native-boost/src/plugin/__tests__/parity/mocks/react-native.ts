@@ -1,4 +1,5 @@
 import Platform from './Platform';
+import View from 'react-native/Libraries/Components/View/View';
 import processColor from 'react-native/Libraries/StyleSheet/processColor';
 import {
   NativeActivityIndicatorCapturer,
@@ -12,11 +13,11 @@ import { flattenStyle } from '../normalize';
 // `import { StyleSheet, processColor } from 'react-native'` plus the dead leftover `import { Text, View }`
 // the plugin leaves in generated code. The host components resolve to the shared capturers so any path
 // that bottoms out here is still captured.
-export { Platform, processColor };
+export { Platform, processColor, View };
+export { default as unstable_TextAncestorContext } from 'react-native/Libraries/Text/TextAncestorContext';
 export const unstable_NativeText = NativeTextCapturer;
 export const unstable_NativeView = NativeViewCapturer;
 export const Text = NativeTextCapturer;
-export const View = NativeViewCapturer;
 export const Animated = { Text, View };
 export const Image = Object.assign(NativeImageCapturer, {
   resolveAssetSource: <T>(source: T): T => source,

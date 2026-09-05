@@ -72,6 +72,7 @@ const NORMALIZED_PROPERTIES = new Set([
  */
 const TEXT_SPREAD_GUARD_KEYS = new Set([
   ...NORMALIZED_PROPERTIES,
+  'children',
   'style',
   'numberOfLines',
   'id',

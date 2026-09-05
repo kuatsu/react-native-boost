@@ -17,13 +17,23 @@ Before it removes the wrapper, Boost converts the convenience props that React N
 
 Static values are converted at build time. Dynamic direct values use minimal runtime helpers.
 
+## Runtime text context
+
+A component can return a `View` without knowing its runtime parent. If the other checks pass, Boost uses a small context-preserving wrapper:
+
+```tsx
+const Box = ({ children }) => <NativeViewWithContext>{children}</NativeViewWithContext>;
+```
+
+This preserves child behavior without the full View prop-processing work. Proven safe paths still use `NativeView` directly.
+
 ## When it runs
 
 The optimizer can usually replace a `View` when:
 
 - It is imported from `react-native`.
 - It is not inside a `Text`.
-- Boost can determine its ancestor context.
+- Boost can determine its ancestor context, or preserve its runtime parent context.
 - Any props that need conversion are written directly on the element.
 
 ## When it skips
@@ -32,9 +42,10 @@ Boost keeps the `View` wrapper when it finds:
 
 - A spread that might contain accessibility props, `tabIndex`, or `id`.
 - A dynamic `id` together with `nativeID`, where their precedence is unclear.
+- Prop conversion might change expression evaluation order.
 - A parent `Text`.
 - An unknown ancestor that might render a `Text` around its children.
-- Children together with an unresolved runtime parent. The `View` wrapper must reset inherited text context for those children.
+- A Unistyles-styled View with children and an unresolved runtime parent.
 - An unknown style source while Unistyles support is active.
 
 If your project guarantees that unknown ancestors never add a text context, you can use [`unknownAncestorsDoNotRenderText`](/docs/configuration/configure#plugin-assumptions-unknownancestorsdonotrendertext) to increase optimization coverage.

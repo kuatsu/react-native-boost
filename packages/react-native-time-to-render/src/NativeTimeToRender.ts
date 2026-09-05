@@ -1,3 +1,4 @@
+// React Native Codegen requires the Native prefix.
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
 

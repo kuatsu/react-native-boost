@@ -71,11 +71,35 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
   const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
 
   const spreadGuardKeys = unistylesEnabled ? VIEW_SPREAD_GUARD_KEYS_UNISTYLES : VIEW_SPREAD_GUARD_KEYS;
+  const needsRuntimeTextContext = () =>
+    options?.assumptions?.unknownAncestorsDoNotRenderText !== true &&
+    hasChildren(path) &&
+    inheritsTextContextFromRuntimeParent(path);
 
   const overridableChecks: BailoutCheck[] = [
     {
       reason: 'has a spread that may carry a translated prop',
       shouldBail: () => hasBlacklistedPropertyInSpread(path, spreadGuardKeys),
+    },
+    {
+      reason: 'contains an impure prop expression that cannot be safely reordered',
+      shouldBail: () =>
+        path.node.attributes.length > 1 &&
+        path.node.attributes.some(
+          (attribute) =>
+            t.isJSXAttribute(attribute) &&
+            t.isJSXIdentifier(attribute.name) &&
+            (attribute.name.name === 'id' ||
+              attribute.name.name === 'tabIndex' ||
+              (attribute.name.name.startsWith('aria-') && VIEW_SPREAD_GUARD_KEYS.has(attribute.name.name)))
+        ) &&
+        path.node.attributes.some(
+          (attribute) =>
+            t.isJSXAttribute(attribute) &&
+            t.isJSXExpressionContainer(attribute.value) &&
+            t.isExpression(attribute.value.expression) &&
+            !path.scope.isPure(attribute.value.expression)
+        ),
     },
     {
       reason: 'has an unresolved style source that may be a Unistyles style',
@@ -87,10 +111,7 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     },
     {
       reason: 'has unresolved runtime parent that may render Text',
-      shouldBail: () =>
-        options?.assumptions?.unknownAncestorsDoNotRenderText !== true &&
-        hasChildren(path) &&
-        inheritsTextContextFromRuntimeParent(path),
+      shouldBail: () => getStyleOrigin() === 'unistyles' && needsRuntimeTextContext(),
     },
     ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
@@ -123,19 +144,24 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     throw new PluginError('No file found in Babel hub');
   }
 
+  const preservesTextContext = !forced && needsRuntimeTextContext();
   logger.optimized({
     target: 'View',
     path,
+    note: preservesTextContext ? 'preserves runtime Text context' : undefined,
   });
 
   const parent = path.parent as t.JSXElement;
 
   processViewProps(path, file);
 
-  // A Unistyles-styled View routes to Unistyles' lean host (a registering wrapper around `RCTView`) so
-  // its shadow-tree registration survives; the `style` already passes through verbatim. Everything else
-  // optimizes to Boost's own raw host as usual.
-  const viewHost = getStyleOrigin() === 'unistyles' ? UNISTYLES_VIEW_HOST : undefined;
+  // Keep Unistyles' host so its shadow-tree registration survives.
+  const viewHost =
+    getStyleOrigin() === 'unistyles'
+      ? UNISTYLES_VIEW_HOST
+      : preservesTextContext
+        ? { importName: 'NativeViewWithContext', nameHint: 'NativeViewWithContext' }
+        : undefined;
   replaceWithNativeComponent(path, parent, file, 'NativeView', viewHost);
 };
 
