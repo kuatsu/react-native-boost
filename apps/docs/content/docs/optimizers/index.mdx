@@ -28,40 +28,6 @@ Boost also skips a component when:
 
 Set `logLevel: 'debug'` to see why a component was skipped.
 
-## Literal JSX spreads
-
-On known iOS and Android targets, Text, View, Image, and ActivityIndicator can use direct literal spreads:
-
-```jsx
-<View {...{ id: 'card', tabIndex: 0 }}>
-  <Text {...{ numberOfLines: 2, style: [{ color: 'red' }, { color: 'blue' }] }}>Label</Text>
-  <Image {...{ source: { uri: 'logo.png' } }} />
-  <ActivityIndicator {...{ size: 'large' }} />
-</View>
-```
-
-Boost opens these spreads before the component checks and before React Compiler runs. It keeps the original value expressions and style arrays. Existing component, platform, ancestry, and styling-integration restrictions still apply. Rejected sites, ignored sites, and disabled optimizers keep their spreads.
-
-Only plain, noncomputed data properties with static literal values qualify. Nested literal objects and arrays can qualify too. Boost does not open getters, methods, nested spreads, array holes, `__proto__`, `key`, or `ref`. It rejects duplicate keys within an object and prop collisions across attributes or spreads. It also rejects unknown spreads and impure neighboring prop expressions.
-
-Boost does not evaluate identifier spreads, helper calls, callback functions inside spreads, or arbitrary objects. An Image callback can remain a separate direct attribute if it passes the [callback checks](./native-image#load-callbacks).
-
-## Static accessibility props
-
-On known iOS and Android targets with React Native 0.83–0.87, eligible Text, View, and Image sites can normalize closed literal accessibility groups at build time:
-
-```jsx
-<Text disabled={false} accessibilityState={{ disabled: true }} />
-<View aria-busy={true} aria-selected={false} />
-<Image src="logo.png" alt="Logo" aria-hidden={true} />
-```
-
-These groups need no runtime accessibility helper or input bag. Boost does not hoist or cache output objects. Boost preserves nulls, undefined fields, alias precedence, and each component's platform and release rules. Text keeps its disabled reconciliation. View keeps its existing single-alias translations.
-
-The input must contain literal scalars, flat literal state/value objects, or string arrays for `accessibilityLabelledBy`. Unshadowed `undefined` and `void 0` qualify in direct attributes and object fields. Boost does not inspect referenced objects, getters, computed or duplicate keys, `__proto__`, nested objects, or other arrays here. A dynamic member keeps its complete group on the helper path. Safe literal JSX spreads can expose groups to this check.
-
-The existing ignore, optimizer, ancestor, and style checks still apply. Shared Text state that could mutate before React renders Text keeps the wrapper. Unknown targets keep runtime handling. Uniwind keeps its adapter path; Unistyles keeps its style identity rules. React Compiler uses the same checks before it changes JSX.
-
 ## Controlling optimizers
 
 Most optimizers are enabled by default. Exceptions are:

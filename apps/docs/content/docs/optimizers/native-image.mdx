@@ -32,16 +32,6 @@ Boost keeps the `Image` wrapper when it finds:
 
 Text ancestry does not select the Image host on iOS or Android 0.85 and later. Unknown ancestors can still inspect or clone an Image and inject props. Boost keeps these sites on the wrapper, even with `unknownAncestorsDoNotRenderText` enabled.
 
-## Load callbacks
-
-Boost supports `onLoadStart`, `onLoad`, `onLoadEnd`, and `onError` at proved safe sites. It accepts inline functions, unchanged local function declarations, and `const` bindings initialized directly with a function. It also accepts literal `null` and unshadowed `undefined`.
-
-On Android 0.85–0.87, Boost removes nullish callbacks and adds `shouldNotifyLoadEvents={true}` only when a supported callback is non-null. With no such callback, it omits the flag. Android 0.83–0.84 keeps authored nullish callback keys and emits a boolean flag. iOS forwards the callbacks unchanged. Function references remain unchanged; Boost does not add an event wrapper.
-
-Callback sites need a proved safe parent, such as a direct `View`. A Text-context assumption does not prove that an unknown parent cannot inject callbacks. Callback sites also skip optimization for an unknown Android version, spreads that cannot be [opened safely](/docs/optimizers#literal-jsx-spreads), duplicate props, an explicit `shouldNotifyLoadEvents`, or impure prop expressions. Parameters, imported handlers, member reads, conditional handlers, and handler factory calls stay on the wrapper.
-
-Uniwind supports the proved function subset and keeps nullish callback sites on the wrapper. The existing Unistyles style restrictions still apply. Web keeps the public `Image`.
-
 ## Configuration
 
 The optimizer is enabled by default. Set `native-image` to `off` to disable it.
