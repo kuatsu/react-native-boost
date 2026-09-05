@@ -19,8 +19,9 @@ import {
   hasExpoRouterLinkParentWithAsChild,
   extractStyleAttribute,
   extractSelectionColor,
-  extractSelectableAndUpdateStyle,
+  extractStaticTextSelectable,
   tryBuildStaticTextStyle,
+  isStaticLiteralTree,
   ancestorBailoutChecks,
   createStyleOriginResolver,
   UNISTYLES_TEXT_HOST,
@@ -109,6 +110,14 @@ const optimizeNativeText: JSXOptimizer = (
       shouldBail: () => hasBlacklistedPropertyInSpread(path, TEXT_SPREAD_GUARD_KEYS),
     },
     {
+      reason: 'disabled reconciliation may mutate caller state before React renders Text',
+      shouldBail: () =>
+        platform !== 'web' &&
+        options?.integrations?.uniwind !== 'on' &&
+        (reactNativeMinor === undefined || reactNativeMinor >= 85) &&
+        mayMutateCallerState(path),
+    },
+    {
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
     },
@@ -188,6 +197,29 @@ const optimizeNativeText: JSXOptimizer = (
 };
 
 export const nativeTextOptimizer = createJSXOptimizer('native-text', optimizeNativeText);
+
+function mayMutateCallerState(path: NodePath<t.JSXOpeningElement>): boolean {
+  const attributes = path.node.attributes.filter((attribute): attribute is t.JSXAttribute =>
+    t.isJSXAttribute(attribute)
+  );
+  const disabled = attributes.find((attribute) => t.isJSXIdentifier(attribute.name, { name: 'disabled' }));
+  const state = attributes.find((attribute) => t.isJSXIdentifier(attribute.name, { name: 'accessibilityState' }));
+  if (!disabled || !state) return false;
+  if (t.isJSXExpressionContainer(disabled.value) && t.isNullLiteral(disabled.value.expression)) return false;
+  if (t.isJSXExpressionContainer(state.value) && isStaticLiteralTree(state.value.expression)) return false;
+  // A definite ARIA state override makes RN copy the caller's state before reconciling disabled.
+  return !attributes.some(
+    (attribute) =>
+      t.isJSXIdentifier(attribute.name) &&
+      ['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected'].includes(attribute.name.name) &&
+      (attribute.value === null ||
+        t.isStringLiteral(attribute.value) ||
+        (t.isJSXExpressionContainer(attribute.value) &&
+          (t.isBooleanLiteral(attribute.value.expression) ||
+            t.isStringLiteral(attribute.value.expression) ||
+            t.isNumericLiteral(attribute.value.expression))))
+  );
+}
 
 /**
  * Checks if the Text component has any invalid children or blacklisted properties.
@@ -299,6 +331,7 @@ function processProps(
   reactNativeMinor?: number,
   normalizeColor?: ReactNativeColorNormalizer
 ) {
+  passStyleByIdentity ||= platform === 'web';
   // Grab the up-to-date list of attributes
   const currentAttributes = [...path.node.attributes];
 
@@ -374,10 +407,21 @@ function processProps(
     return t.callExpression(t.identifier(defaultStyleIdentifier.name), []);
   };
 
+  const withDefaultTextStyle = (style: t.Expression): t.Expression => {
+    const defaultStyle = emitsDefaultStyle ? buildDefaultTextStyleExpression() : undefined;
+    if (!defaultStyle) return style;
+    const composed = t.arrayExpression([t.cloneNode(defaultStyle), style]);
+    return resolvesDefaultStyleAtBuildTime
+      ? composed
+      : t.conditionalExpression(defaultStyle, composed, t.cloneNode(style, true));
+  };
+
   // `passStyleByIdentity` (Unistyles routing) skips all style transforms — the original `style`
   // attribute is left untouched in the collected attributes below so it reaches the native host intact.
   if (styleExpr && !passStyleByIdentity) {
-    const selectable = extractSelectableAndUpdateStyle(styleExpr);
+    // An unknown platform can load the web runtime, which must receive the unmodified style.
+    const staticStyle = platform === undefined ? undefined : tryBuildStaticTextStyle(styleExpr);
+    const selectable = staticStyle ? extractStaticTextSelectable(styleExpr) : undefined;
 
     if (selectable) {
       selectableAttribute = t.jsxAttribute(
@@ -390,15 +434,11 @@ function processProps(
       );
     }
 
-    // A fully static style is normalized at build time and emitted as a direct `style={...}` object,
-    // dropping the per-render `processTextStyle` call. Dynamic styles still go through the runtime
-    // helper, where the WeakMap reference cache and `StyleSheet.flatten` are the actual win.
-    const staticStyle = tryBuildStaticTextStyle(styleExpr);
+    // Static styles skip runtime inspection, but keep the authored entries before RN's overrides.
     if (staticStyle) {
-      const defaultStyle = emitsDefaultStyle ? buildDefaultTextStyleExpression() : undefined;
       staticStyleAttribute = t.jsxAttribute(
         t.jsxIdentifier('style'),
-        t.jsxExpressionContainer(defaultStyle ? t.arrayExpression([defaultStyle, staticStyle]) : staticStyle)
+        t.jsxExpressionContainer(withDefaultTextStyle(staticStyle))
       );
     } else {
       const flattenIdentifier = addFileImportHint({
@@ -415,14 +455,14 @@ function processProps(
       const flattenedStyleExpr = t.callExpression(t.identifier(flattenIdentifier.name), helperArguments);
       styleSpread = t.jsxSpreadAttribute(flattenedStyleExpr);
     }
-  } else if (!styleAttribute && emitsDefaultStyle) {
+  } else if (!styleAttribute && emitsDefaultStyle && (!resolvesDefaultStyleAtBuildTime || reactNativeMinor >= 85)) {
     // No style at all still gets the wrapper's default. A style attribute without an extractable
     // expression (e.g. `style=""`) is left verbatim instead — emitting a second `style` would have the
     // later attribute silently discard one of the two.
-    const defaultStyle = buildDefaultTextStyleExpression();
-    if (defaultStyle) {
-      staticStyleAttribute = t.jsxAttribute(t.jsxIdentifier('style'), t.jsxExpressionContainer(defaultStyle));
-    }
+    staticStyleAttribute = t.jsxAttribute(
+      t.jsxIdentifier('style'),
+      t.jsxExpressionContainer(withDefaultTextStyle(t.unaryExpression('void', t.numericLiteral(0))))
+    );
   }
 
   // --- selectionColor ---

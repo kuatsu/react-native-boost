@@ -7,7 +7,7 @@ import {
 import { Text } from 'react-native';
 <_NativeText
   {..._processSelectionColor(true)}
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
   accessible={_getDefaultTextAccessible()}>

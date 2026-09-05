@@ -101,15 +101,17 @@ const restorePlatformMock = async () => {
 
 describe('processTextStyle', () => {
   it('returns the RN 0.86 default style for falsy style', () => {
-    expect(processTextStyle(null)).toEqual({ style: { overflow: 'hidden' } });
-    expect(processTextStyle()).toEqual({ style: { overflow: 'hidden' } });
+    expect(processTextStyle(null)).toStrictEqual({ style: [{ overflow: 'hidden' }, null] });
+    expect(processTextStyle()).toStrictEqual({ style: [{ overflow: 'hidden' }, undefined] });
   });
 
-  it('caches computed props', () => {
+  it('keeps the input identity without caching derived props', () => {
     const style = { color: 'red' };
     const result1 = processTextStyle(style);
     const result2 = processTextStyle(style);
-    expect(result1).toBe(result2);
+    expect(result1).not.toBe(result2);
+    expect((result1.style as unknown[])[1]).toBe(style);
+    expect((result2.style as unknown[])[1]).toBe(style);
   });
 
   it('converts numeric fontWeight to string', () => {
@@ -221,7 +223,7 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
     const runtime = await loadRuntime(84);
     expect(runtime.getDefaultTextStyle()).toBeUndefined();
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({ style: { color: 'red' } });
-    expect(runtime.processTextStyle(null)).toEqual({});
+    expect(runtime.processTextStyle(null)).toStrictEqual({ style: null });
   });
 
   it('prepends overflow hidden from RN 0.85', async () => {
@@ -230,7 +232,7 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
     expect(runtime.processTextStyle({ color: 'red' })).toEqual({
       style: [{ overflow: 'hidden' }, { color: 'red' }],
     });
-    expect(runtime.processTextStyle(null)).toEqual({ style: { overflow: 'hidden' } });
+    expect(runtime.processTextStyle(null)).toStrictEqual({ style: [{ overflow: 'hidden' }, null] });
   });
 
   it('uses a build-time default when provided', async () => {
@@ -246,6 +248,37 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
     const runtime = await loadRuntime();
     expect(runtime.getDefaultTextStyle()).toEqual({ overflow: 'hidden' });
   });
+});
+
+describe('Text accessibility release defaults', () => {
+  afterEach(restorePlatformMock);
+
+  it.each([83, 84, 85, 86, 87, undefined])(
+    'preserves null visibility and state ownership on RN 0.%s',
+    async (minor) => {
+      const runtime = await loadRuntime(minor);
+      const legacy = minor !== undefined && minor < 85;
+      const state = { disabled: true };
+      const result = runtime.processTextAccessibilityProps({
+        'aria-hidden': null,
+        'accessibilityElementsHidden': true,
+        'accessibilityState': state,
+        'disabled': false,
+      });
+      expect(result.accessibilityElementsHidden).toBe(legacy ? true : null);
+      expect(result.accessibilityState === state).toBe(!legacy);
+      expect(state.disabled).toBe(legacy);
+      expect(Object.hasOwn(result, 'accessibilityLabel')).toBe(legacy);
+      if (legacy) {
+        expect(
+          runtime.processTextAccessibilityProps({
+            accessibilityState: Object.freeze({ disabled: true }),
+            disabled: false,
+          }).accessibilityState
+        ).toStrictEqual({ disabled: false });
+      }
+    }
+  );
 });
 
 describe('processTextAccessibilityProps', () => {

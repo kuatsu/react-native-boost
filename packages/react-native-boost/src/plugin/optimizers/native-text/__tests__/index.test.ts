@@ -153,6 +153,77 @@ describe('selectionColor', () => {
   });
 });
 
+describe('web Text styles', () => {
+  it('keeps native style normalization in the runtime when the platform is unknown', async () => {
+    const output = await formatTestResult(
+      transformSync(
+        `import { Text } from 'react-native'; <Text style={{fontWeight: 400, userSelect: 'text'}}>label</Text>;`,
+        {
+          configFile: false,
+          babelrc: false,
+          plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(nativeTextOptimizer)],
+        }
+      )!.code!
+    );
+    expect(output).toContain('processTextStyle');
+    expect(output).toContain('fontWeight: 400');
+    expect(output).toContain("userSelect: 'text'");
+    expect(output).not.toContain('selectable=');
+  });
+
+  it('leaves authored styles and selectable to the web wrapper', async () => {
+    const output = await formatTestResult(
+      transformSync(
+        `
+      import { Text } from 'react-native';
+      <Text selectable={false} style={[{ fontWeight: 400, userSelect: 'text' }, { verticalAlign: 'middle' }]}>label</Text>;
+    `,
+        {
+          configFile: false,
+          babelrc: false,
+          plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(nativeTextOptimizer, {}, 'web', 87)],
+        }
+      )!.code!
+    );
+    expect(output).toContain('selectable={false}');
+    expect(output).toContain('fontWeight: 400');
+    expect(output).toContain("userSelect: 'text'");
+    expect(output).toContain("verticalAlign: 'middle'");
+    expect(output).not.toContain('processTextStyle');
+    expect(output).not.toContain('textAlignVertical');
+    expect(output).not.toContain('getDefaultTextStyle');
+  });
+});
+
+describe('Text caller-state mutation timing', () => {
+  it.each(['disabled={null}', 'disabled={false} aria-busy={true}'])(
+    'keeps safe shared-state cases optimized: %s',
+    (attributes) => {
+      const output = transformSync(
+        `import { Text } from 'react-native'; const state = {disabled:true}; <Text accessibilityState={state} ${attributes}>label</Text>;`,
+        {
+          configFile: false,
+          babelrc: false,
+          plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(nativeTextOptimizer, {}, 'ios', 87)],
+        }
+      )!.code!;
+      expect(output).toContain('processTextAccessibilityProps');
+    }
+  );
+
+  it.each([83, 84, 85, 86, 87])('keeps shared conflicting state in the wrapper from RN 0.85 (target 0.%i)', (minor) => {
+    const output = transformSync(
+      `import { Text } from 'react-native'; const state = {disabled:true}; <Text accessibilityState={state} disabled={false}>label</Text>;`,
+      {
+        configFile: false,
+        babelrc: false,
+        plugins: ['@babel/plugin-syntax-jsx', generateTestPlugin(nativeTextOptimizer, {}, 'ios', minor)],
+      }
+    )!.code!;
+    expect(output.includes('react-native-boost/runtime')).toBe(minor < 85);
+  });
+});
+
 describe('text version defaults', () => {
   it('omits the default overflow style before RN 0.85', async () => {
     const output = await transformText(84, 'ios');
@@ -168,7 +239,7 @@ describe('text version defaults', () => {
 
     expect(output).not.toContain('getDefaultTextStyle');
     expect(output).toContain('textDefaultOverflowStyle as _textDefaultOverflowStyle');
-    expect(output).toContain('style={_textDefaultOverflowStyle}');
+    expect(output).toContain('style={[_textDefaultOverflowStyle, void 0]}');
     expect(output).toContain('processTextStyle(dynamicStyle, true)');
   });
 

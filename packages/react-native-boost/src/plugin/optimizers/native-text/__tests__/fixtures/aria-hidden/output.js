@@ -8,7 +8,7 @@ import { Text } from 'react-native';
   {..._processTextAccessibilityProps({
     'aria-hidden': true,
   })}
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   allowFontScaling={true}
   ellipsizeMode={'tail'}>
   test

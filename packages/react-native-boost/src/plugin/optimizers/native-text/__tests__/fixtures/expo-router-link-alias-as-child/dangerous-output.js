@@ -11,7 +11,7 @@ import { Link as RouterLink } from 'expo-router';
   </RouterLink>
   <RouterLink>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>

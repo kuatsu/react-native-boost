@@ -1,6 +1,6 @@
 import {
   processTextAccessibilityProps as _processTextAccessibilityProps,
-  getDefaultTextStyle as _getDefaultTextStyle,
+  processTextStyle as _processTextStyle,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
@@ -9,13 +9,14 @@ import { Text } from 'react-native';
     'aria-label': 'test',
     'accessibilityLabel': 'test',
   })}
-  style={[
-    _getDefaultTextStyle(),
-    {
-      color: 'red',
-      fontSize: 16,
-    },
-  ]}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
+  {..._processTextStyle([
+    {
+      color: 'red',
+    },
+    {
+      fontSize: 16,
+    },
+  ])}
 />;

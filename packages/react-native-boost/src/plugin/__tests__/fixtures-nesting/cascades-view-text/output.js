@@ -12,7 +12,7 @@ const C = () => (
       flex: 1,
     }}>
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>
@@ -23,7 +23,7 @@ const C = () => (
         gap: 4,
       }}>
       <_NativeText
-        style={_getDefaultTextStyle()}
+        style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
         allowFontScaling={true}
         ellipsizeMode={'tail'}
         accessible={_getDefaultTextAccessible()}>

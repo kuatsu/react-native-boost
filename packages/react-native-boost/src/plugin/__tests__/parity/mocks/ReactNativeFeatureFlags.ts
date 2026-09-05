@@ -1,5 +1,6 @@
 // Release defaults used by the supported RN wrappers in parity tests.
 export const defaultTextToOverflowHidden = () => true;
+export const enableNativeCSSParsing = () => false;
 export const enableNativeViewPropTransformations = () => false;
 export const fixImageSrcDimensionPropagation = () => true;
 export const reduceDefaultPropsInImage = () => false;

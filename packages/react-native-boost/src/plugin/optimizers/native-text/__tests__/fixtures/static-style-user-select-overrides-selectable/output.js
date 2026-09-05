@@ -1,18 +1,16 @@
 import {
-  getDefaultTextStyle as _getDefaultTextStyle,
+  processTextStyle as _processTextStyle,
   getDefaultTextAccessible as _getDefaultTextAccessible,
   NativeText as _NativeText,
 } from 'react-native-boost/runtime';
 import { Text } from 'react-native';
 <_NativeText
-  style={[
-    _getDefaultTextStyle(),
-    {
-      color: 'red',
-    },
-  ]}
+  selectable={false}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
-  selectable={true}
+  {..._processTextStyle({
+    userSelect: 'text',
+    color: 'red',
+  })}
   accessible={_getDefaultTextAccessible()}
 />;

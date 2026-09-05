@@ -10,8 +10,6 @@ import type { ActivityIndicatorProps, ColorValue, ProcessedColorValue } from 're
 import { GenericStyleProp } from './types';
 import { userSelectToSelectableMap, verticalAlignToTextAlignVerticalMap } from './utils/constants';
 
-const propsWithDefaultTextStyleCache = new WeakMap();
-const propsWithoutDefaultTextStyleCache = new WeakMap();
 const imageBaseStyle = { overflow: 'hidden' } as const;
 export const textDefaultOverflowStyle = { overflow: 'hidden' } as const;
 const emptyImageSource = { uri: undefined, width: undefined, height: undefined };
@@ -130,9 +128,9 @@ export function processImageArraySourceDimensions<T>(dimensions: T): T | undefin
  *
  * @param style - Style prop passed to a text-like component.
  * @param includesDefaultStyle - Build-time release default. Omit it to detect the runtime version.
- * @returns Native-friendly text props. Returns an empty object when `style` is falsy or cannot be normalized.
+ * @returns Native text props with the authored style and wrapper overrides preserved.
  * @remarks
- * - Flattens style arrays via `StyleSheet.flatten`
+ * - Inspects style arrays via `StyleSheet.flatten`, without replacing the authored style
  * - Converts numeric `fontWeight` values to string values
  * - Maps `userSelect` and `verticalAlign` to native-compatible props
  * - Applies the build-time default-style setting, or uses {@link getDefaultTextStyle} as a fallback
@@ -147,41 +145,29 @@ export function processTextStyle(
       : includesDefaultStyle
         ? textDefaultOverflowStyle
         : undefined;
-  if (!style) return defaultTextStyle ? { style: defaultTextStyle } : {};
+  const props: { style?: TextProps['style']; selectable?: boolean } = {};
+  const flattenedStyle = StyleSheet.flatten(style) as TextStyle | undefined;
+  let overrides: { -readonly [Key in keyof TextStyle]: TextStyle[Key] } | undefined;
 
-  const cache = defaultTextStyle ? propsWithDefaultTextStyleCache : propsWithoutDefaultTextStyleCache;
-  let props = cache.get(style);
-  if (props) return props;
-
-  props = {};
-  cache.set(style, props);
-
-  const flattenedStyle = StyleSheet.flatten(style) as TextStyle;
-
-  if (!flattenedStyle) {
-    if (defaultTextStyle) props.style = defaultTextStyle;
-    return props;
+  if (typeof flattenedStyle?.fontWeight === 'number') {
+    overrides = { fontWeight: String(flattenedStyle.fontWeight) as TextStyle['fontWeight'] };
   }
-
-  const processedStyle = { ...flattenedStyle };
-
-  if (typeof processedStyle.fontWeight === 'number') {
-    processedStyle.fontWeight = processedStyle.fontWeight.toString() as TextStyle['fontWeight'];
+  if (flattenedStyle?.userSelect != null) {
+    props.selectable = userSelectToSelectableMap[flattenedStyle.userSelect];
+    (overrides ??= {}).userSelect = undefined;
   }
-
-  if (processedStyle.userSelect != null) {
-    props.selectable = userSelectToSelectableMap[processedStyle.userSelect];
-    delete processedStyle.userSelect;
-  }
-
-  if (processedStyle.verticalAlign != null) {
-    processedStyle.textAlignVertical = verticalAlignToTextAlignVerticalMap[
-      processedStyle.verticalAlign
+  if (flattenedStyle?.verticalAlign != null) {
+    overrides ??= {};
+    overrides.textAlignVertical = verticalAlignToTextAlignVerticalMap[
+      flattenedStyle.verticalAlign
     ] as TextStyle['textAlignVertical'];
-    delete processedStyle.verticalAlign;
+    overrides.verticalAlign = undefined;
   }
 
-  props.style = defaultTextStyle ? [defaultTextStyle, processedStyle] : processedStyle;
+  // The renderer processes every authored entry, then RN's overrides. Do not flatten or cache this shape.
+  const normalizedStyle = overrides ? [style, overrides] : style;
+  if (defaultTextStyle) props.style = [defaultTextStyle, normalizedStyle];
+  else if (normalizedStyle !== undefined) props.style = normalizedStyle;
   return props;
 }
 
@@ -327,16 +313,7 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
 export const getDefaultTextAccessible = (): boolean | undefined => Platform.select({ ios: true, android: false });
 
 /**
- * Translates `aria-hidden` into its native counterparts for the `Text` helper, mirroring `Text.js`'s
- * legacy path: `aria-hidden` supplies `accessibilityElementsHidden`, falling back to an explicit value
- * when it is nullish (`??`), and forces `importantForAccessibility` to `'no-hide-descendants'` only when
- * it is strictly `true` (otherwise the explicit value is preserved). The `??` fallback is the legacy
- * superset of the two RN `Text` implementations, so this is correct regardless of which path a given RN
- * version runs.
- *
- * The `View` helper deliberately does NOT reuse this: `View.js` assigns `accessibilityElementsHidden`
- * directly under an `=== undefined` guard (no `??`), so the two diverge for a nullish `aria-hidden` and
- * must stay separate.
+ * Translates Text's ARIA visibility props. The caller applies RN < 0.85's nullish fallback.
  */
 function applyAriaHidden(
   ariaHidden: unknown,
@@ -344,7 +321,7 @@ function applyAriaHidden(
   importantForAccessibility?: unknown
 ): { accessibilityElementsHidden: unknown; importantForAccessibility: unknown } {
   return {
-    accessibilityElementsHidden: ariaHidden ?? accessibilityElementsHidden,
+    accessibilityElementsHidden: ariaHidden === undefined ? accessibilityElementsHidden : ariaHidden,
     importantForAccessibility: ariaHidden === true ? 'no-hide-descendants' : importantForAccessibility,
   };
 }
@@ -375,8 +352,6 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
     ['aria-expanded']: ariaExpanded,
     ['aria-selected']: ariaSelected,
     ['aria-hidden']: ariaHidden,
-    accessibilityElementsHidden,
-    importantForAccessibility,
     accessible,
     disabled,
     ...restProperties
@@ -409,20 +384,25 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
   // Reconcile `disabled` with `accessibilityState.disabled`. When the two are out of sync (and not
   // both falsy) the explicit `disabled` prop wins and is mirrored back into the state object, so the
   // native host receives a consistent value on both fields.
+  const minor = getReactNativeMinor();
+  // RN 0.85 removed the legacy Text path, which copied state and treated aria-hidden null as absent.
+  const legacy = minor !== null && minor < 85;
   const stateDisabled = normalizedState?.disabled;
   const normalizedDisabled = disabled ?? stateDisabled;
   if (
     normalizedDisabled !== stateDisabled &&
     ((normalizedDisabled != null && normalizedDisabled !== false) || (stateDisabled != null && stateDisabled !== false))
   ) {
-    normalizedState = { ...normalizedState, disabled: normalizedDisabled };
+    if (legacy || normalizedState == null) normalizedState = { ...normalizedState, disabled: normalizedDisabled };
+    else normalizedState.disabled = normalizedDisabled;
   }
 
-  // `aria-hidden` → `accessibilityElementsHidden` / `importantForAccessibility`. The explicit native
-  // props are consumed (destructured out of `restProperties`) so `aria-hidden` wins over them, matching
-  // the wrapper; the plugin routes both into this call when `aria-hidden` is present.
   const { accessibilityElementsHidden: normalizedElementsHidden, importantForAccessibility: normalizedImportant } =
-    applyAriaHidden(ariaHidden, accessibilityElementsHidden, importantForAccessibility);
+    applyAriaHidden(
+      legacy && ariaHidden === null ? undefined : ariaHidden,
+      restProperties.accessibilityElementsHidden,
+      restProperties.importantForAccessibility
+    );
 
   // Resolve `accessible` exactly as `Text` does: opt-out on iOS, off by default on Android. The
   // Android pressable case (`onPress`/`onLongPress`) never applies — press handlers bail out of
@@ -433,15 +413,20 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
     default: accessible,
   });
 
-  return {
+  const result: Record<string, unknown> = {
     ...restProperties,
-    accessibilityLabel: normalizedLabel,
-    accessibilityState: normalizedState,
-    accessibilityElementsHidden: normalizedElementsHidden,
-    importantForAccessibility: normalizedImportant,
     accessible: normalizedAccessible,
     disabled: normalizedDisabled,
   };
+  if (legacy || normalizedLabel !== undefined) result.accessibilityLabel = normalizedLabel;
+  if (legacy || normalizedState !== undefined) result.accessibilityState = normalizedState;
+  if (legacy || ariaHidden !== undefined) {
+    result.accessibilityElementsHidden = normalizedElementsHidden;
+  }
+  if (legacy || ariaHidden === true) {
+    result.importantForAccessibility = normalizedImportant;
+  }
+  return result;
 }
 
 /**
@@ -492,9 +477,6 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
   if (parsedAriaLabelledBy !== undefined) result.accessibilityLabelledBy = parsedAriaLabelledBy;
   if (ariaLabel !== undefined) result.accessibilityLabel = ariaLabel;
   if (ariaLive !== undefined) result.accessibilityLiveRegion = ariaLive === 'off' ? 'none' : ariaLive;
-  // Direct assignment under an `!== undefined` guard, matching `View.js` exactly. This is NOT the
-  // `Text` helper's `applyAriaHidden` rule (which uses `??`): the two diverge for a nullish value, so
-  // they must stay separate.
   if (ariaHidden !== undefined) {
     result.accessibilityElementsHidden = ariaHidden;
     if (ariaHidden === true) result.importantForAccessibility = 'no-hide-descendants';

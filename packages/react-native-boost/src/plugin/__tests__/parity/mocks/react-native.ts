@@ -8,7 +8,7 @@ import {
   NativeTextCapturer,
   NativeViewCapturer,
 } from '../capture';
-import { flattenStyle } from '../normalize';
+import flattenStyle from 'react-native/Libraries/StyleSheet/flattenStyle';
 
 // Keep real Text and View wrappers for unoptimized elements so the oracle preserves nested context.
 export { Platform, processColor, Text, View };
@@ -21,11 +21,11 @@ export const Image = Object.assign(NativeImageCapturer, {
 });
 export const ActivityIndicator = NativeActivityIndicatorCapturer;
 
-// `processTextStyle` (the runtime under test) calls `StyleSheet.flatten`, so it must faithfully
-// reproduce RN's flatten semantics — an identity stub would silently break every dynamic-`style` parity
-// comparison (arrays would never merge, the top-level conversions would never fire). It shares the one
-// `flattenStyle` the comparison normalizer uses, so the Boost side flattens identically to the wrapper.
-export const StyleSheet = {
+// Both sides must inspect styles with the installed RN implementation.
+export const StyleSheet: {
+  flatten: typeof import('react-native').StyleSheet.flatten;
+  compose: (first: unknown, second: unknown) => unknown;
+} = {
   flatten: flattenStyle,
   compose: (first: unknown, second: unknown) => (second ? [first, second] : first),
 };

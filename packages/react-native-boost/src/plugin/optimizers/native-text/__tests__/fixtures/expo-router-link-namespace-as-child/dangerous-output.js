@@ -11,7 +11,7 @@ import * as ExpoRouter from 'expo-router';
   </ExpoRouter.Link>
   <ExpoRouter.Link href="/home">
     <_NativeText
-      style={_getDefaultTextStyle()}
+      style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
       allowFontScaling={true}
       ellipsizeMode={'tail'}
       accessible={_getDefaultTextAccessible()}>

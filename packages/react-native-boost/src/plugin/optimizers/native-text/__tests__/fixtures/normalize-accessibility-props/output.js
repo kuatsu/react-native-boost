@@ -9,7 +9,7 @@ import { Text } from 'react-native';
     'aria-label': 'test',
     'accessibilityLabel': 'test',
   })}
-  style={_getDefaultTextStyle()}
+  style={_getDefaultTextStyle() ? [_getDefaultTextStyle(), void 0] : void 0}
   allowFontScaling={true}
   ellipsizeMode={'tail'}
 />;
