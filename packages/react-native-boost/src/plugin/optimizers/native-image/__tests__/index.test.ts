@@ -140,6 +140,19 @@ describe('Image load callbacks', () => {
     ).not.toContain('_NativeImage');
   });
 
+  it.each([83, 84, 85, 86, 87])('matches Android notification defaults without callbacks (RN %s)', async (minor) => {
+    const output = await transformImage(
+      `import {Image, View} from 'react-native'; <View><Image source={{uri:'logo.png'}} /></View>;`,
+      'android',
+      { reactNativeMinor: minor }
+    );
+    const [attributes] = getNativeImageAttributes(output);
+    expect(attributes).toBeDefined();
+    expect(getAttributeNames(attributes).has('shouldNotifyLoadEvents')).toBe(minor <= 84);
+    if (minor <= 84)
+      expect(getAttributeExpression(attributes!, 'shouldNotifyLoadEvents')).toMatchObject({ value: false });
+  });
+
   it.each([83, 84, 85, 86, 87])('keeps Android nullish-only notification omission (RN %s)', async (minor) => {
     const output = await transformImage(
       `import {Image, View} from 'react-native';

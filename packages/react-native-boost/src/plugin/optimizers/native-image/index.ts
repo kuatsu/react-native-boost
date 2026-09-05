@@ -230,7 +230,10 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
   } else {
     processRuntimeImageProps(path, file, platform, reactNativeMinor);
   }
-  if (platform === 'android' && loadCallbacks.length > 0) {
+  if (
+    platform === 'android' &&
+    (loadCallbacks.length > 0 || (reactNativeMinor !== undefined && reactNativeMinor <= 84))
+  ) {
     const legacy = reactNativeMinor !== undefined && reactNativeMinor <= 84;
     if (!legacy) {
       path.node.attributes = path.node.attributes.filter((attribute) => {

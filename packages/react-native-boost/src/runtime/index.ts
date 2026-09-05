@@ -165,7 +165,8 @@ export function processTextStyle(
   }
 
   // The renderer processes every authored entry, then RN's overrides. Do not flatten or cache this shape.
-  const normalizedStyle = overrides ? [style, overrides] : style;
+  // Older RN types exclude recursive readonly arrays, although the renderer accepts them.
+  const normalizedStyle = (overrides ? [style, overrides] : style) as TextProps['style'];
   if (defaultTextStyle) props.style = [defaultTextStyle, normalizedStyle];
   else if (normalizedStyle !== undefined) props.style = normalizedStyle;
   return props;
