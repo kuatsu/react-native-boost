@@ -27,12 +27,133 @@ vi.mock('../../../runtime/components/native-activity-indicator', async () => {
   return { NativeActivityIndicator: NativeActivityIndicatorCapturer };
 });
 
+const accessibilityProps = (props: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(props).filter(
+      ([key]) =>
+        key.startsWith('accessib') ||
+        key.startsWith('aria-') ||
+        key === 'alt' ||
+        key === 'role' ||
+        key === 'disabled' ||
+        key === 'importantForAccessibility'
+    )
+  );
+
 const originalAttributes = { ...attributes };
 afterEach(() => Object.assign(attributes, originalAttributes));
 const wrapper = (props: Record<string, unknown>) => renderAndCaptureSingle(createElement(Text, props, 'label')).props;
 
 for (const platform of ['ios', 'android'] as const) {
   describe(`raw Text parity (${platform})`, () => {
+    it.each([false, true])(
+      'matches static accessibility own keys and renderer updates (compiler=%s)',
+      async (compile) => {
+        const validAttributes = {
+          accessible: true,
+          disabled: true,
+          accessibilityLabel: true,
+          accessibilityLabelledBy: true,
+          accessibilityElementsHidden: true,
+          importantForAccessibility: true,
+          accessibilityState: { busy: true, checked: true, disabled: true, expanded: true, selected: true },
+          accessibilityValue: { min: true, max: true, now: true, text: true },
+        };
+        for (const component of ['Text', 'View', 'Image']) {
+          let previousExpected = {};
+          let previousActual = {};
+          const groups = [
+            'aria-busy={true} aria-selected={false}',
+            'accessibilityState={{disabled:false,extra:"kept?"}}',
+            'accessibilityState={null}',
+            'aria-busy={null} aria-checked={false} accessibilityState={{busy:null, disabled:true, selected:false, extra:"kept?"}}',
+            'aria-busy={undefined} accessibilityState={null}',
+            'aria-busy={null} accessibilityState={undefined}',
+            'aria-busy={false} accessibilityState={{busy:true, checked:null}}',
+            'aria-label={null} accessibilityLabel={null}',
+            'aria-label={undefined} accessibilityLabel="fallback"',
+            'aria-hidden={null} accessibilityElementsHidden={true} importantForAccessibility={null}',
+            'aria-hidden={true} accessible={true} importantForAccessibility="auto"',
+            'aria-hidden={false} accessible={null}',
+            ...(component === 'Text'
+              ? [
+                  'disabled={false} accessibilityState={{disabled:true,extra:"kept"}}',
+                  'disabled={true} accessibilityState={null}',
+                  'disabled={false} accessibilityState={null}',
+                  'aria-busy={true} accessibilityRole={null} role={undefined}',
+                  'aria-busy={true} accessibilityRole="button" role="link"',
+                ]
+              : []),
+            ...(component === 'Image'
+              ? [
+                  'alt={null} accessible={false}',
+                  'alt="fallback" aria-label="winner" aria-hidden={true}',
+                  'aria-labelledby={null} accessibilityLabelledBy={null}',
+                  'aria-labelledby={null} accessibilityLabelledBy={["first","second"]}',
+                ]
+              : []),
+            ...(component === 'View'
+              ? [
+                  'aria-valuenow={0} aria-valuetext={null} accessibilityValue={{min:0,max:10,text:"fallback"}}',
+                  'aria-valuenow={undefined} accessibilityValue={null}',
+                ]
+              : []),
+          ];
+          if (component === 'Text') {
+            for (const disabled of ['null', 'undefined', 'false', 'true'])
+              for (const state of ['null', 'undefined', 'false', 'true'])
+                for (const aria of ['null', 'undefined', 'false', 'true'])
+                  groups.push(
+                    `disabled={${disabled}} accessibilityState={{disabled:${state}}} aria-disabled={${aria}}`
+                  );
+          }
+          for (const group of groups) {
+            const jsx = `<${component} ${component === 'Image' ? 'src="logo.png"' : ''} ${group} />`;
+            const expectedHosts = await captureWrapperHosts(platform, jsx);
+            const expected = expectedHosts[0].props;
+            const result = await captureBoostHosts(platform, jsx, '', true, compile);
+            if (!result.optimized) throw new Error(`${component} must optimize: ${group}`);
+            const actual = result.hosts[0].props;
+            expect(accessibilityProps(actual), `${component} ${group}`).toStrictEqual(accessibilityProps(expected));
+            expect(create(actual, validAttributes)).toStrictEqual(create(expected, validAttributes));
+            expect(diff(previousActual, actual, validAttributes)).toStrictEqual(
+              diff(previousExpected, expected, validAttributes)
+            );
+            previousExpected = expected;
+            previousActual = actual;
+          }
+        }
+      }
+    );
+
+    it('keeps dynamic state identity and prop evaluation order', async () => {
+      const state = { busy: false, disabled: false };
+      const calls: string[] = [];
+      vi.stubGlobal('accessibilityProbe', { state, calls });
+      try {
+        for (const component of ['Text', 'View', 'Image']) {
+          const preamble =
+            'const state=globalThis.accessibilityProbe.state; const effect=name => {globalThis.accessibilityProbe.calls.push(name); return name;};';
+          const jsx = `<${component} ${component === 'Image' ? 'src="logo.png"' : ''} aria-busy={true} accessibilityState={state} testID={effect("testID")} nativeID={effect("nativeID")} />`;
+          calls.length = 0;
+          const expectedHosts = await captureWrapperHosts(platform, jsx, preamble);
+          const expected = expectedHosts[0].props;
+          const expectedCalls = [...calls];
+          calls.length = 0;
+          const result = await captureBoostHosts(platform, jsx, preamble);
+          // View retains its wrapper for the impure neighbors.
+          if (result.optimized) {
+            const actual = result.hosts[0].props;
+            expect(actual.accessibilityState).toStrictEqual(expected.accessibilityState);
+            expect(actual.accessibilityState === state).toBe(expected.accessibilityState === state);
+            expect(calls).toStrictEqual(expectedCalls);
+          } else expect(component).toBe('View');
+        }
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
     it('keeps literal spread string whitespace and entities', async () => {
       for (const component of ['Text', 'View']) {
         const jsx = `<${component} {...{id:"a\\n b &amp;", testID:"a\\n b &amp;"}} />`;

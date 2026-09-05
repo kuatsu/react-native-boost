@@ -18,6 +18,7 @@ import {
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { createJSXOptimizer } from '../../utils/optimizer';
+import { foldAccessibility } from '../../utils/static-accessibility';
 
 /**
  * Props the `View` wrapper destructures and transforms before handing off to its native host. The
@@ -58,7 +59,7 @@ const VIEW_CHILDREN_PROP = new Set(['children']);
 const ARIA_STATE_PROPERTIES = new Set(['aria-busy', 'aria-checked', 'aria-disabled', 'aria-expanded', 'aria-selected']);
 const ARIA_VALUE_PROPERTIES = new Set(['aria-valuemax', 'aria-valuemin', 'aria-valuenow', 'aria-valuetext']);
 
-const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnabled, platform }) => {
+const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnabled, platform, reactNativeMinor }) => {
   if (platform === 'web' && options?.integrations?.uniwind === 'on') return;
   if (!isReactNativeComponent(path, 'View')) return;
 
@@ -100,7 +101,10 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
             (t.isJSXAttribute(attribute) &&
               t.isJSXExpressionContainer(attribute.value) &&
               t.isExpression(attribute.value.expression) &&
-              !path.scope.isPure(attribute.value.expression))
+              !path.scope.isPure(attribute.value.expression) &&
+              !(
+                t.isIdentifier(attribute.value.expression, { name: 'undefined' }) && !path.scope.getBinding('undefined')
+              ))
         ),
     },
     {
@@ -173,7 +177,7 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     return;
   }
 
-  processViewProps(path, file);
+  processViewProps(path, file, platform, reactNativeMinor);
 
   // Keep Unistyles' host so its shadow-tree registration survives.
   const viewHost =
@@ -216,7 +220,12 @@ function hasChildren(path: NodePath<t.JSXOpeningElement>): boolean {
  * Translated props are emitted LAST so they win over any pass-through spread carrying the same native
  * key — mirroring the wrapper, which applies its translations on top of `...otherProps`.
  */
-function processViewProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
+function processViewProps(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  platform?: string,
+  reactNativeMinor?: number
+) {
   const currentAttributes = [...path.node.attributes];
 
   const stateGroupTriggered = currentAttributes.some((attribute) => isAriaStateAttribute(attribute));
@@ -230,9 +239,19 @@ function processViewProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
     if (!t.isJSXAttribute(attribute) || !t.isJSXIdentifier(attribute.name)) continue;
     const name = attribute.name.name;
 
-    // Aggregation groups → route every present member (including a passed base prop) through the
-    // helper, but only when an ARIA sibling forces the merge. A lone `accessibilityState`/
-    // `accessibilityValue` is value-equal to a pass-through after normalization, so it is left alone.
+    if (
+      (name === 'accessibilityState' && !stateGroupTriggered) ||
+      (name === 'accessibilityValue' && !valueGroupTriggered)
+    ) {
+      const folded = foldAccessibility(path, [attribute], 'View', platform, reactNativeMinor);
+      if (folded) {
+        literalReplacements.push(...folded);
+        consumed.add(attribute);
+      }
+      continue;
+    }
+
+    // An ARIA sibling requires the complete state/value group, including the native base prop.
     if ((name === 'accessibilityState' || ARIA_STATE_PROPERTIES.has(name)) && stateGroupTriggered) {
       helperBag.push(attribute);
       consumed.add(attribute);
@@ -281,7 +300,10 @@ function processViewProps(path: NodePath<t.JSXOpeningElement>, file: HubFile) {
   }
 
   const spreadAttributes: t.JSXSpreadAttribute[] = [];
-  if (helperBag.length > 0) {
+  const folded =
+    helperBag.length > 0 ? foldAccessibility(path, helperBag, 'View', platform, reactNativeMinor) : undefined;
+  if (folded) literalReplacements.push(...folded);
+  if (helperBag.length > 0 && !folded) {
     const helperIdentifier = addFileImportHint({
       file,
       nameHint: 'processViewAccessibilityProps',
