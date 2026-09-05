@@ -17,6 +17,32 @@ afterEach(() => {
 });
 
 describe('private Metro graph integration', () => {
+  it.each([false, true])('invalidates spread keys across re-exports (compiler: %s)', async (compile) => {
+    const safe = `export function props(enabled, index) { if (!enabled) return {}; const result = {role: 'cell'}; if (index !== undefined) result['aria-colindex'] = index; return result; }`;
+    const sources = {
+      'Screen.js': `import {View} from 'react-native'; import {props} from './Barrel'; export function Screen({enabled, index}) { return <View {...props(enabled, index)} />; }`,
+      'Barrel.js': `export * from './Props';`,
+      'Props.js': safe,
+    };
+    const project = createGraph(sources, 'Screen.js', {}, compile ? [compiler] : []);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('<_NativeView');
+    expect(project.code()).not.toContain('NativeViewWithContext');
+
+    for (const body of [
+      `return {'aria-label': 'changed'};`,
+      `const result = {}; escape(result); return result;`,
+      `return unknown();`,
+    ]) {
+      sources['Props.js'] = `export function props() { ${body} }`;
+      await project.graph.traverseDependencies([project.filename('Props.js')], project.options);
+      expect(project.code()).not.toContain('react-native-boost/runtime');
+      sources['Props.js'] = safe;
+      await project.graph.traverseDependencies([project.filename('Props.js')], project.options);
+      expect(project.code()).toContain('<_NativeView');
+    }
+  });
+
   it('preserves compiler summaries and resolved import paths across incremental edits', async () => {
     const resolveAliases: PluginObj = {
       visitor: {

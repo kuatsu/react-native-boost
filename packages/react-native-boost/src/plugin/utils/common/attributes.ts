@@ -1,4 +1,5 @@
 import { NodePath, types as t } from '@babel/core';
+import { getCallReturnKeys } from '../returned-props';
 import { ACCESSIBILITY_PROPERTIES } from '../constants';
 import { USER_SELECT_STYLE_TO_SELECTABLE_PROP, VERTICAL_ALIGN_TO_TEXT_ALIGN_VERTICAL } from '../constants';
 
@@ -32,16 +33,19 @@ export const hasBlacklistedProperty = (path: NodePath<t.JSXOpeningElement>, blac
  * ignored. Callers that can rewrite a direct attribute (e.g. the `id` → `nativeID` rename) handle it
  * separately, but still need the conservative spread bail: an unresolvable spread, or a resolvable
  * spread whose object contains a guarded key, could smuggle the prop through untranslated. The spread
- * resolution semantics mirror {@link hasBlacklistedProperty} exactly.
+ * guard accepts proved helper returns; the Text/Image blacklist checks still reject those calls.
  *
  * @param path - The path to the JSXOpeningElement.
  * @param keys - The set of guarded keys.
  * @returns true if any spread attribute could contribute one of `keys`.
  */
 export const hasBlacklistedPropertyInSpread = (path: NodePath<t.JSXOpeningElement>, keys: Set<string>): boolean =>
-  path.node.attributes.some(
-    (attribute) => t.isJSXSpreadAttribute(attribute) && spreadMayContainProperty(path, attribute.argument, keys)
-  );
+  path.node.attributes.some((attribute) => {
+    if (!t.isJSXSpreadAttribute(attribute)) return false;
+    if (!t.isCallExpression(attribute.argument)) return spreadMayContainProperty(path, attribute.argument, keys);
+    const returnedKeys = getCallReturnKeys(path, attribute.argument);
+    return returnedKeys === null || returnedKeys.some((key) => keys.has(key));
+  });
 
 function spreadMayContainProperty(
   path: NodePath<t.JSXOpeningElement>,

@@ -7,9 +7,14 @@ export type AncestorSummary =
   | { kind: 'import'; source: string; imported: string }
   | { kind: 'ancestors' | 'branches'; values: AncestorSummary[] };
 
+export type SpreadKeys = string[] | null;
+export type SpreadSummary = SpreadKeys | { kind: 'import'; source: string; imported: string };
+
 export interface ModuleAncestorAnalysis {
   exports: Record<string, AncestorSummary>;
   exportAll: string[];
+  spreadExports?: Record<string, SpreadSummary>;
+  spreadReferences?: Array<{ source: string; imported: string; keys: SpreadKeys }>;
   /** Import paths after Babel's module resolver, keyed by their pre-compiler spelling. */
   sources?: Record<string, string>;
   /** The values used by Babel let Metro skip transforms whose ancestor inputs did not change. */
@@ -20,4 +25,5 @@ export interface AncestorSnapshot {
   version: 1;
   revision: number;
   platforms: Record<string, Record<string, Record<string, Record<string, ComponentAncestorClassification>>>>;
+  spreadPlatforms?: Record<string, Record<string, Record<string, Record<string, SpreadKeys>>>>;
 }

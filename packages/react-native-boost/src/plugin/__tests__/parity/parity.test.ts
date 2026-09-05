@@ -535,6 +535,37 @@ describe('differential parity', () => {
       expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
+    it.each([false, true])('evaluates spread helpers once, in place (compiler: %s)', async (compile) => {
+      const calls: string[] = [];
+      vi.stubGlobal('recordSpreadCall', (value: string) => {
+        calls.push(value);
+        return value;
+      });
+      try {
+        const jsx = '<View testID={recordSpreadCall("first")} {...getProps()} nativeID={recordSpreadCall("last")} />';
+        const preamble = `function getProps() { recordSpreadCall('spread'); const props = {testID: 'cell'}; props.nativeID = 'from-spread'; return props; }`;
+        const wrapper = await captureWrapperHosts(os, jsx, preamble);
+        expect(calls).toEqual(['first', 'spread', 'last']);
+        calls.length = 0;
+        const boost = await captureBoostHosts(os, jsx, preamble, false, compile);
+        if (!boost.optimized) throw new Error('expected a proved spread');
+        expect(calls).toEqual(['first', 'spread', 'last']);
+        expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
+      } finally {
+        Reflect.deleteProperty(globalThis, 'recordSpreadCall');
+      }
+    });
+
+    it.each([false, true])('preserves spread-provided children under Text (compiler: %s)', async (compile) => {
+      const jsx = '<Text><View {...getProps()} /></Text>';
+      const preamble = `function getProps() { return {children: <Text>cell</Text>}; }`;
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      const boost = await captureBoostHosts(os, jsx, preamble, false, compile);
+      if (!boost.optimized) throw new Error('expected a context-preserving View');
+      expect(boost.hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeView', 'NativeText']);
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
+    });
+
     it('preserves View context directly under Text', async () => {
       const jsx = '<Text><View aria-label="box"><Text>label</Text></View></Text>';
       const wrapper = await captureWrapperHosts(os, jsx);

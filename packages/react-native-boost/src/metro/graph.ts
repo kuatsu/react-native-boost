@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { isDeepStrictEqual } from 'node:util';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import type {
@@ -6,6 +7,7 @@ import type {
   AncestorSummary,
   ComponentAncestorClassification,
   ModuleAncestorAnalysis,
+  SpreadKeys,
 } from '../ancestor-types';
 
 const patchProperty = '__reactNativeBoostGraphPatch';
@@ -29,6 +31,7 @@ type ConsumerImports = Record<string, Record<string, Record<string, ComponentAnc
 
 type ResolvedGraph = {
   consumers: ConsumerImports;
+  spreadConsumers: Record<string, Record<string, Record<string, SpreadKeys>>>;
   staleConsumers: string[];
 };
 
@@ -38,6 +41,7 @@ type Adapter = {
   revision: number;
   snapshotPath: string;
   platforms: AncestorSnapshot['platforms'];
+  spreadPlatforms: NonNullable<AncestorSnapshot['spreadPlatforms']>;
 };
 
 type Patch = {
@@ -76,7 +80,7 @@ export function installMetroGraphPatch(
   }
 
   if (patch.adapters.some((adapter) => adapter.injectionId === options.injectionId)) return;
-  patch.adapters.push({ ...options, queue: Promise.resolve(), revision: 0, platforms: {} });
+  patch.adapters.push({ ...options, queue: Promise.resolve(), revision: 0, platforms: {}, spreadPlatforms: {} });
 
   async function patchedInitialTraverse(this: MetroGraph, transformOptions: unknown): Promise<MetroDelta> {
     const activePatch = Graph![patchProperty]!;
@@ -108,8 +112,8 @@ async function updateAncestors(
 
   return runExclusive(adapter, async () => {
     while (true) {
-      const { consumers, staleConsumers } = resolveGraph(graph, adapter.injectionId);
-      writeSnapshot(adapter, graph.transformOptions?.platform, consumers);
+      const { consumers, spreadConsumers, staleConsumers } = resolveGraph(graph, adapter.injectionId);
+      writeSnapshot(adapter, graph.transformOptions?.platform, consumers, spreadConsumers);
       if (staleConsumers.length === 0) return result;
 
       markTransformResultsStale(graph, staleConsumers, adapter.revision);
@@ -121,11 +125,12 @@ async function updateAncestors(
 
 export function resolveGraph(graph: MetroGraph, injectionId: string): ResolvedGraph {
   const consumers: ConsumerImports = {};
+  const spreadConsumers: ResolvedGraph['spreadConsumers'] = {};
   const staleConsumers: string[] = [];
 
   for (const [consumerPath, module] of graph.dependencies) {
     const analysis = getAnalysis(module, injectionId);
-    if (!analysis || analysis.references.length === 0) continue;
+    if (!analysis || (analysis.references.length === 0 && !analysis.spreadReferences?.length)) continue;
 
     const imports = Object.create(null) as ConsumerImports[string];
     let stale = false;
@@ -142,10 +147,18 @@ export function resolveGraph(graph: MetroGraph, injectionId: string): ResolvedGr
       if (classification !== reference.classification) stale = true;
     }
     consumers[consumerPath] = imports;
+    for (const reference of analysis.spreadReferences ?? []) {
+      const target = findDependency(module, reference.source, injectionId);
+      const keys = target ? resolveSpreadExport(graph, target, reference.imported, injectionId, new Set()).keys : null;
+      ((spreadConsumers[consumerPath] ??= Object.create(null))[reference.source] ??= Object.create(null))[
+        reference.imported
+      ] = keys;
+      if (!isDeepStrictEqual(keys, reference.keys)) stale = true;
+    }
     if (stale) staleConsumers.push(consumerPath);
   }
 
-  return { consumers, staleConsumers };
+  return { consumers, spreadConsumers, staleConsumers };
 }
 
 function resolveImport(
@@ -214,6 +227,41 @@ function evaluateSummary(
   return values.every((value) => value === values[0]) ? values[0]! : 'context';
 }
 
+function resolveSpreadExport(
+  graph: MetroGraph,
+  modulePath: string,
+  exported: string,
+  injectionId: string,
+  visiting: Set<string>
+): { found: boolean; keys: SpreadKeys } {
+  const key = `${modulePath}\0${exported}`;
+  if (visiting.has(key)) return { found: true, keys: null };
+  const module = graph.dependencies.get(modulePath);
+  const analysis = getAnalysis(module, injectionId);
+  if (!analysis) return { found: false, keys: null };
+  visiting.add(key);
+  const follow = (source: string, imported: string) => {
+    const target = findDependency(module, source, injectionId);
+    return target ? resolveSpreadExport(graph, target, imported, injectionId, visiting) : { found: false, keys: null };
+  };
+  const summary = analysis.spreadExports?.[exported];
+  let result: { found: boolean; keys: SpreadKeys };
+  if (summary === undefined) {
+    const matches =
+      exported === 'default'
+        ? []
+        : analysis.exportAll.map((source) => follow(source, exported)).filter((entry) => entry.found);
+    result = matches.length === 1 ? matches[0]! : { found: matches.length > 0, keys: null };
+  } else {
+    result = {
+      found: true,
+      keys: summary === null || Array.isArray(summary) ? summary : follow(summary.source, summary.imported).keys,
+    };
+  }
+  visiting.delete(key);
+  return result;
+}
+
 function findDependency(module: MetroModule | undefined, source: string, injectionId: string): string | undefined {
   source = getAnalysis(module, injectionId)?.sources?.[source] ?? source;
   let resolved: string | undefined;
@@ -248,12 +296,19 @@ function runExclusive<T>(adapter: Adapter, operation: () => Promise<T>): Promise
   return result;
 }
 
-function writeSnapshot(adapter: Adapter, platform: string | undefined, consumers: ConsumerImports): void {
+function writeSnapshot(
+  adapter: Adapter,
+  platform: string | undefined,
+  consumers: ConsumerImports,
+  spreads: ResolvedGraph['spreadConsumers']
+): void {
   adapter.platforms[platform ?? ''] = consumers;
+  adapter.spreadPlatforms[platform ?? ''] = spreads;
   const snapshot: AncestorSnapshot = {
     version: 1,
     revision: ++adapter.revision,
     platforms: adapter.platforms,
+    spreadPlatforms: adapter.spreadPlatforms,
   };
   const temporaryPath = `${adapter.snapshotPath}.${process.pid}.${adapter.revision}`;
   fs.mkdirSync(path.dirname(adapter.snapshotPath), { recursive: true });

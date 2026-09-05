@@ -1,6 +1,6 @@
 import type { NodePath, PluginObj, PluginPass } from '@babel/core';
 import { types as t } from '@babel/core';
-import type { ComponentAncestorClassification, ModuleAncestorAnalysis } from '../../ancestor-types';
+import type { ComponentAncestorClassification, ModuleAncestorAnalysis, SpreadKeys } from '../../ancestor-types';
 
 export type OptimizationState = 'on' | 'off';
 
@@ -162,6 +162,8 @@ export type HubFile = t.File & {
     caller?: { platform?: string };
   };
   __ancestorAnalysis?: ModuleAncestorAnalysis;
+  __spreadImports?: Record<string, Record<string, SpreadKeys>>;
+  __spreadReferences?: Map<string, NonNullable<ModuleAncestorAnalysis['spreadReferences']>[number]>;
   __ancestorImports?: Record<string, Record<string, ComponentAncestorClassification>>;
   __ancestorReferences?: Map<string, ModuleAncestorAnalysis['references'][number]>;
   __hasImports?: Record<string, t.Identifier>;
