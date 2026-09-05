@@ -9,7 +9,7 @@
     "preandroid": "node scripts/gen-unoptimized.mjs",
     "preios": "node scripts/gen-unoptimized.mjs",
     "preweb": "node scripts/gen-unoptimized.mjs",
-    "pretypecheck": "node scripts/gen-unoptimized.mjs",
+    "pretypecheck": "pnpm --filter react-native-boost build && node scripts/gen-unoptimized.mjs",
     "typecheck": "tsc --noEmit",
     "start": "expo start",
     "dev": "expo start",
