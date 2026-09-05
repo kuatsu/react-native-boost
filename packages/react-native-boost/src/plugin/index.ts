@@ -14,7 +14,7 @@ import type {
 } from './types';
 import { createLogger } from './utils/logger';
 import { nativeViewOptimizer } from './optimizers/native-view';
-import { analyzeAncestorModule, isIgnoredFile } from './utils/common';
+import { analyzeAncestorModule, createFileIgnoreMatcher } from './utils/common';
 import { isUnistylesInstalled } from './utils/unistyles';
 import { nativeActivityIndicatorOptimizer } from './optimizers/native-activity-indicator';
 import { animatedValueInitializationOptimizer } from './optimizers/animated-value-initialization';
@@ -79,6 +79,7 @@ export default declare((api, rawOptions, dirname?: string) => {
 
   const options = validatePluginOptions(stripInternalOptions(rawOptions ?? {}));
   const logger = createLogger(options.logLevel ?? 'info');
+  const isIgnoredFile = createFileIgnoreMatcher(options.ignores ?? []);
   const platform = normalizeTargetPlatform(caller.platform);
   const configuredTarget = options.target?.reactNative;
   let targetResolution: ReactNativeTargetResolution | undefined = configuredTarget
@@ -137,11 +138,11 @@ export default declare((api, rawOptions, dirname?: string) => {
       if (injectionId) (file.metadata as Record<string, unknown>).reactNativeBoost = { injectionId };
 
       const hubFile = file as unknown as HubFile;
-      if (snapshotPath) {
+      const ignored = isIgnoredFile(hubFile);
+      if (snapshotPath && !ignored) {
         hubFile.__ancestorImports = readAncestorImports(snapshotPath, projectRoot, hubFile.opts.filename, platform);
         hubFile.__ancestorReferences = new Map();
       }
-      const ignored = isIgnoredFile(hubFile, options.ignores ?? []);
       const reactNativeMinor = ignored ? undefined : resolveReactNativeMinor(hubFile);
       if (!ignored && !colorNormalizerResolved) {
         normalizeColor = loadReactNativeColorNormalizer(targetResolution?.target?.packageJson);

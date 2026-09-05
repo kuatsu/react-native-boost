@@ -22,7 +22,6 @@ import {
   extractSelectableAndUpdateStyle,
   tryBuildStaticTextStyle,
   ancestorBailoutChecks,
-  inheritsTextContextFromRuntimeParent,
   createStyleOriginResolver,
   UNISTYLES_TEXT_HOST,
 } from '../../utils/common';
@@ -126,11 +125,6 @@ const optimizeNativeText: JSXOptimizer = (
     {
       reason: 'contains non-primitive children',
       shouldBail: () => hasInvalidChildren(path, parent),
-    },
-    {
-      reason: 'has unresolved runtime parent that may render Text',
-      shouldBail: () =>
-        options?.assumptions?.unknownAncestorsDoNotRenderText !== true && inheritsTextContextFromRuntimeParent(path),
     },
     ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
   ];
