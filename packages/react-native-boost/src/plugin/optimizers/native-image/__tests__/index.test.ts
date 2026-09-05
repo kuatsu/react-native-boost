@@ -702,15 +702,18 @@ const imageSource = (value: string) => `
   `;
 
 describe('image nullable accessible', () => {
-  it.each(['maybeAccessible', 'null'])(
-    'routes accessible={%s} through the runtime helper on Android',
-    async (value) => {
-      const output = await transformImage(imageSource(value), 'android');
+  it.each(['maybeAccessible'])('routes accessible={%s} through the runtime helper on Android', async (value) => {
+    const output = await transformImage(imageSource(value), 'android');
 
-      expect(output).toContain('processImageAccessibilityProps');
-      expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(false);
-    }
-  );
+    expect(output).toContain('processImageAccessibilityProps');
+    expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(false);
+  });
+
+  it('omits a static null accessible without a helper on Android', async () => {
+    const output = await transformImage(imageSource('null'), 'android');
+    expect(output).not.toContain('processImageAccessibilityProps');
+    expect(getAttributeNames(getNativeImageAttributes(output)[0]).has('accessible')).toBe(false);
+  });
 
   it('keeps a provably non-nullish accessible inline on Android', async () => {
     const output = await transformImage(imageSource('false'), 'android');

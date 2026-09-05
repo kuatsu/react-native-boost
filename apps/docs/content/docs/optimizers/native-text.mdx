@@ -27,9 +27,7 @@ The optimizer can usually replace a `Text` when:
 
 Direct accessibility props, `id`, `numberOfLines`, `selectionColor`, and supported text styles are normalized before the wrapper is removed.
 
-<Callout type="warn" title="Do not mutate dynamic styles">
-  Boost caches dynamic `Text` style processing by object identity. Pass a new style object when values change (which is best practice anyway), or use [`@boost-ignore`](/docs/configuration/boost-decorator#boost-ignore) for mutable styles.
-</Callout>
+Boost preserves authored style entries and React Native's override order so public style preprocessors receive the same inputs. Dynamic styles are inspected on each call, without an identity cache.
 
 ## When it skips
 
@@ -41,6 +39,7 @@ Boost keeps the `Text` wrapper when it finds:
 - An unknown parent or runtime caller that might place it inside a `Text`.
 - A spread that might contain props Boost must convert.
 - A dynamic `id` together with `nativeID`, where their precedence is unclear.
+- Disabled-state reconciliation that could mutate a shared accessibility state object before React renders the `Text`.
 - An `expo-router` `Link` with `asChild`, which makes its child pressable.
 - An unknown style source while Unistyles support is active.
 

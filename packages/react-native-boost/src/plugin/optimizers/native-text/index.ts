@@ -28,6 +28,7 @@ import {
 } from '../../utils/common';
 import { ACCESSIBILITY_PROPERTIES, RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { createJSXOptimizer } from '../../utils/optimizer';
+import { foldAccessibility } from '../../utils/static-accessibility';
 
 export const textBlacklistedProperties = new Set([
   'onLongPress',
@@ -115,7 +116,14 @@ const optimizeNativeText: JSXOptimizer = (
         platform !== 'web' &&
         options?.integrations?.uniwind !== 'on' &&
         (reactNativeMinor === undefined || reactNativeMinor >= 85) &&
-        mayMutateCallerState(path),
+        mayMutateCallerState(path) &&
+        foldAccessibility(
+          path,
+          path.node.attributes.filter(isNormalizedProperty),
+          'Text',
+          platform,
+          reactNativeMinor
+        ) === undefined,
     },
     {
       reason: 'has an unresolved style source that may be a Unistyles style',
@@ -352,22 +360,39 @@ function processProps(
   // ============================================
 
   let accessibilitySpread: t.JSXSpreadAttribute | undefined;
+  let accessibilityAttributes: t.JSXAttribute[] | undefined;
 
   // --- Accessibility & `disabled` ---
   if (shouldNormalize) {
     const normalizedAttributes = currentAttributes.filter((attribute) => isNormalizedProperty(attribute));
 
-    const normalizeIdentifier = addFileImportHint({
-      file,
-      nameHint: 'processTextAccessibilityProps',
+    accessibilityAttributes = foldAccessibility(
       path,
-      importName: 'processTextAccessibilityProps',
-      moduleName: RUNTIME_MODULE_NAME,
-    });
+      currentAttributes.filter(
+        (attribute): attribute is t.JSXAttribute =>
+          t.isJSXAttribute(attribute) &&
+          t.isJSXIdentifier(attribute.name) &&
+          (NORMALIZED_PROPERTIES.has(attribute.name.name) ||
+            attribute.name.name === 'role' ||
+            attribute.name.name === 'accessibilityRole')
+      ),
+      'Text',
+      platform,
+      reactNativeMinor
+    );
+    if (!accessibilityAttributes) {
+      const normalizeIdentifier = addFileImportHint({
+        file,
+        nameHint: 'processTextAccessibilityProps',
+        path,
+        importName: 'processTextAccessibilityProps',
+        moduleName: RUNTIME_MODULE_NAME,
+      });
 
-    const accessibilityObject = buildPropertiesFromAttributes(normalizedAttributes);
-    const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
-    accessibilitySpread = t.jsxSpreadAttribute(accessibilityExpr);
+      const accessibilityObject = buildPropertiesFromAttributes(normalizedAttributes);
+      const accessibilityExpr = t.callExpression(t.identifier(normalizeIdentifier.name), [accessibilityObject]);
+      accessibilitySpread = t.jsxSpreadAttribute(accessibilityExpr);
+    }
   }
 
   // --- Style ---
@@ -501,6 +526,13 @@ function processProps(
 
     // Skip the props we routed through `processTextAccessibilityProps`
     if (shouldNormalize && isNormalizedProperty(attribute)) continue;
+    if (
+      accessibilityAttributes &&
+      t.isJSXAttribute(attribute) &&
+      t.isJSXIdentifier(attribute.name) &&
+      (attribute.name.name === 'role' || attribute.name.name === 'accessibilityRole')
+    )
+      continue;
 
     // Skip the selectionColor attribute after preparing its replacement.
     if (selectionColorAttribute && attribute === selectionColorAttribute) continue;
@@ -538,6 +570,7 @@ function processProps(
   path.node.attributes = [
     selectionColorReplacement,
     accessibilitySpread,
+    ...(accessibilityAttributes ?? []),
     staticStyleAttribute,
     ...remainingAttributes,
     selectableAttribute,

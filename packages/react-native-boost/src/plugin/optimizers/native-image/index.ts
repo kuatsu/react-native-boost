@@ -19,6 +19,7 @@ import {
 } from '../../utils/common';
 import { RUNTIME_MODULE_NAME } from '../../utils/constants';
 import { createJSXOptimizer } from '../../utils/optimizer';
+import { foldAccessibility } from '../../utils/static-accessibility';
 
 const IMAGE_LOAD_CALLBACKS = new Set(['onLoadStart', 'onLoad', 'onLoadEnd', 'onError']);
 
@@ -227,7 +228,7 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
   if (nativeSource && styleInfo !== null) {
     processImageProps(path, file, nativeSource, styleInfo, platform, reactNativeMinor);
   } else {
-    processRuntimeImageProps(path, file, platform);
+    processRuntimeImageProps(path, file, platform, reactNativeMinor);
   }
   if (platform === 'android' && loadCallbacks.length > 0) {
     const legacy = reactNativeMinor !== undefined && reactNativeMinor <= 84;
@@ -289,7 +290,7 @@ type StyleInfo = {
 
 type ImageAccessibilityInfo = {
   attributes: t.JSXAttribute[];
-  spreadAttribute: t.JSXSpreadAttribute;
+  replacements: (t.JSXAttribute | t.JSXSpreadAttribute)[];
 };
 
 type RuntimeImageInfo = {
@@ -305,7 +306,7 @@ function processImageProps(
   platform?: string,
   reactNativeMinor?: number
 ) {
-  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform);
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform, reactNativeMinor);
   const consumed = new Set<t.JSXAttribute>([
     ...nativeSource.sourceAttributes,
     ...nativeSource.requestHeaderAttributes,
@@ -351,7 +352,7 @@ function processImageProps(
 
   path.node.attributes = [
     ...remaining,
-    accessibilityInfo?.spreadAttribute,
+    ...(accessibilityInfo?.replacements ?? []),
     makeAttribute('style', buildStyle(nativeSource, styleInfo, includesDimensions, arrayDimensionsGate)),
     makeAttribute('source', hoistStaticImageSource(path, file, nativeSource.sourceArray)),
     androidHeaders ? makeAttribute('headers', androidHeaders) : undefined,
@@ -392,8 +393,13 @@ function addRuntimeHelper(path: NodePath<t.JSXOpeningElement>, file: HubFile, im
   );
 }
 
-function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: HubFile, platform?: string) {
-  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform);
+function processRuntimeImageProps(
+  path: NodePath<t.JSXOpeningElement>,
+  file: HubFile,
+  platform?: string,
+  reactNativeMinor?: number
+) {
+  const accessibilityInfo = buildImageAccessibilityInfo(path, file, platform, reactNativeMinor);
   const runtimeInfo = buildRuntimeImageInfo(path, file);
   if (!runtimeInfo) return;
 
@@ -403,7 +409,7 @@ function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: Hub
     (attribute) => !t.isJSXAttribute(attribute) || !consumed.has(attribute)
   );
 
-  path.node.attributes = [...remaining, accessibilityInfo?.spreadAttribute, runtimeInfo.spreadAttribute].filter(
+  path.node.attributes = [...remaining, ...(accessibilityInfo?.replacements ?? []), runtimeInfo.spreadAttribute].filter(
     (attribute): attribute is t.JSXAttribute | t.JSXSpreadAttribute => attribute !== undefined
   );
 }
@@ -411,8 +417,29 @@ function processRuntimeImageProps(path: NodePath<t.JSXOpeningElement>, file: Hub
 function buildImageAccessibilityInfo(
   path: NodePath<t.JSXOpeningElement>,
   file: HubFile,
-  platform?: string
+  platform?: string,
+  reactNativeMinor?: number
 ): ImageAccessibilityInfo | undefined {
+  const groupNames = new Set([
+    ...IMAGE_ARIA_STATE_PROPS,
+    'alt',
+    'accessible',
+    'accessibilityLabel',
+    'accessibilityLabelledBy',
+    'accessibilityState',
+    'importantForAccessibility',
+    'aria-hidden',
+    'aria-label',
+    'aria-labelledby',
+  ]);
+  const group = path.node.attributes.filter(
+    (attribute): attribute is t.JSXAttribute =>
+      t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && groupNames.has(attribute.name.name)
+  );
+  if (group.length > 0) {
+    const folded = foldAccessibility(path, group, 'Image', platform, reactNativeMinor);
+    if (folded) return { attributes: group, replacements: folded };
+  }
   const directNames = getDirectAttributeNames(path.node.attributes);
   const hasAlt = directNames.has('alt');
   const hasLabelTrigger = hasAlt || directNames.has('aria-label');
@@ -470,9 +497,11 @@ function buildImageAccessibilityInfo(
 
   return {
     attributes,
-    spreadAttribute: t.jsxSpreadAttribute(
-      t.callExpression(t.identifier(helperIdentifier.name), [buildPropertiesFromAttributes(attributes)])
-    ),
+    replacements: [
+      t.jsxSpreadAttribute(
+        t.callExpression(t.identifier(helperIdentifier.name), [buildPropertiesFromAttributes(attributes)])
+      ),
+    ],
   };
 }
 
