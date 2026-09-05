@@ -497,6 +497,36 @@ describe('differential parity', () => {
       expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
     });
 
+    it.each([
+      ['Text', true],
+      ['Text', false],
+      ['View', true],
+      ['View', false],
+    ])('preserves View context under %s with conditional Text: %s', async (parent, inline) => {
+      const jsx = `<${parent}><Parent inline={${inline}}><View aria-label="box"><Text>label</Text></View></Parent></${parent}>`;
+      const preamble = `function Parent({children, inline}) {
+        if (inline) return <Text>{children}</Text>;
+        return children;
+      }`;
+      const wrapper = await captureWrapperHosts(os, jsx, preamble);
+      const boost = await captureBoostHosts(os, jsx, preamble, false);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected a context-preserving View');
+      expect(boost.hosts.map((host) => host.which)).toEqual(wrapper.map((host) => host.which));
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
+      expect(wrapper.at(-1)?.which).toBe('NativeText');
+    });
+
+    it('preserves View context directly under Text', async () => {
+      const jsx = '<Text><View aria-label="box"><Text>label</Text></View></Text>';
+      const wrapper = await captureWrapperHosts(os, jsx);
+      const boost = await captureBoostHosts(os, jsx, '', false);
+      expect(boost.optimized).toBe(true);
+      if (!boost.optimized) throw new Error('expected a context-preserving View');
+      expect(boost.hosts.map((host) => host.which)).toEqual(['NativeText', 'NativeView', 'NativeText']);
+      expect(boost.hosts.map((host) => normalize(host.props))).toEqual(wrapper.map((host) => normalize(host.props)));
+    });
+
     it('optimizes ActivityIndicator when an unknown ancestor provides Text context', async () => {
       const jsx = '<UnknownTextWrapper><ActivityIndicator /></UnknownTextWrapper>';
       const wrapper = await captureWrapperHosts(os, jsx, UNKNOWN_TEXT_WRAPPER_PREAMBLE);

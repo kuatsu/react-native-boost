@@ -1,5 +1,6 @@
 import Platform from './Platform';
 import View from 'react-native/Libraries/Components/View/View';
+import Text from 'react-native/Libraries/Text/Text';
 import processColor from 'react-native/Libraries/StyleSheet/processColor';
 import {
   NativeActivityIndicatorCapturer,
@@ -9,15 +10,11 @@ import {
 } from '../capture';
 import { flattenStyle } from '../normalize';
 
-// Bare-specifier `react-native` surface for the Boost side. It backs the runtime index's
-// `import { StyleSheet, processColor } from 'react-native'` plus the dead leftover `import { Text, View }`
-// the plugin leaves in generated code. The host components resolve to the shared capturers so any path
-// that bottoms out here is still captured.
-export { Platform, processColor, View };
+// Keep real Text and View wrappers for unoptimized elements so the oracle preserves nested context.
+export { Platform, processColor, Text, View };
 export { default as unstable_TextAncestorContext } from 'react-native/Libraries/Text/TextAncestorContext';
 export const unstable_NativeText = NativeTextCapturer;
 export const unstable_NativeView = NativeViewCapturer;
-export const Text = NativeTextCapturer;
 export const Animated = { Text, View };
 export const Image = Object.assign(NativeImageCapturer, {
   resolveAssetSource: <T>(source: T): T => source,

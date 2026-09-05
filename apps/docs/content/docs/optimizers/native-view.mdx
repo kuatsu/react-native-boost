@@ -3,9 +3,7 @@ title: Native View
 description: How Boost removes the React Native View wrapper and when it keeps it.
 ---
 
-The Native View optimizer replaces React Native's `View` component, which is a JavaScript-based wrapper component, with its native host component.
-
-Before it removes the wrapper, Boost converts the convenience props that React Native normally handles during every render. This includes accessibility props, `tabIndex`, and `id`.
+The Native View optimizer replaces React Native's `View` wrapper with its native host component. It converts props such as accessibility attributes, `tabIndex`, and `id` to preserve their behavior.
 
 ```tsx
 // Before
@@ -15,40 +13,25 @@ Before it removes the wrapper, Boost converts the convenience props that React N
 <NativeView accessibilityLabel="Profile" nativeID="profile" />
 ```
 
-Static values are converted at build time. Dynamic direct values use minimal runtime helpers.
+Static values are converted at build time. Dynamic values use minimal runtime helpers where needed.
 
-## Runtime text context
+## Nested components
 
-A component can return a `View` without knowing its runtime parent. If the other checks pass, Boost uses a small context-preserving wrapper:
+In order to optimize a `View` into a `NativeView`, Boost needs to classify its ancestors. If it has an ancestor that is a `Text` or `TextInput` (or Boost is not sure if it has), the native host component cannot be used directly. In these cases, Boost still tries to perform a partial optimization by using a small wrapper that preserves text context instead of the full View wrapper.
 
-```tsx
-const Box = ({ children }) => <NativeViewWithContext>{children}</NativeViewWithContext>;
-```
+Boost recognizes common parents such as `Pressable`, `TouchableOpacity`, and `ImageBackground` as safe ancestors for optimization. It also recognizes `Animated.View` from React Native and Reanimated without removing animation behavior.
 
-This preserves child behavior without the full View prop-processing work. Proven safe paths still use `NativeView` directly.
-
-## When it runs
-
-The optimizer can usually replace a `View` when:
-
-- It is imported from `react-native`.
-- It is not inside a `Text`.
-- Boost can determine its ancestor context, or preserve its runtime parent context.
-- Any props that need conversion are written directly on the element.
 
 ## When it skips
 
-Boost keeps the `View` wrapper when it finds:
+Boost keeps the original `View` when it cannot preserve behavior. Common reasons include:
 
-- A spread that might contain accessibility props, `tabIndex`, or `id`.
-- A dynamic `id` together with `nativeID`, where their precedence is unclear.
-- Prop conversion might change expression evaluation order.
-- A parent `Text`.
-- An unknown ancestor that might render a `Text` around its children.
-- A Unistyles-styled View with children and an unresolved runtime parent.
-- An unknown style source while Unistyles support is active.
+- A parent might inspect or change its children. This includes unknown custom parents and some scroll, list, and touchable components.
+- A prop spread might contain values that need conversion.
+- Prop conversion could change evaluation order or precedence.
+- Unistyles styles or parent context cannot be resolved.
 
-If your project guarantees that unknown ancestors never add a text context, you can use [`unknownAncestorsDoNotRenderText`](/docs/configuration/configure#plugin-assumptions-unknownancestorsdonotrendertext) to increase optimization coverage.
+If your project guarantees that unknown parents never add text context, [`unknownAncestorsDoNotRenderText`](/docs/configuration/configure#plugin-assumptions-unknownancestorsdonotrendertext) can increase coverage. Enable it only when that guarantee holds.
 
 ## Configuration
 

@@ -12,7 +12,7 @@ import {
   isIgnoredLine,
   isReactNativeComponent,
   replaceWithNativeComponent,
-  ancestorBailoutChecks,
+  getAncestorClassification,
   inheritsTextContextFromRuntimeParent,
   createStyleOriginResolver,
   makeAttribute,
@@ -71,10 +71,12 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
   const getStyleOrigin = createStyleOriginResolver(path, unistylesEnabled);
 
   const spreadGuardKeys = unistylesEnabled ? VIEW_SPREAD_GUARD_KEYS_UNISTYLES : VIEW_SPREAD_GUARD_KEYS;
+  const ancestor = getAncestorClassification(path);
+  const hasVariableTextContext = ancestor === 'text' || ancestor === 'context';
   const needsRuntimeTextContext = () =>
-    options?.assumptions?.unknownAncestorsDoNotRenderText !== true &&
     hasChildren(path) &&
-    inheritsTextContextFromRuntimeParent(path);
+    (hasVariableTextContext ||
+      (options?.assumptions?.unknownAncestorsDoNotRenderText !== true && inheritsTextContextFromRuntimeParent(path)));
 
   const overridableChecks: BailoutCheck[] = [
     {
@@ -111,9 +113,12 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     },
     {
       reason: 'has unresolved runtime parent that may render Text',
-      shouldBail: () => getStyleOrigin() === 'unistyles' && needsRuntimeTextContext(),
+      shouldBail: () => getStyleOrigin() === 'unistyles' && (hasVariableTextContext || needsRuntimeTextContext()),
     },
-    ...ancestorBailoutChecks(path, options?.assumptions?.unknownAncestorsDoNotRenderText === true),
+    {
+      reason: 'has unresolved ancestor that may inspect or change children',
+      shouldBail: () => ancestor === 'unknown' && options?.assumptions?.unknownAncestorsDoNotRenderText !== true,
+    },
   ];
 
   if (forced) {

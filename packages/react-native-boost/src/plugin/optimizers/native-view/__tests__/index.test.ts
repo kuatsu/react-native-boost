@@ -29,6 +29,11 @@ pluginTester({
       fixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/code.js'),
       outputFixture: path.resolve(import.meta.dirname, 'fixtures/unknown-imported-ancestor/dangerous-output.js'),
     },
+    {
+      title: 'still preserves known Text context when the assumption is enabled',
+      fixture: path.resolve(import.meta.dirname, 'fixtures/text-ancestor/code.js'),
+      outputFixture: path.resolve(import.meta.dirname, 'fixtures/text-ancestor/output.js'),
+    },
   ],
 });
 

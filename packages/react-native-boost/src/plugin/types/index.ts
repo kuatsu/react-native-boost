@@ -151,6 +151,7 @@ export type JSXOptimizer = (path: NodePath<t.JSXOpeningElement>, context: Optimi
 export type HubFile = t.File & {
   opts: {
     filename: string;
+    caller?: { platform?: string };
   };
   __ancestorAnalysis?: ModuleAncestorAnalysis;
   __ancestorImports?: Record<string, Record<string, ComponentAncestorClassification>>;

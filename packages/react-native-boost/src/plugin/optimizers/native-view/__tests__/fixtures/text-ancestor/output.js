@@ -1,12 +1,12 @@
-import { NativeView as _NativeView } from 'react-native-boost/runtime';
+import { NativeView as _NativeView, NativeViewWithContext as _NativeViewWithContext } from 'react-native-boost/runtime';
 import { Text, View } from 'react-native';
 <>
   <_NativeView>
     <Optimized />
   </_NativeView>
   <Text>
-    <View>
+    <_NativeViewWithContext>
       <NotOptimized />
-    </View>
+    </_NativeViewWithContext>
   </Text>
 </>;

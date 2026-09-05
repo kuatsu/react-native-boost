@@ -15,6 +15,50 @@ afterEach(() => {
 });
 
 describe('private Metro graph integration', () => {
+  it.each([
+    [`export { Pressable as Card } from 'react-native';`, `export { Text as Card } from 'react-native';`],
+    [
+      `import Animated from 'react-native-reanimated'; export const Card = Animated.View;`,
+      `import Animated from 'react-native-reanimated'; export const Card = Animated.Text;`,
+    ],
+  ])('invalidates an intrinsic ancestor summary: %s', async (safe, text) => {
+    const sources = {
+      'Screen.js': `import { Text } from 'react-native'; import { Card } from './Card'; export default () => <Card><Text>Hello</Text></Card>;`,
+      'Card.js': safe,
+    };
+    const project = createGraph(sources);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('<_NativeText');
+
+    sources['Card.js'] = text;
+    const delta = await project.graph.traverseDependencies([project.filename('Card.js')], project.options);
+    expect(project.code()).toContain('<Text>Hello</Text>');
+    expect(delta.modified.has(project.filename('Screen.js'))).toBe(true);
+  });
+
+  it('keeps unsafe branches distinct from variable Text context across files', async () => {
+    const sources = {
+      'Screen.js': `import { Text, View } from 'react-native'; import { Wrapper } from './Wrapper'; export default () => <Wrapper><View testID="target"><Text>Hello</Text></View><Text>inline</Text></Wrapper>;`,
+      'Wrapper.js': `import { Text } from 'react-native'; import { Inner } from './Inner'; export function Wrapper({children, inline}) { if (inline) return <Text>{children}</Text>; return <Inner>{children}</Inner>; }`,
+      'Inner.js': `export const Inner = ({children}) => children;`,
+    };
+    const project = createGraph(sources);
+    await project.graph.initialTraverseDependencies(project.options);
+    expect(project.code()).toContain('<_NativeViewWithContext testID="target">');
+    expect(project.code()).toContain('<Text>inline</Text>');
+
+    sources['Inner.js'] =
+      `import React from 'react'; export const Inner = ({children}) => React.Children.map(children, child => React.cloneElement(child, {'aria-label': 'Name'}));`;
+    await project.graph.traverseDependencies([project.filename('Inner.js')], project.options);
+    expect(project.code()).toContain('<View testID="target">');
+    expect(project.code()).not.toContain('NativeViewWithContext');
+
+    sources['Inner.js'] =
+      `import { Text } from 'react-native'; export const Inner = ({children}) => <Text>{children}</Text>;`;
+    await project.graph.traverseDependencies([project.filename('Inner.js')], project.options);
+    expect(project.code()).toContain('<_NativeViewWithContext testID="target">');
+  });
+
   it('continues resolving ancestors after a queued transform fails', async () => {
     const project = createGraph({
       'Screen.js': `import { Text } from 'react-native'; import { Card } from './Card'; export default () => <Card><Text>Hello</Text></Card>;`,

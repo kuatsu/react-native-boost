@@ -1,4 +1,5 @@
-export type AncestorClassification = 'safe' | 'text' | 'unknown';
+/** `context` means child handling is known, but Text context varies between branches. */
+export type AncestorClassification = 'safe' | 'text' | 'context' | 'unknown';
 export type ComponentAncestorClassification = AncestorClassification | 'transparent';
 
 export type AncestorSummary =

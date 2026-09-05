@@ -217,8 +217,8 @@ function evaluateSummary(
 
   const values = summary.values.map((value) => evaluateSummary(graph, modulePath, value, injectionId, visiting));
   if (summary.kind === 'ancestors') return values.find((value) => value !== 'transparent') ?? 'transparent';
-  if (values.includes('text')) return 'text';
-  return values.every((value) => value === values[0]) ? values[0]! : 'unknown';
+  if (values.includes('unknown')) return 'unknown';
+  return values.every((value) => value === values[0]) ? values[0]! : 'context';
 }
 
 function findDependency(module: MetroModule | undefined, source: string): string | undefined {
