@@ -3,6 +3,11 @@ declare module 'react-native/Libraries/Components/View/View' {
   export default View;
 }
 
+declare module 'react-native/Libraries/Text/Text' {
+  const Text: typeof import('react-native').Text;
+  export default Text;
+}
+
 declare module 'react-native/Libraries/Text/TextAncestorContext' {
   const TextAncestorContext: import('react').Context<boolean>;
   export default TextAncestorContext;

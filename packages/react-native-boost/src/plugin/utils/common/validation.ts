@@ -17,6 +17,7 @@ import {
 } from '../constants';
 import { getMarkedReactNativeComponent } from './optimized-host';
 import { extractStyleAttribute } from './attributes';
+import { classifyAnimatedAncestor, classifyReactNativeAncestor } from './intrinsic-ancestors';
 
 /** Checks if a file matches one of the configured ignore patterns. */
 export const isIgnoredFile = (file: HubFile, ignores: string[]): boolean => {
@@ -151,6 +152,7 @@ type AncestorAnalysisContext = {
   imports?: Record<string, Record<string, ComponentAncestorClassification>>;
   references?: Map<string, { source: string; imported: string }>;
   symbolic?: boolean;
+  platform?: string;
 };
 
 type TextContextSource = AncestorClassification | 'runtime';
@@ -169,6 +171,7 @@ function getTextContextSource(path: NodePath<t.JSXOpeningElement>): TextContextS
   const context: AncestorAnalysisContext = {
     componentCache: new WeakMap<t.Node, AncestorSummary>(),
     componentInProgress: new WeakSet<t.Node>(),
+    platform: file.opts.caller?.platform,
     imports: file.__ancestorImports,
     references: file.__ancestorReferences,
   };
@@ -214,7 +217,7 @@ export const ancestorBailoutChecks = (
   return [
     {
       reason: 'has Text ancestor',
-      shouldBail: () => classify() === 'text',
+      shouldBail: () => classify() === 'text' || classify() === 'context',
     },
     {
       reason: 'has unresolved ancestor that may render Text',
@@ -247,7 +250,7 @@ function classifyJSXElementAsAncestor(path: NodePath<t.JSXElement>, context: Anc
   if (isReactFragmentElement(path)) return 'transparent';
 
   const markedComponent = getMarkedReactNativeComponent(path.node.openingElement);
-  if (markedComponent) return markedComponent === 'Text' ? 'text' : markedComponent === 'View' ? 'safe' : 'unknown';
+  if (markedComponent) return classifyReactNativeAncestor(markedComponent, context.platform);
 
   const openingElementName = path.node.openingElement.name;
 
@@ -278,25 +281,8 @@ function classifyJSXMemberExpressionAsAncestor(
   expression: t.JSXMemberExpression,
   context: AncestorAnalysisContext
 ): AncestorSummary {
-  if (!t.isJSXIdentifier(expression.object) || !t.isJSXIdentifier(expression.property)) {
-    return 'unknown';
-  }
-
-  const binding = path.scope.getBinding(expression.object.name);
-  if (!binding || binding.kind !== 'module' || !t.isImportNamespaceSpecifier(binding.path.node)) {
-    return 'unknown';
-  }
-
-  const importDeclaration = binding.path.parent;
-  if (!t.isImportDeclaration(importDeclaration)) return 'unknown';
-
-  const source = importDeclaration.source.value;
-  if (source === 'react-native') {
-    if (expression.property.name === 'Text') return 'text';
-    return expression.property.name === 'View' ? 'safe' : 'unknown';
-  }
-
-  return classifyImportedAncestor(source, expression.property.name, context);
+  const reference = getModuleReference(path, expression);
+  return reference ? classifyModuleReference(reference, context) : 'unknown';
 }
 
 function classifyBindingAsAncestor(binding: ScopeBinding, context: AncestorAnalysisContext): AncestorSummary {
@@ -312,12 +298,11 @@ function classifyModuleBindingAsAncestor(binding: ScopeBinding, context: Ancesto
   if (!t.isImportDeclaration(importDeclaration)) return 'unknown';
 
   const source = importDeclaration.source.value;
-  if (source === 'react-native') {
-    if (!t.isImportSpecifier(binding.path.node)) return 'unknown';
-    const importedName = getImportSpecifierImportedName(binding.path.node);
-    if (importedName === 'Text') return 'text';
-    return importedName === 'View' ? 'safe' : 'unknown';
-  }
+  if (
+    importDeclaration.importKind === 'type' ||
+    (t.isImportSpecifier(binding.path.node) && binding.path.node.importKind === 'type')
+  )
+    return 'unknown';
 
   // An ancestor Boost itself already rewrote (its own runtime host, or a Unistyles lean host in
   // Unistyles mode) is a *known* host: a View establishes a normal context ('safe'), a Text an
@@ -398,6 +383,11 @@ function analyzeVariableDeclaratorComponent(
     return analyzeCallWrappedComponent(initPath, context);
   }
 
+  if (initPath.isMemberExpression()) {
+    const reference = getModuleReference(initPath, initPath.node);
+    return reference ? classifyModuleReference(reference, context) : 'unknown';
+  }
+
   if (initPath.isIdentifier()) {
     const aliasBinding = path.scope.getBinding(initPath.node.name);
     if (!aliasBinding) return 'unknown';
@@ -412,7 +402,14 @@ function analyzeCallWrappedComponent(
   path: NodePath<t.CallExpression>,
   context: AncestorAnalysisContext
 ): AncestorSummary {
-  if (!isReactMemoOrForwardRefCall(path)) return 'unknown';
+  const factory = getModuleReference(path, path.node.callee);
+  const animated =
+    factory &&
+    ((factory.source === 'react-native' && factory.members.join('.') === 'Animated.createAnimatedComponent') ||
+      (factory.source === 'react-native-reanimated' &&
+        (factory.members.join('.') === 'createAnimatedComponent' ||
+          factory.members.join('.') === 'default.createAnimatedComponent')));
+  if (!animated && !isReactMemoOrForwardRefCall(path)) return 'unknown';
 
   const [firstArgumentPath] = path.get('arguments');
   if (!firstArgumentPath?.node) return 'unknown';
@@ -430,6 +427,11 @@ function analyzeCallWrappedComponent(
 
   if (firstArgumentPath.isCallExpression()) {
     return analyzeCallWrappedComponent(firstArgumentPath, context);
+  }
+
+  if (firstArgumentPath.isMemberExpression()) {
+    const reference = getModuleReference(firstArgumentPath, firstArgumentPath.node);
+    return reference ? classifyModuleReference(reference, context) : 'unknown';
   }
 
   return 'unknown';
@@ -586,12 +588,48 @@ function classifyChildrenReference(
 }
 
 function mergeChildrenSummaries(current: AncestorSummary, next: AncestorSummary): AncestorSummary {
-  if (current === 'text' || next === 'text') return 'text';
-  if (typeof current === 'string' && typeof next === 'string') return current === next ? current : 'unknown';
+  if (current === 'unknown' || next === 'unknown') return 'unknown';
+  if (typeof current === 'string' && typeof next === 'string') return current === next ? current : 'context';
   return { kind: 'branches', values: [current, next] };
 }
 
+type ModuleReference = { source: string; members: string[] };
+
+function getModuleReference(path: NodePath, expression: t.Node): ModuleReference | undefined {
+  const members: string[] = [];
+  while (t.isJSXMemberExpression(expression) || t.isMemberExpression(expression)) {
+    if (t.isMemberExpression(expression) && expression.computed) return;
+    if (!t.isIdentifier(expression.property) && !t.isJSXIdentifier(expression.property)) return;
+    members.unshift(expression.property.name);
+    expression = expression.object;
+  }
+  if (!t.isIdentifier(expression) && !t.isJSXIdentifier(expression)) return;
+  const binding = path.scope.getBinding(expression.name);
+  if (!binding?.constant || binding.kind !== 'module') return;
+  const declaration = binding.path.parent;
+  if (!t.isImportDeclaration(declaration) || declaration.importKind === 'type') return;
+  if (t.isImportSpecifier(binding.path.node) && binding.path.node.importKind === 'type') return;
+  const imported = getBindingImportedName(binding);
+  if (imported) members.unshift(imported);
+  else if (!t.isImportNamespaceSpecifier(binding.path.node)) return;
+  return { source: declaration.source.value, members };
+}
+
+function classifyModuleReference(reference: ModuleReference, context: AncestorAnalysisContext): AncestorSummary {
+  const { source, members } = reference;
+  if (
+    (source === 'react-native' && members[0] === 'Animated') ||
+    (source === 'react-native-reanimated' && members[0] === 'default')
+  ) {
+    return members.length === 2 ? classifyAnimatedAncestor(members[1]!) : 'unknown';
+  }
+  return members.length === 1 ? classifyImportedAncestor(source, members[0]!, context) : 'unknown';
+}
+
 function classifyImportedAncestor(source: string, imported: string, context: AncestorAnalysisContext): AncestorSummary {
+  if (source === 'react-native') return classifyReactNativeAncestor(imported, context.platform);
+  // Reanimated's named exports are not members of its default Animated object.
+  if (source === 'react-native-reanimated') return 'unknown';
   if (context.symbolic) return { kind: 'import', source, imported };
 
   const key = `${source}\0${imported}`;
@@ -618,7 +656,9 @@ function getImportSpecifierImportedName(specifier: t.ImportSpecifier): string | 
 }
 
 export function analyzeAncestorModule(path: NodePath<t.Program>): ModuleAncestorAnalysis {
+  const file = (path.hub as unknown as { file: HubFile }).file;
   const context: AncestorAnalysisContext = {
+    platform: file.opts.caller?.platform,
     componentCache: new WeakMap<t.Node, AncestorSummary>(),
     componentInProgress: new WeakSet<t.Node>(),
     symbolic: true,
@@ -663,7 +703,7 @@ export function analyzeAncestorModule(path: NodePath<t.Program>): ModuleAncestor
       const local = getModuleExportName(specifier.local);
       if (!exported || !local) continue;
       if (statementPath.node.source) {
-        exports[exported] = { kind: 'import', source: statementPath.node.source.value, imported: local };
+        exports[exported] = classifyImportedAncestor(statementPath.node.source.value, local, context);
       } else {
         const binding = path.scope.getBinding(local);
         exports[exported] = binding ? classifyBindingAsAncestor(binding, context) : 'unknown';
@@ -671,7 +711,6 @@ export function analyzeAncestorModule(path: NodePath<t.Program>): ModuleAncestor
     }
   }
 
-  const file = (path.hub as unknown as { file: HubFile }).file;
   return { exports, exportAll, references: [...(file.__ancestorReferences?.values() ?? [])] };
 }
 
