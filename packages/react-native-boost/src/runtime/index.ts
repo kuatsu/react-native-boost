@@ -111,6 +111,8 @@ function propagatesArraySourceDimensions(): boolean {
  * build target is unknown. See {@link liftsObjectSourceHeaders}.
  */
 export function processImageObjectSourceHeaders<T>(headers: T): T | undefined {
+  const minor = getReactNativeMinor();
+  if (headers === null && (minor === null || minor >= 85)) return undefined;
   return liftsObjectSourceHeaders() ? headers : undefined;
 }
 
@@ -235,7 +237,8 @@ function getImageSourcesFromProps(props: ImageSourceHelperProps): ImageSource | 
     return [{ uri: props.src, headers, width: props.width, height: props.height }];
   }
   if (source != null && source.uri && Object.keys(headers).length > 0) {
-    return [{ ...source, headers }];
+    const minor = getReactNativeMinor();
+    return [{ ...source, headers: minor === null || minor >= 88 ? { ...headers, ...source.headers } : headers }];
   }
   return source;
 }
@@ -292,11 +295,20 @@ export function processImageSourceProps(props: ImageSourceHelperProps): Record<s
     source: sources,
     resizeMode,
   };
+  const minor = getReactNativeMinor();
+  if (minor !== null && minor < (Platform.OS === 'ios' ? 88 : 85)) {
+    for (const key of ['width', 'height']) {
+      if (Object.hasOwn(props, key)) result[key] = props[key];
+    }
+  }
   Object.assign(result, tintColor === undefined ? {} : { tintColor });
 
-  if (Platform.OS === 'android') {
-    Object.assign(result, headers === null || headers === undefined ? {} : { headers });
-  }
+  if (
+    Platform.OS === 'android' &&
+    headers !== undefined &&
+    (headers !== null || (!Array.isArray(source) && minor !== null && minor < 85))
+  )
+    result.headers = headers;
 
   return result;
 }
@@ -361,38 +373,49 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
   // Merge label props: prefer the aria-label if defined.
   const normalizedLabel = ariaLabel ?? accessibilityLabel;
 
-  // Merge the accessibilityState with any provided ARIA properties.
+  const minor = getReactNativeMinor();
+  const copiesState = minor === null || minor >= 88;
+  const stateDisabled = copiesState ? (ariaDisabled ?? accessibilityState?.disabled) : undefined;
+  const resolvedDisabled = disabled ?? stateDisabled;
+  const needsStateUpdate =
+    resolvedDisabled !== stateDisabled &&
+    ((resolvedDisabled != null && resolvedDisabled !== false) || (stateDisabled != null && stateDisabled !== false));
   let normalizedState = accessibilityState;
-  if (ariaBusy != null || ariaChecked != null || ariaDisabled != null || ariaExpanded != null || ariaSelected != null) {
+  if (
+    (copiesState && needsStateUpdate) ||
+    ariaBusy != null ||
+    ariaChecked != null ||
+    ariaDisabled != null ||
+    ariaExpanded != null ||
+    ariaSelected != null
+  ) {
     normalizedState =
       normalizedState == null
         ? {
             busy: ariaBusy,
             checked: ariaChecked,
-            disabled: ariaDisabled,
+            disabled: copiesState ? resolvedDisabled : ariaDisabled,
             expanded: ariaExpanded,
             selected: ariaSelected,
           }
         : {
             busy: ariaBusy ?? normalizedState.busy,
             checked: ariaChecked ?? normalizedState.checked,
-            disabled: ariaDisabled ?? normalizedState.disabled,
+            disabled: copiesState ? resolvedDisabled : (ariaDisabled ?? normalizedState.disabled),
             expanded: ariaExpanded ?? normalizedState.expanded,
             selected: ariaSelected ?? normalizedState.selected,
           };
   }
 
-  // Reconcile `disabled` with `accessibilityState.disabled`. When the two are out of sync (and not
-  // both falsy) the explicit `disabled` prop wins and is mirrored back into the state object, so the
-  // native host receives a consistent value on both fields.
-  const minor = getReactNativeMinor();
-  // RN 0.85 removed the legacy Text path, which copied state and treated aria-hidden null as absent.
+  // RN 0.85–0.87 mutates conflicting state; 0.88 copies only the five native fields.
   const legacy = minor !== null && minor < 85;
-  const stateDisabled = normalizedState?.disabled;
-  const normalizedDisabled = disabled ?? stateDisabled;
+  const mergedDisabled = normalizedState?.disabled;
+  const normalizedDisabled = copiesState ? resolvedDisabled : (disabled ?? mergedDisabled);
   if (
-    normalizedDisabled !== stateDisabled &&
-    ((normalizedDisabled != null && normalizedDisabled !== false) || (stateDisabled != null && stateDisabled !== false))
+    !copiesState &&
+    normalizedDisabled !== mergedDisabled &&
+    ((normalizedDisabled != null && normalizedDisabled !== false) ||
+      (mergedDisabled != null && mergedDisabled !== false))
   ) {
     if (legacy || normalizedState == null) normalizedState = { ...normalizedState, disabled: normalizedDisabled };
     else normalizedState.disabled = normalizedDisabled;
@@ -548,42 +571,55 @@ export function processImageAccessibilityProps(props: Record<string, any>): Reco
   } = props;
 
   const result = restProperties;
-  const normalizedLabel = ariaLabel ?? accessibilityLabel ?? alt;
-  if (normalizedLabel !== undefined) result.accessibilityLabel = normalizedLabel;
-
-  if (Platform.OS === 'android') {
-    const normalizedLabelledBy = ariaLabelledBy ?? accessibilityLabelledBy;
-    if (normalizedLabelledBy !== undefined) result.accessibilityLabelledBy = normalizedLabelledBy;
-  } else if (accessibilityLabelledBy !== undefined) {
-    result.accessibilityLabelledBy = accessibilityLabelledBy;
-  }
-
-  // RN 0.85 changed Android from undefined checks to nullish checks.
-  if (Platform.OS === 'ios') {
-    if (ariaHidden === true) {
-      result.accessible = false;
-    } else if (alt !== undefined) {
-      result.accessible = true;
-    } else if (accessible !== undefined) {
-      result.accessible = accessible;
+  const minor = getReactNativeMinor();
+  const modern = minor === null || minor >= 88;
+  if (modern) {
+    for (const key of ['accessible', 'accessibilityLabel', 'accessibilityLabelledBy', 'importantForAccessibility']) {
+      if (Object.hasOwn(props, key)) result[key] = props[key];
     }
+    if (ariaLabel != null) result.accessibilityLabel = ariaLabel;
+    else if (alt != null && accessibilityLabel == null) result.accessibilityLabel = alt;
+    if (ariaLabelledBy != null) result.accessibilityLabelledBy = ariaLabelledBy;
+    if (Platform.OS === 'ios' && ariaHidden === true) result.accessible = false;
+    else if (alt != null) result.accessible = true;
+    if (Platform.OS !== 'ios' && ariaHidden === true) result.importantForAccessibility = 'no-hide-descendants';
   } else {
-    const minor = getReactNativeMinor();
-    const usesUndefinedChecks = minor !== null && minor <= 84;
-    if (usesUndefinedChecks ? alt !== undefined : alt != null) {
-      result.accessible = true;
-    } else if (usesUndefinedChecks ? accessible !== undefined : accessible != null) {
-      result.accessible = accessible;
+    const normalizedLabel = ariaLabel ?? accessibilityLabel ?? alt;
+    if (normalizedLabel !== undefined) result.accessibilityLabel = normalizedLabel;
+
+    if (Platform.OS === 'android') {
+      const normalizedLabelledBy = ariaLabelledBy ?? accessibilityLabelledBy;
+      if (normalizedLabelledBy !== undefined) result.accessibilityLabelledBy = normalizedLabelledBy;
+    } else if (accessibilityLabelledBy !== undefined) {
+      result.accessibilityLabelledBy = accessibilityLabelledBy;
+    }
+
+    // RN 0.85 changed Android from undefined checks to nullish checks.
+    if (Platform.OS === 'ios') {
+      if (ariaHidden === true) {
+        result.accessible = false;
+      } else if (alt !== undefined) {
+        result.accessible = true;
+      } else if (accessible !== undefined) {
+        result.accessible = accessible;
+      }
+    } else {
+      const usesUndefinedChecks = minor !== null && minor <= 84;
+      if (usesUndefinedChecks ? alt !== undefined : alt != null) {
+        result.accessible = true;
+      } else if (usesUndefinedChecks ? accessible !== undefined : accessible != null) {
+        result.accessible = accessible;
+      }
+    }
+
+    if (ariaHidden === true && Platform.OS !== 'ios') {
+      result.importantForAccessibility = 'no-hide-descendants';
+    } else if (importantForAccessibility !== undefined) {
+      result.importantForAccessibility = importantForAccessibility;
     }
   }
 
-  if (ariaHidden === true && Platform.OS !== 'ios') {
-    result.importantForAccessibility = 'no-hide-descendants';
-  } else if (importantForAccessibility !== undefined) {
-    result.importantForAccessibility = importantForAccessibility;
-  }
-
-  if (Platform.OS === 'ios' && accessibilityState !== undefined) {
+  if (!modern && Platform.OS === 'ios' && accessibilityState !== undefined) {
     result.accessibilityState = accessibilityState;
   } else if (
     accessibilityState != null ||

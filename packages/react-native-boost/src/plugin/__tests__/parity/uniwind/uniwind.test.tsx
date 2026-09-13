@@ -8,7 +8,7 @@ import { transformSync, type TransformCaller } from '@babel/core';
 import boost from '../../../index';
 import { renderAndCaptureAll } from '../capture';
 import { normalize, normalizeImage } from '../normalize';
-import { setPlatformOS } from '../mocks/Platform';
+import { reactNativeVersion, setPlatformOS } from '../mocks/Platform';
 import * as optimized from '../../../../runtime/uniwind';
 
 vi.mock('../../../../runtime/components/native-text', () =>
@@ -90,7 +90,7 @@ UniwindStore.reinit(
 const capture = (Component: React.ElementType, props: object) =>
   renderAndCaptureAll(React.createElement(Component, props)).map((item) => ({
     which: item.which,
-    props: item.which === 'NativeImage' ? normalizeImage(item.props, 87) : normalize(item.props),
+    props: item.which === 'NativeImage' ? normalizeImage(item.props, reactNativeVersion.minor) : normalize(item.props),
   }));
 const generated = fileURLToPath(new URL('__generated__/', import.meta.url));
 mkdirSync(generated, { recursive: true });
@@ -187,6 +187,26 @@ describe('free Uniwind native parity', () => {
       expect(capture(optimized[name], props), platform).toEqual(capture(original[name], props));
     }
     setPlatformOS('ios');
+  });
+
+  it.each([false, true])('preserves Text state ownership and errors (frozen=%s)', (frozen) => {
+    const expectedState = { disabled: true };
+    const actualState = { disabled: true };
+    if (frozen) {
+      Object.freeze(expectedState);
+      Object.freeze(actualState);
+    }
+    const expected = () =>
+      capture(original.NativeText, { accessibilityState: expectedState, disabled: false, children: 'label' });
+    const actual = () =>
+      capture(optimized.NativeText, { accessibilityState: actualState, disabled: false, children: 'label' });
+    if (frozen && reactNativeVersion.minor >= 85 && reactNativeVersion.minor < 88) {
+      expect(expected).toThrow(TypeError);
+      expect(actual).toThrow(TypeError);
+    } else {
+      expect(actual()).toEqual(expected());
+      expect(actualState).toStrictEqual(expectedState);
+    }
   });
 
   it.each(['NativeView', 'NativeText', 'NativeImage', 'NativeActivityIndicator'] as const)(
@@ -308,9 +328,14 @@ it('routes animation hooks missing from Uniwind through the native runtime', asy
   const { code } = await compile(
     '<View value={useRef(new Animated.ValueXY({x: 1, y: 2})).current} color={useRef(new Animated.Color("red")).current}/>'
   );
-  expect(code).toMatch(/import[^;]*useAnimatedValueXY[^;]*from "react-native-boost\/uniwind"/);
-  expect(code).toMatch(/import[^;]*useAnimatedColor[^;]*from "react-native-boost\/uniwind"/);
-  expect(code).not.toContain('new Animated.');
+  if (reactNativeVersion.minor >= 85) {
+    expect(code).toMatch(/import[^;]*useAnimatedValueXY[^;]*from "react-native-boost\/uniwind"/);
+    expect(code).toMatch(/import[^;]*useAnimatedColor[^;]*from "react-native-boost\/uniwind"/);
+    expect(code).not.toContain('new Animated.');
+  } else {
+    expect(code).toContain('new Animated.ValueXY');
+    expect(code).toContain('new Animated.Color');
+  }
 });
 
 it('retains classes when removing an eligible Animated wrapper', async () => {

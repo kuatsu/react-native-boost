@@ -1,17 +1,9 @@
-import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
+import {
+  processImageSourceProps as _processImageSourceProps,
+  NativeImage as _NativeImage,
+} from 'react-native-boost/runtime';
 import { Image } from 'react-native';
 const _imageSource = [
-    {
-      uri: 'https://example.com/logo.png',
-      headers: {
-        'Access-Control-Allow-Credentials': 'true',
-        'Referrer-Policy': 'no-referrer',
-      },
-      width: 16,
-      height: 16,
-    },
-  ],
-  _imageSource2 = [
     {
       uri: 'logo.png',
       width: 16,
@@ -22,13 +14,22 @@ const _imageSource = [
       },
     },
   ],
-  _imageSource3 = [
+  _imageSource2 = [
     {
       uri: '',
       width: 16,
       height: 16,
     },
   ];
+<_NativeImage
+  {..._processImageSourceProps({
+    src: 'https://example.com/logo.png',
+    width: 16,
+    height: 16,
+    crossOrigin: 'use-credentials',
+    referrerPolicy: 'no-referrer',
+  })}
+/>;
 <_NativeImage
   style={[
     {},
@@ -41,16 +42,6 @@ const _imageSource = [
 />;
 <_NativeImage
   style={[
-    {},
-    {
-      overflow: 'hidden',
-    },
-  ]}
-  source={_imageSource2}
-  resizeMode="cover"
-/>;
-<_NativeImage
-  style={[
     {
       width: 16,
       height: 16,
@@ -59,6 +50,6 @@ const _imageSource = [
       overflow: 'hidden',
     },
   ]}
-  source={_imageSource3}
+  source={_imageSource2}
   resizeMode="cover"
 />;

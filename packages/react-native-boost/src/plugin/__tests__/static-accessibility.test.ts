@@ -49,7 +49,7 @@ function emittedProps(
   return new Function(`return ${code}`) as () => Record<string, unknown>;
 }
 
-for (const minor of [83, 84, 85, 86, 87])
+for (const minor of [83, 84, 85, 86, 87, 88])
   for (const platform of ['ios', 'android'] as const) {
     it(`emits release-specific nulls and own keys on ${platform} RN ${minor}`, () => {
       const text = emittedProps(
@@ -72,13 +72,17 @@ for (const minor of [83, 84, 85, 86, 87])
       expect(Object.hasOwn(roles, 'accessibilityRole')).toBe(minor < 85);
       expect(roles.accessibilityRole).toBe(minor === 83 ? null : undefined);
       expect(Object.hasOwn(first, 'importantForAccessibility')).toBe(minor < 85);
-      expect(first.accessibilityState).toStrictEqual({ disabled: false, extra: 'kept' });
+      expect(first.accessibilityState).toStrictEqual(
+        minor >= 88
+          ? { busy: undefined, checked: undefined, disabled: false, expanded: undefined, selected: undefined }
+          : { disabled: false, extra: 'kept' }
+      );
       expect(first.accessibilityState).not.toBe(text().accessibilityState);
       const image = emittedProps('Image', 'alt={null} accessible={false} accessibilityState={null}', platform, minor)();
-      expect(image.accessible).toBe(platform === 'ios' || minor < 85);
-      expect(Object.hasOwn(image, 'accessibilityLabel')).toBe(platform === 'ios' || minor < 85);
-      expect(Object.hasOwn(image, 'accessibilityState')).toBe(platform === 'ios' || minor < 85);
-      if (platform === 'ios') expect(image.accessibilityState).toBeNull();
+      expect(image.accessible).toBe((platform === 'ios' && minor < 88) || minor < 85);
+      expect(Object.hasOwn(image, 'accessibilityLabel')).toBe((platform === 'ios' && minor < 88) || minor < 85);
+      expect(Object.hasOwn(image, 'accessibilityState')).toBe((platform === 'ios' && minor < 88) || minor < 85);
+      if (platform === 'ios' && minor < 88) expect(image.accessibilityState).toBeNull();
       const view = emittedProps(
         'View',
         'aria-busy={null} aria-disabled={false} accessibilityState={{busy:true, extra:"removed"}} aria-valuenow={0} accessibilityValue={{text:null}}',

@@ -220,7 +220,7 @@ const optimizeNativeImage: JSXOptimizer = (path, { logger, options, platform, un
     return;
   }
 
-  const nativeSource = staticSrcSetSource ?? buildStaticNativeSource(path.node.attributes, platform);
+  const nativeSource = staticSrcSetSource ?? buildStaticNativeSource(path.node.attributes, platform, reactNativeMinor);
   const styleInfo = buildStaticStyleInfo(path.node.attributes);
 
   logger.optimized({ target: 'Image', path });
@@ -273,7 +273,6 @@ type NativeSource = {
   sourceAttributes: t.JSXAttribute[];
   requestHeaderAttributes: t.JSXAttribute[];
   sourceArray: t.ArrayExpression;
-  consumesSizeProps: boolean;
   androidHeaders?: t.Expression;
   width?: t.Expression;
   height?: t.Expression;
@@ -321,7 +320,8 @@ function processImageProps(
     if (!t.isJSXAttribute(attribute)) return true;
     if (consumed.has(attribute)) return false;
     const name = attribute.name.name;
-    if (nativeSource.consumesSizeProps && (name === 'width' || name === 'height')) return false;
+    if (name === 'width' || name === 'height')
+      return reactNativeMinor !== undefined && reactNativeMinor < (platform === 'ios' ? 88 : 85);
     return name !== 'resizeMode' && name !== 'tintColor';
   });
 
@@ -352,6 +352,12 @@ function processImageProps(
       androidHeaders = t.cloneNode(nativeSource.androidHeaders, true);
     }
   }
+
+  if (
+    t.isNullLiteral(androidHeaders) &&
+    (!nativeSource.objectSourceHeaders || (reactNativeMinor !== undefined && reactNativeMinor >= 85))
+  )
+    androidHeaders = undefined;
 
   path.node.attributes = [
     ...remaining,
@@ -448,12 +454,16 @@ function buildImageAccessibilityInfo(
   const hasLabelTrigger = hasAlt || directNames.has('aria-label');
   const hasHiddenTrigger = directNames.has('aria-hidden');
   const hasLabelledByTrigger = directNames.has('aria-labelledby');
-  const hasStateTrigger = [...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name));
-  // Android drops a nullish `accessible`, so passing the authored value through would emit an
-  // `accessible={null}` the wrapper never sets. iOS forwards it unchanged, so only Android needs the helper.
+  const hasStateTrigger =
+    [...IMAGE_ARIA_STATE_PROPS].some((name) => directNames.has(name)) ||
+    ((reactNativeMinor === undefined || reactNativeMinor >= 88) && directNames.has('accessibilityState'));
+  // Android 0.85–0.87 drops nullish `accessible`; keep the runtime gate for unknown targets.
   const accessible = getAttributeExpression(path.node.attributes, 'accessible');
   const hasNullableAccessible =
-    platform === 'android' && accessible !== undefined && !isStaticNonNullishExpression(accessible);
+    platform === 'android' &&
+    (reactNativeMinor === undefined || reactNativeMinor < 88) &&
+    accessible !== undefined &&
+    !isStaticNonNullishExpression(accessible);
 
   if (!hasLabelTrigger && !hasHiddenTrigger && !hasLabelledByTrigger && !hasStateTrigger && !hasNullableAccessible) {
     return undefined;
@@ -600,7 +610,6 @@ function buildStaticSrcSetSource(
     ),
     requestHeaderAttributes: requestHeaders.attributes,
     sourceArray,
-    consumesSizeProps: true,
     androidHeaders: t.cloneNode(requestHeaders.headers, true),
     width: emitsDimensions && width ? t.cloneNode(width, true) : undefined,
     height: emitsDimensions && height ? t.cloneNode(height, true) : undefined,
@@ -647,8 +656,19 @@ function isStaticSrcSetDimension(expression: t.Expression): boolean {
 
 function buildStaticNativeSource(
   attributes: Array<t.JSXAttribute | t.JSXSpreadAttribute>,
-  platform?: string
+  platform?: string,
+  reactNativeMinor?: number
 ): NativeSource | undefined {
+  // Unknown targets need a runtime gate; dynamic dimensions must not be evaluated twice.
+  for (const name of ['width', 'height']) {
+    const value = getAttributeExpression(attributes, name);
+    if (
+      value &&
+      (reactNativeMinor === undefined ||
+        ((platform === 'android' || reactNativeMinor < 88) && !isStaticLiteralTree(value)))
+    )
+      return undefined;
+  }
   const requestHeaders = buildRequestHeaders(attributes);
   if (!requestHeaders) return undefined;
 
@@ -664,12 +684,6 @@ function buildStaticNativeSource(
     const source = findAttribute(attributes, 'source');
     const width = getAttributeExpression(attributes, 'width');
     const height = getAttributeExpression(attributes, 'height');
-    // On Android the dimensions are emitted twice (source entry AND style), so a non-literal
-    // expression would be evaluated twice; defer those to the runtime helper instead.
-    if (emitsAndroidProps) {
-      if (width && !isStaticLiteralTree(width)) return undefined;
-      if (height && !isStaticLiteralTree(height)) return undefined;
-    }
     const headers = t.cloneNode(requestHeaders.headers, true);
     return {
       sourceAttributes: [src, source].filter((attribute): attribute is t.JSXAttribute => attribute !== undefined),
@@ -682,7 +696,6 @@ function buildStaticNativeSource(
           ...(height ? [t.objectProperty(t.identifier('height'), height)] : []),
         ]),
       ]),
-      consumesSizeProps: true,
       androidHeaders: t.cloneNode(requestHeaders.headers, true),
       width: emitsAndroidProps && width ? t.cloneNode(width, true) : undefined,
       height: emitsAndroidProps && height ? t.cloneNode(height, true) : undefined,
@@ -704,7 +717,6 @@ function buildStaticNativeSource(
       sourceAttributes: [source],
       requestHeaderAttributes: requestHeaders.attributes,
       sourceArray: t.cloneNode(sourceExpression, true),
-      consumesSizeProps: false,
       androidHeaders: getFirstSourceHeaders(sourceExpression),
       width: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'width') : undefined,
       height: dimensionSource ? getObjectPropertyExpression(dimensionSource, 'height') : undefined,
@@ -717,24 +729,28 @@ function buildStaticNativeSource(
   const sourceHeight = getObjectPropertyExpression(sourceObject, 'height');
   const width = getNullishFallback(sourceWidth, getAttributeExpression(attributes, 'width'));
   const height = getNullishFallback(sourceHeight, getAttributeExpression(attributes, 'height'));
-  const sourceArrayObject = buildSourceObject(sourceObject, requestHeaders);
+  if (
+    reactNativeMinor === undefined &&
+    requestHeaders.headers.properties.length > 0 &&
+    hasObjectProperty(sourceObject, 'headers')
+  )
+    return undefined;
+  const sourceArrayObject = buildSourceObject(sourceObject, requestHeaders, reactNativeMinor);
   // An object source with generated request headers and a truthy `uri` goes through ImageSourceUtils
   // as a single-entry ARRAY source, so the width/height ?? prop fallback does not apply: only the
   // source entry's own dimensions reach the style, and only on Android. Without generated headers it
   // stays an OBJECT source, whose own dimensions always reach the style and whose inline `headers`
   // are lifted only on the RN versions that do so — hence the gate.
+  const uri = getObjectPropertyExpression(sourceObject, 'uri');
   const usesGeneratedHeaders =
-    requestHeaders.headers.properties.length > 0 && hasObjectProperty(sourceArrayObject, 'headers');
+    requestHeaders.headers.properties.length > 0 && uri !== undefined && isStaticTruthyForLogicalOr(uri);
   const arrayDimensionSource = usesGeneratedHeaders && emitsAndroidProps ? sourceArrayObject : undefined;
 
   return {
     sourceAttributes: [source],
     requestHeaderAttributes: requestHeaders.attributes,
     sourceArray: t.arrayExpression([sourceArrayObject]),
-    consumesSizeProps: true,
-    androidHeaders: usesGeneratedHeaders
-      ? t.cloneNode(requestHeaders.headers, true)
-      : getObjectPropertyExpression(sourceArrayObject, 'headers'),
+    androidHeaders: getObjectPropertyExpression(sourceArrayObject, 'headers'),
     objectSourceHeaders: !usesGeneratedHeaders,
     width: usesGeneratedHeaders
       ? arrayDimensionSource && getObjectPropertyExpression(arrayDimensionSource, 'width')
@@ -782,14 +798,22 @@ function buildRequestHeaders(attributes: Array<t.JSXAttribute | t.JSXSpreadAttri
   };
 }
 
-function buildSourceObject(sourceObject: t.ObjectExpression, requestHeaders: RequestHeaders): t.ObjectExpression {
+function buildSourceObject(
+  sourceObject: t.ObjectExpression,
+  requestHeaders: RequestHeaders,
+  reactNativeMinor?: number
+): t.ObjectExpression {
   if (requestHeaders.headers.properties.length === 0) return t.cloneNode(sourceObject, true);
 
   const uri = getObjectPropertyExpression(sourceObject, 'uri');
   if (!uri || !isStaticTruthyForLogicalOr(uri)) return t.cloneNode(sourceObject, true);
 
   const nativeSource = t.cloneNode(sourceObject, true);
-  nativeSource.properties.push(t.objectProperty(t.identifier('headers'), t.cloneNode(requestHeaders.headers, true)));
+  const headers = t.cloneNode(requestHeaders.headers, true);
+  const sourceHeaders = getObjectPropertyExpression(sourceObject, 'headers');
+  if (reactNativeMinor !== undefined && reactNativeMinor >= 88 && sourceHeaders && !isNullishExpression(sourceHeaders))
+    headers.properties.push(t.spreadElement(sourceHeaders));
+  nativeSource.properties.push(t.objectProperty(t.identifier('headers'), headers));
   return nativeSource;
 }
 
@@ -913,7 +937,7 @@ function findAttribute(
 }
 
 function getObjectPropertyExpression(object: t.ObjectExpression, name: string): t.Expression | undefined {
-  for (const property of object.properties) {
+  for (const property of object.properties.toReversed()) {
     if (!t.isObjectProperty(property) || !t.isExpression(property.value)) continue;
     if (t.isIdentifier(property.key, { name }) || (t.isStringLiteral(property.key) && property.key.value === name)) {
       return t.cloneNode(property.value, true);

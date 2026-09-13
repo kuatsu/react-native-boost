@@ -61,8 +61,6 @@ export const normalizeImage = (props: Record<string, unknown>, reactNativeMinor:
     'crossOrigin',
     'referrerPolicy',
     'srcSet',
-    'width',
-    'height',
   ]) {
     delete normalized[key];
   }

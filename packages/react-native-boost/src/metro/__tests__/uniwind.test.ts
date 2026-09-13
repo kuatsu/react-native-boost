@@ -89,7 +89,7 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
         unstable_conditionNames: ['require', 'react-native'],
         extraNodeModules: { 'react-native-boost': packageRoot },
       },
-      watchFolders: [path.resolve(packageRoot, '../..')],
+      watchFolders: [packageRoot, path.resolve(packageRoot, '../../node_modules')],
       transformer: {
         ...base.transformer,
         assetRegistryPath: createRequire(require.resolve('react-native/package.json')).resolve(

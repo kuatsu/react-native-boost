@@ -253,7 +253,7 @@ describe('getDefaultTextStyle follows the installed RN version', () => {
 describe('Text accessibility release defaults', () => {
   afterEach(restorePlatformMock);
 
-  it.each([83, 84, 85, 86, 87, undefined])(
+  it.each([83, 84, 85, 86, 87, 88, undefined])(
     'preserves null visibility and state ownership on RN 0.%s',
     async (minor) => {
       const runtime = await loadRuntime(minor);
@@ -266,8 +266,9 @@ describe('Text accessibility release defaults', () => {
         'disabled': false,
       });
       expect(result.accessibilityElementsHidden).toBe(legacy ? true : null);
-      expect(result.accessibilityState === state).toBe(!legacy);
-      expect(state.disabled).toBe(legacy);
+      const mutatesState = minor !== undefined && minor >= 85 && minor < 88;
+      expect(result.accessibilityState === state).toBe(mutatesState);
+      expect(state.disabled).toBe(!mutatesState);
       expect(Object.hasOwn(result, 'accessibilityLabel')).toBe(legacy);
       if (legacy) {
         expect(
@@ -548,6 +549,7 @@ describe('processImageAccessibilityProps', () => {
     it.each([
       [84, { accessibilityLabel: 'Label', accessible: true }],
       [85, { accessibilityLabel: 'Label' }],
+      [88, { accessibilityLabel: 'Label' }],
     ])('handles a null alt on RN 0.%i', async (minor, expected) => {
       const runtime = await loadRuntime(minor);
       expect(runtime.processImageAccessibilityProps({ 'alt': null, 'aria-label': 'Label' })).toEqual(expected);
@@ -556,6 +558,7 @@ describe('processImageAccessibilityProps', () => {
     it.each([
       [84, { accessible: null }],
       [85, {}],
+      [88, { accessible: null }],
     ])('handles a null accessible prop on RN 0.%i', async (minor, expected) => {
       const runtime = await loadRuntime(minor);
       expect(runtime.processImageAccessibilityProps({ accessible: null })).toEqual(expected);
@@ -716,7 +719,7 @@ describe('processImageSourceProps', () => {
   describe('object-source headers follow the installed RN version', () => {
     afterEach(restorePlatformMock);
 
-    it.each([84, 87])('lifts them on RN 0.%i', async (minor) => {
+    it.each([84, 87, 88])('lifts them on RN 0.%i', async (minor) => {
       const runtime = await loadRuntime(minor);
       const source = { uri: 'logo.png', headers: { Authorization: 'Bearer object' } };
       expect(runtime.processImageSourceProps({ source }).headers).toEqual({ Authorization: 'Bearer object' });
@@ -724,6 +727,25 @@ describe('processImageSourceProps', () => {
         Authorization: 'Bearer object',
       });
     });
+
+    it.each([83, 84, 85, 86, 87, 88, undefined])(
+      'merges generated headers only from RN 0.88 (target %s)',
+      async (minor) => {
+        const runtime = await loadRuntime(minor);
+        const headers = { 'Authorization': 'Bearer token', 'Referrer-Policy': 'no-referrer' };
+        const result = runtime.processImageSourceProps({
+          source: { uri: 'logo.png', headers },
+          referrerPolicy: 'origin',
+        });
+        expect(result.source[0].headers).toStrictEqual(
+          minor === undefined || minor >= 88 ? headers : { 'Referrer-Policy': 'origin' }
+        );
+        expect(result.headers).toStrictEqual(result.source[0].headers);
+        const nullHeaders = minor !== undefined && minor < 85 ? null : undefined;
+        expect(runtime.processImageObjectSourceHeaders(null)).toBe(nullHeaders);
+        expect(runtime.processImageSourceProps({ source: { uri: '', headers: null } }).headers).toBe(nullHeaders);
+      }
+    );
 
     it('drops them on RN 0.85, matching the wrapper of that version', async () => {
       const runtime = await loadRuntime(85);
