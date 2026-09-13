@@ -26,7 +26,7 @@ It eliminates unnecessary runtime work, replaces JavaScript abstractions with mo
 
 ## Documentation
 
-The documentation is available at [react-native-boost.oss.kuatsu.de](https://react-native-boost.oss.kuatsu.de).
+The documentation is available at [boost.kuatsu.de](https://boost.kuatsu.de).
 
 ## Benchmark
 
@@ -37,7 +37,7 @@ The documentation is available at [react-native-boost.oss.kuatsu.de](https://rea
   </picture>
 </div>
 
-See the [benchmarks page](https://react-native-boost.oss.kuatsu.de/docs/information/benchmarks) for Android results and the full methodology.
+See the [benchmarks page](https://boost.kuatsu.de/docs/information/benchmarks) for Android results and the full methodology.
 
 ## Compatibility
 
@@ -53,7 +53,7 @@ For older React Native versions, you can install `react-native-boost@^0`. Please
 
 ## Installation
 
-Install the package using your favorite package manager. Please **do not** install the package as a development dependency. While the Babel plugin itself would work as a development dependency, it relies on importing the runtime library (`react-native-boost/runtime`) into your code, which requires the package to be installed as a regular dependency. Read more [here](https://react-native-boost.oss.kuatsu.de/docs/runtime-library/).
+Install the package using your favorite package manager. Please **do not** install the package as a development dependency. While the Babel plugin itself would work as a development dependency, it relies on importing the runtime library (`react-native-boost/runtime`) into your code, which requires the package to be installed as a regular dependency. Read more [here](https://boost.kuatsu.de/docs/runtime-library/).
 
 ```sh
 npm install react-native-boost
@@ -76,7 +76,7 @@ If you don't see the `metro.config.js` file, run this command first:
 npx expo customize metro.config.js
 ```
 
-If you're using Unistyles, Nativewind, or a bundler other than Metro, see the [documentation](https://react-native-boost.oss.kuatsu.de/docs) for setup instructions.
+If you're using Unistyles, Nativewind, or a bundler other than Metro, see the [documentation](https://boost.kuatsu.de/docs) for setup instructions.
 
 Finally, restart your React Native development server and clear the bundler cache:
 
@@ -88,11 +88,11 @@ yarn start --clear
 
 That's it! No imports in your code, rebuilding, or anything else is required.
 
-Optional configuration is described in the [documentation](https://react-native-boost.oss.kuatsu.de/docs/configuration/configure).
+Optional configuration is described in the [documentation](https://boost.kuatsu.de/docs/configuration/configure).
 
 ## How it works
 
-A [short overview of how the plugin works](https://react-native-boost.oss.kuatsu.de/docs/information/how-it-works) can be found in the documentation.
+A [short overview of how the plugin works](https://boost.kuatsu.de/docs/information/how-it-works) can be found in the documentation.
 
 ## Contributing
 

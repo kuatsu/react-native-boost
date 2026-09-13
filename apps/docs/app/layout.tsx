@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://react-native-boost.oss.kuatsu.de'),
+  metadataBase: new URL('https://boost.kuatsu.de'),
   title: {
     default: 'React Native Boost',
     template: '%s | React Native Boost',
