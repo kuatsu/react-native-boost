@@ -1,0 +1,135 @@
+---
+title: Migrate from 1.x to 2.x
+description: Move Boost from Babel to Metro and update renamed options.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Most apps need only two configuration changes:
+
+1. Move Boost from `babel.config.js` to `metro.config.js`.
+2. Update any Boost options that you set.
+
+Your application code does not need to change. Boost 2 continues to support React Native 0.83 and later.
+
+<Callout type="info" title="Not using Metro?">
+  If you do not use Metro in your app (which is very rare), keep the Babel plugin and follow the [non-Metro setup guide](./non-metro). You still need to update your options as shown below.
+</Callout>
+
+## 1. Update the package
+
+Install the latest 2.x release with your package manager:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']} groupId="package-manager" persist>
+  <Tab value="npm">
+
+  ```sh
+  npm install react-native-boost@^2
+  ```
+
+  </Tab>
+  <Tab value="pnpm">
+
+  ```sh
+  pnpm add react-native-boost@^2
+  ```
+
+  </Tab>
+  <Tab value="yarn">
+
+  ```sh
+  yarn add react-native-boost@^2
+  ```
+
+  </Tab>
+  <Tab value="bun">
+
+  ```sh
+  bun add react-native-boost@^2
+  ```
+
+  </Tab>
+</Tabs>
+
+## 2. Move Boost to Metro
+
+Remove the `react-native-boost/plugin` entry from `babel.config.js`. Keep your other Babel presets and plugins.
+
+Then wrap your existing Metro config with `withBoostConfig`:
+
+```js
+// metro.config.js
+const { getDefaultConfig } = require('expo/metro-config');
+const { withBoostConfig } = require('react-native-boost/metro');
+
+const config = getDefaultConfig(__dirname);
+
+module.exports = withBoostConfig(config);
+```
+
+Bare React Native apps import `getDefaultConfig` from `@react-native/metro-config` instead.
+
+If your Expo app does not have a `metro.config.js` file, create one first:
+
+```sh
+npx expo customize metro.config.js
+```
+
+## 3. Update your options
+
+Pass Boost options as the second argument to `withBoostConfig`.
+
+```js
+module.exports = withBoostConfig(config, {
+  logLevel: 'debug',
+  ignores: ['node_modules/**'],
+  integrations: {
+    unistyles: 'on',
+  },
+  optimizations: {
+    'native-text': 'on',
+    'native-view': 'on',
+    'native-image': 'off',
+  },
+});
+```
+
+Use this table to replace 1.x options:
+
+| 1.x option | 2.x option |
+| --- | --- |
+| `verbose: true` | `logLevel: 'debug'` |
+| `silent: true` | `logLevel: 'silent'` |
+| `verbose: false`, `silent: false` | Remove both. The default is `logLevel: 'info'`. |
+| `unistyles: true` | `integrations: { unistyles: 'on' }` |
+| `unistyles: false` | `integrations: { unistyles: 'off' }` |
+| `optimizations.text` | `optimizations['native-text']` |
+| `optimizations.view` | `optimizations['native-view']` |
+| `optimizations.image` | `optimizations['native-image']` |
+| `true` or `false` optimization values | `'on'` or `'off'` |
+| `dangerouslyOptimize*WithUnknownAncestors` | `assumptions.unknownAncestorsDoNotRenderText` |
+| `ignores` | No change |
+
+<Callout type="warn" title="Review the ancestor assumption">
+  The three separate 1.x dangerous options are now one project-wide assumption. Enable `unknownAncestorsDoNotRenderText` only if unknown components never add a React Native `Text` around their children.
+</Callout>
+
+See [Configure Boost](./configure) for the complete option reference.
+
+## 4. Check styling integrations
+
+Skip this section if you do not use these libraries.
+
+- **Unistyles v3:** Keep the Unistyles Babel plugin. Move only the Boost options to Metro and set `integrations.unistyles` to `'on'`. See [Unistyles support](../compatibility/unistyles).
+- **Nativewind v4:** Keep the existing `cssInterop` setup. See [Nativewind support](../compatibility/nativewind).
+- **Uniwind:** Boost 2 adds support for Uniwind >= 1.6.2. Apply `withBoostConfig` after `withUniwindConfig` and set `integrations.uniwind` to `'on'`. See [Uniwind support](../compatibility/uniwind).
+
+## 5. Clear the cache and verify
+
+Restart Metro with a clean cache:
+
+```sh
+npm start -- --clear
+```
+
+Boost v2 adds a lot of new optimizers and expands support for a lot more component instances. If you see any unknown behavior, set `logLevel: 'debug'` to see which optimizations run where. If you find a bug, please [report it](https://github.com/kuatsu/react-native-boost/issues)!. See [Troubleshooting](../information/troubleshooting) if Metro reports an integration error.
