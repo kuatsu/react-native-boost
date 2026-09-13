@@ -55,7 +55,7 @@ export function foldAccessibility(
   platform?: string,
   minor?: number
 ): t.JSXAttribute[] | undefined {
-  if ((platform !== 'ios' && platform !== 'android') || minor === undefined || minor < 83 || minor > 87) return;
+  if ((platform !== 'ios' && platform !== 'android') || minor === undefined || minor < 83 || minor > 88) return;
   const names = new Set<string>();
   for (const attribute of path.node.attributes) {
     if (!t.isJSXAttribute(attribute) || !t.isJSXIdentifier(attribute.name) || names.has(attribute.name.name)) return;
@@ -117,14 +117,21 @@ function textProps(props: Props, platform: string, minor: number): Props {
   ])
     delete result[key];
   let state = props.accessibilityState as Record<string, Primitive> | null | undefined;
-  if (stateKeys.some((key) => props['aria-' + key] != null)) {
+  const stateDisabled = props['aria-disabled'] ?? state?.disabled;
+  const resolvedDisabled = props.disabled ?? stateDisabled;
+  const needsStateUpdate =
+    resolvedDisabled !== stateDisabled &&
+    ((resolvedDisabled != null && resolvedDisabled !== false) || (stateDisabled != null && stateDisabled !== false));
+  if ((minor >= 88 && needsStateUpdate) || stateKeys.some((key) => props['aria-' + key] != null)) {
     state =
       state == null
         ? (Object.fromEntries(stateKeys.map((key) => [key, props['aria-' + key]])) as Record<string, Primitive>)
         : merge(props, 'accessibilityState', stateKeys);
+    if (minor >= 88) state.disabled = resolvedDisabled as Primitive;
   }
-  const disabled = (props.disabled ?? state?.disabled) as Primitive;
+  const disabled = (minor >= 88 ? resolvedDisabled : (props.disabled ?? state?.disabled)) as Primitive;
   if (
+    minor < 88 &&
     disabled !== state?.disabled &&
     ((disabled != null && disabled !== false) || (state?.disabled != null && state.disabled !== false))
   )
@@ -177,6 +184,20 @@ function viewProps(props: Props): Props | undefined {
 function imageProps(props: Props, platform: string, minor: number): Props {
   const result = { ...props };
   const legacy = minor < 85;
+  if (minor >= 88) {
+    for (const key of Object.keys(result))
+      if (key.startsWith('aria-') || key === 'alt' || key === 'accessibilityState') delete result[key];
+    if (props['aria-label'] != null) result.accessibilityLabel = props['aria-label'];
+    else if (props.alt != null && props.accessibilityLabel == null) result.accessibilityLabel = props.alt;
+    if (props['aria-labelledby'] != null) result.accessibilityLabelledBy = props['aria-labelledby'];
+    if (platform === 'ios' && props['aria-hidden'] === true) result.accessible = false;
+    else if (props.alt != null) result.accessible = true;
+    if (platform === 'android' && props['aria-hidden'] === true)
+      result.importantForAccessibility = 'no-hide-descendants';
+    if (props.accessibilityState != null || stateKeys.some((key) => props['aria-' + key] != null))
+      result.accessibilityState = merge(props, 'accessibilityState', stateKeys);
+    return result;
+  }
   if (platform === 'android' && !legacy) {
     for (const key of Object.keys(result))
       if (

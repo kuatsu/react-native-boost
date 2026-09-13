@@ -1,19 +1,16 @@
-import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
+import {
+  processImageSourceProps as _processImageSourceProps,
+  NativeImage as _NativeImage,
+} from 'react-native-boost/runtime';
 import { Image } from 'react-native';
-const _imageSource = [
-  {
-    uri: 'https://example.com/src.png',
-    headers: {},
-    width: 20,
-  },
-];
 <_NativeImage
-  style={[
-    {},
-    {
-      overflow: 'hidden',
+  {..._processImageSourceProps({
+    source: {
+      uri: 'source.png',
+      width: 16,
+      height: 16,
     },
-  ]}
-  source={_imageSource}
-  resizeMode="cover"
+    src: 'https://example.com/src.png',
+    width: 20,
+  })}
 />;

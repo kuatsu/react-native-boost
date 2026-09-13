@@ -493,7 +493,8 @@ describe('image android output', () => {
     expect(getStyleDimensionEntries(modernImages[2]!).properties).toHaveLength(0);
 
     const unknownOutput = await transformImage(source, 'android', { reactNativeMinor: null });
-    const unknownStyle = getAttributeExpression(getNativeImageAttributes(unknownOutput)[0]!, 'style');
+    expect(unknownOutput).toContain('processImageSourceProps');
+    const unknownStyle = getAttributeExpression(getNativeImageAttributes(unknownOutput)[1]!, 'style');
     const unknownDimensions = unwrapRuntimeGate(
       (unknownStyle as t.ArrayExpression).elements[0] as t.Expression,
       'processImageArraySourceDimensions'
@@ -515,8 +516,8 @@ describe('image android output', () => {
     const androidOutput = await transformImage(source, 'android');
     expect(androidOutput).toContain('processImageSourceProps');
 
-    // iOS emits the dimensions only once (in the source entry), so it can stay static.
-    const iosOutput = await transformImage(source, 'ios');
+    expect(await transformImage(source, 'ios')).toContain('processImageSourceProps');
+    const iosOutput = await transformImage(source, 'ios', { reactNativeMinor: 88 });
     expect(iosOutput).not.toContain('processImageSourceProps');
     expect(iosOutput).not.toContain('const _imageSource');
     expect(iosOutput).toContain('<_NativeImage');
@@ -773,8 +774,8 @@ describe('image consumed props', () => {
 
       for (const image of images) {
         const names = getAttributeNames(image);
-        expect(names.has('width')).toBe(false);
-        expect(names.has('height')).toBe(false);
+        expect(names.has('width')).toBe(platform === 'ios');
+        expect(names.has('height')).toBe(platform === 'ios');
         expect(names.has('crossOrigin')).toBe(false);
         expect(names.has('referrerPolicy')).toBe(false);
       }

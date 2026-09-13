@@ -189,6 +189,7 @@ const IMAGE_CASES = [
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} crossOrigin="use-credentials" referrerPolicy="origin" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt="Logo" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} alt={null} aria-label="Logo" />',
+  '<Image source={{ uri: "logo.png" }} aria-labelledby="label" accessibilityLabelledBy="fallback" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} accessible={null} />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-label="Logo" accessibilityLabel="Fallback" />',
   '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-hidden={true} accessible={true} />',
@@ -283,7 +284,8 @@ const IMAGE_PROP_ASSERTIONS = new Map<string, (props: Record<string, unknown>, o
     [
       '<Image source={{ uri: "logo.png", width: 16, height: 16 }} aria-busy={true} accessibilityState={{ selected: true }} />',
       (props, os) => {
-        if (os === 'android') expect(props.accessibilityState).toEqual({ selected: true, busy: true });
+        if (os === 'android' || REACT_NATIVE_MINOR >= 88)
+          expect(normalize(props).accessibilityState).toEqual({ selected: true, busy: true });
         else expect(props.accessibilityState).toEqual({ selected: true });
       },
     ],
@@ -371,6 +373,52 @@ describe('differential parity', () => {
         normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
       );
       DYNAMIC_IMAGE_PROP_ASSERTIONS.get(jsx)?.(boost.props);
+    });
+
+    it.each([
+      [false, 'logo.png'],
+      [true, 'logo.png'],
+      [false, ''],
+      [true, ''],
+    ] as const)('Image: preserves source headers and collisions (dynamic=%s, uri=%s)', async (dynamic, uri) => {
+      for (const headers of [
+        'null',
+        '{}',
+        '{ Authorization: "Bearer token", "Referrer-Policy": "no-referrer", "Access-Control-Allow-Credentials": "false" }',
+      ]) {
+        const source = `{ uri: ${JSON.stringify(uri)}, width: 16, height: 8, headers: ${headers} }`;
+        const preamble = dynamic ? `const source = ${source};` : '';
+        const jsx = `<Image source={${dynamic ? 'source' : source}} crossOrigin="use-credentials" referrerPolicy="origin" />`;
+        const boost = await captureBoost(os, jsx, preamble);
+        if (!boost.optimized) throw new Error('Image headers must optimize');
+        const wrapper = await captureWrapper(os, jsx, preamble);
+        expect(boost.props.source).toStrictEqual(wrapper.props.source);
+        expect(boost.props.headers).toStrictEqual(wrapper.props.headers);
+        expect(normalizeImage(boost.props, REACT_NATIVE_MINOR)).toEqual(
+          normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
+        );
+      }
+    });
+
+    it.each([false, true])('Image: preserves native dimensions (dynamic=%s)', async (dynamic) => {
+      for (const source of [
+        '{ uri: "logo.png", width: 16, height: 8 }',
+        '[{ uri: "logo.png", width: 16, height: 8 }]',
+        '[{ uri: "logo.png" }, { uri: "large.png", scale: 2 }]',
+      ]) {
+        const preamble = dynamic ? `const source = ${source};` : '';
+        const jsx = `<Image source={${dynamic ? 'source' : source}} width={20} height={10} />`;
+        const boost = await captureBoost(os, jsx, preamble);
+        if (!boost.optimized) throw new Error('Image dimensions must optimize');
+        const wrapper = await captureWrapper(os, jsx, preamble);
+        for (const key of ['width', 'height']) {
+          expect(Object.hasOwn(boost.props, key)).toBe(Object.hasOwn(wrapper.props, key));
+          expect(boost.props[key]).toBe(wrapper.props[key]);
+        }
+        expect(normalizeImage(boost.props, REACT_NATIVE_MINOR)).toEqual(
+          normalizeImage(wrapper.props, REACT_NATIVE_MINOR)
+        );
+      }
     });
 
     it.each(STATIC_SELECTION_COLOR_CASES)('Text: precomputes selectionColor: %s', async (jsx) => {

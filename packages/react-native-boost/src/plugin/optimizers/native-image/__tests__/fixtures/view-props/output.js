@@ -1,4 +1,7 @@
-import { NativeImage as _NativeImage } from 'react-native-boost/runtime';
+import {
+  processImageAccessibilityProps as _processImageAccessibilityProps,
+  NativeImage as _NativeImage,
+} from 'react-native-boost/runtime';
 import { Image } from 'react-native';
 const _imageSource = [
   {
@@ -15,9 +18,6 @@ const _imageSource = [
   accessibilityValue={{
     text: 'loaded',
   }}
-  accessibilityState={{
-    selected: true,
-  }}
   nativeID="logo"
   pointerEvents="none"
   collapsable={false}
@@ -27,6 +27,11 @@ const _imageSource = [
   borderTopRightRadius={2}
   borderBottomLeftRadius={3}
   borderBottomRightRadius={4}
+  {..._processImageAccessibilityProps({
+    accessibilityState: {
+      selected: true,
+    },
+  })}
   style={[
     {
       width: 16,

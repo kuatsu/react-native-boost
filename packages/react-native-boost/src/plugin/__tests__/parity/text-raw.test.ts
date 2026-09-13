@@ -86,7 +86,13 @@ for (const platform of ['ios', 'android'] as const) {
               : []),
             ...(component === 'Image'
               ? [
+                  'alt={null}',
                   'alt={null} accessible={false}',
+                  'accessible={null}',
+                  'accessible={undefined}',
+                  'accessibilityLabel={null}',
+                  'accessibilityLabelledBy={null}',
+                  'aria-labelledby="winner" accessibilityLabelledBy="fallback"',
                   'alt="fallback" aria-label="winner" aria-hidden={true}',
                   'aria-labelledby={null} accessibilityLabelledBy={null}',
                   'aria-labelledby={null} accessibilityLabelledBy={["first","second"]}',
@@ -154,6 +160,40 @@ for (const platform of ['ios', 'android'] as const) {
         vi.unstubAllGlobals();
       }
     });
+
+    it.runIf(reactNativeVersion.minor >= 88)(
+      'preserves dynamic Image accessibility own keys and state copies',
+      async () => {
+        for (const properties of [
+          { alt: null, accessible: false },
+          { accessible: null, accessibilityLabel: null, accessibilityLabelledBy: null },
+          { accessible: undefined, accessibilityLabel: undefined, accessibilityLabelledBy: undefined },
+          { 'aria-labelledby': 'label', 'accessibilityLabelledBy': 'fallback' },
+          { 'aria-label': null, 'accessibilityLabel': null, 'alt': null },
+          { 'aria-hidden': true, 'alt': 'logo', 'accessible': true },
+          { accessibilityState: null },
+          { accessibilityState: { busy: false, extra: 'removed' } },
+          { 'aria-busy': true, 'accessibilityState': { busy: false, selected: true } },
+        ]) {
+          vi.stubGlobal('imageAccessibilityInput', properties);
+          try {
+            const jsx = `<Image src="logo.png" ${Object.keys(properties)
+              .map((key) => `${key}={input[${JSON.stringify(key)}]}`)
+              .join(' ')} />`;
+            const preamble = 'const input = globalThis.imageAccessibilityInput;';
+            const expected = await captureWrapper(platform, jsx, preamble);
+            const result = await captureBoostHosts(platform, jsx, preamble);
+            if (!result.optimized) throw new Error('Dynamic Image accessibility must optimize');
+            const actual = result.hosts[0].props;
+            expect(accessibilityProps(actual)).toStrictEqual(accessibilityProps(expected.props));
+            if (properties.accessibilityState != null)
+              expect(actual.accessibilityState).not.toBe(properties.accessibilityState);
+          } finally {
+            vi.unstubAllGlobals();
+          }
+        }
+      }
+    );
 
     it('keeps literal spread string whitespace and entities', async () => {
       for (const component of ['Text', 'View']) {
@@ -246,7 +286,7 @@ for (const platform of ['ios', 'android'] as const) {
       }
     });
 
-    it('reconciles shared state in place across renders and preserves ARIA copy boundaries', () => {
+    it('preserves release-specific state identity and mutations across renders', () => {
       setPlatformOS(platform);
       for (const aria of [{}, { 'aria-busy': true }]) {
         const expectedState = { disabled: true };
@@ -262,10 +302,10 @@ for (const platform of ['ios', 'android'] as const) {
       }
     });
 
-    it('throws for a frozen conflicting state, but not an ARIA-created copy', () => {
+    it('preserves release-specific frozen state errors and ARIA copies', () => {
       setPlatformOS(platform);
       const state = Object.freeze({ disabled: true });
-      if (reactNativeVersion.minor >= 85) {
+      if (reactNativeVersion.minor >= 85 && reactNativeVersion.minor < 88) {
         expect(() => wrapper({ accessibilityState: state, disabled: false })).toThrow(TypeError);
         expect(() => processTextAccessibilityProps({ accessibilityState: state, disabled: false })).toThrow(TypeError);
       } else {
