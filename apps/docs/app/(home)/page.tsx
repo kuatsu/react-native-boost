@@ -9,11 +9,9 @@ export default function HomePage() {
           <Rocket className="size-4" />
           React Native Boost
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-          Improve your app's performance with one line of code.
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">The React Native performance compiler.</h1>
         <p className="mt-3 max-w-3xl text-fd-muted-foreground md:text-base">
-          A Babel plugin that replaces analyzes your code and performs safe optimizations to reduce unnecessary runtime
+          A Metro plugin that replaces analyzes your code and performs safe optimizations to reduce unnecessary runtime
           overhead in React Native apps.
         </p>
 
@@ -33,7 +31,7 @@ export default function HomePage() {
             Faster renders
           </p>
           <p className="text-sm text-fd-muted-foreground">
-            Removes runtime overhead from wrapper components to improve UI-heavy screens.
+            Removes runtime overhead by moving expensive work to build time.
           </p>
         </article>
         <article className="rounded-xl border border-fd-border bg-fd-card p-4">
@@ -42,7 +40,7 @@ export default function HomePage() {
             Safety first
           </p>
           <p className="text-sm text-fd-muted-foreground">
-            Conservative analysis skips uncertain optimizations to reduce behavioral risk.
+            Conservative by default, optimizing only what can safely be optimized.
           </p>
         </article>
         <article className="rounded-xl border border-fd-border bg-fd-card p-4">
@@ -51,7 +49,7 @@ export default function HomePage() {
             Minimal setup
           </p>
           <p className="text-sm text-fd-muted-foreground">
-            Install, add the Babel plugin, get instant improvements. No code changes required.
+            Install, add the Metro plugin, get instant improvements. No code changes required.
           </p>
         </article>
       </section>
