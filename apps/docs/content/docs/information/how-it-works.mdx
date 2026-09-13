@@ -5,9 +5,9 @@ description: Why React Native Boost makes your app faster.
 
 In React Native, many of the standard components, like `Text` and `View`, aren't quite what they appear to be. They look like basic building blocks, but each one runs JavaScript code **every time it renders**, wrapping lower-level native components underneath.
 
-These wrappers are genuinely useful. They handle edge cases and power many conveniences such as style normalization. But the majority of elements do not need all that runtime work, making these wrappers pure overhead. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
+These wrappers are genuinely useful. They handle edge cases and power many conveniences such as style normalization. But the majority of elements do not need all that runtime work, making these wrappers pure overhead in most cases. On a busy screen with hundreds of these components, that overhead adds up and starts costing you frames.
 
-React Native Boost removes such wrappers when they're not needed. Additionally, it also provides a few smaller micro-optimizations that move small runtime work to the build time, like resolving `StyleSheet` function calls, folding `Platform.OS` branches, and more, which all stack up additionally across an app.
+React Native Boost removes such wrappers when they're not needed. Additionally, it also makes a few smaller micro-optimizations that move small runtime work to the build time, like resolving `StyleSheet` function calls, folding `Platform.OS` branches, and more, which all stack up additionally across an app.
 
 React Native Boost can therefore be described as a performance optimization compiler for React Native.
 
@@ -21,7 +21,7 @@ React Native Boost can therefore be described as a performance optimization comp
 <NativeText style={{ color: "red" }} allowFontScaling={true} ellipsizeMode="tail">Hello</NativeText>
 ```
 
-`NativeText` is exactly what the `Text` wrapper would have rendered after doing the wrapper work outlined above. Boost just skips the middleman on the runtime and does it during build time instead. The defaults the wrapper would have applied are baked in during compilation, so runtime behavior stays identical.
+This is exactly what React Native would have rendered using its `Text` wrapper component. The difference is that Boost does this work at build time, while pure React Native relies on a middleman on the runtime doing this work on your user's device instead.
 
 ## Only when it's safe
 
@@ -31,7 +31,7 @@ By default, Boost rewrites a component only when it can **prove** that doing so 
 - Are its props fully compatible with the underlying native component?
 - Is it in a safe spot in the tree (for example, not nested inside another `Text`)?
 
-If any check fails, Boost leaves that component or function exactly as it was. It has a strong bias toward safety and would rather miss an optimization than risk a bug.
+If any check fails and Boost can't safely transform it at build time, it leaves that component or function exactly as it was. It has a strong bias toward safety and would rather miss an optimization than risk a bug.
 
 ## Compatibility boundary
 
