@@ -11,8 +11,8 @@ export default function HomePage() {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">The React Native performance compiler.</h1>
         <p className="mt-3 max-w-3xl text-fd-muted-foreground md:text-base">
-          A Metro plugin that replaces analyzes your code and performs safe optimizations to reduce unnecessary runtime
-          overhead in React Native apps.
+          A Metro plugin that analyzes your code and performs safe optimizations to reduce unnecessary runtime overhead
+          in React Native apps.
         </p>
 
         <div className="mt-5 flex items-center">
