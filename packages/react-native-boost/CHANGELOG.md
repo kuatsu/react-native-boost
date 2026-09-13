@@ -1,5 +1,55 @@
 # Changelog
 
+## [2.0.0](https://github.com/kuatsu/react-native-boost/compare/v1.7.1...v2.0.0) (2026-09-13)
+
+### ⚠ BREAKING CHANGES
+
+* **plugin:** redesign configuration API
+
+### ✨ Features
+
+* add ActivityIndicator optimizer ([0c914dd](https://github.com/kuatsu/react-native-boost/commit/0c914dd6ef096386ccb8ca694404642d0970d809))
+* add support for React Native 0.88 ([3d9c0c9](https://github.com/kuatsu/react-native-boost/commit/3d9c0c9f45085efaccd5e9a6654decbab913259a))
+* **animated-value-initialization:** lazily create animated values ([e01a3f6](https://github.com/kuatsu/react-native-boost/commit/e01a3f6084b52e7332e0b0711b71bca883f6064c))
+* **example:** drive mount benchmark automatically ([ef12fe2](https://github.com/kuatsu/react-native-boost/commit/ef12fe2bfc057c5bd5ef2358fc5fb5c1842ae931))
+* **image:** optimize load-event callbacks ([296493b](https://github.com/kuatsu/react-native-boost/commit/296493bd3d2028e082d56f646a16af5b52417a67))
+* **metro:** add config adapter ([613872b](https://github.com/kuatsu/react-native-boost/commit/613872bf0be719ca1c4a1a46399ffddfe44f2815))
+* **metro:** resolve cross-file component ancestors ([1cdee30](https://github.com/kuatsu/react-native-boost/commit/1cdee30ffd1c31cc12c8f4630eb0ae8e075949c4))
+* **platform-folding:** fold Platform select calls and branches ([efef2be](https://github.com/kuatsu/react-native-boost/commit/efef2bea6e11ca9c71b3c9c51836dee5645161ad))
+* **platform-folding:** resolve platform branches and expressions ([639479a](https://github.com/kuatsu/react-native-boost/commit/639479afbe28c3c87f3d046287bbe15850103dba))
+* **plugin:** classify react-native ancestors ([598e790](https://github.com/kuatsu/react-native-boost/commit/598e7904d4c047cbeba7f47b49a22a26fb9aad14))
+* **plugin:** optimize literal JSX spread props ([a0796a2](https://github.com/kuatsu/react-native-boost/commit/a0796a2245acdcfb0ed9cb62f97fbe9b9dbca77b))
+* **plugin:** precompute static accessibility props ([acc9cae](https://github.com/kuatsu/react-native-boost/commit/acc9caedac17f4fe48e10ba7519de4eb70822644))
+* **plugin:** redesign configuration API ([47199db](https://github.com/kuatsu/react-native-boost/commit/47199dbbab9c5efb5eb7a8b283a5acaffa43953d))
+* **plugin:** support Uniwind integration ([ec287cd](https://github.com/kuatsu/react-native-boost/commit/ec287cd0c4dd318fdf6607f2022ce2c96f3b54d9))
+* resolve spread helper return keys ([4f8a819](https://github.com/kuatsu/react-native-boost/commit/4f8a8194c9c27de96a48f5cda9df30474c4882db))
+* **static-animated:** remove wrappers without animated values ([82625d6](https://github.com/kuatsu/react-native-boost/commit/82625d6462fc608892f633161e2e38ab1b21cc2d))
+* **stylesheet-operations:** evaluate static StyleSheet operations ([85389c8](https://github.com/kuatsu/react-native-boost/commit/85389c87b259f7014ac6bf55fe872e7d6335ff87))
+* **view:** preserve runtime Text context if needed ([b26de72](https://github.com/kuatsu/react-native-boost/commit/b26de728315fc533efe5ed90766d7ed4c0d2bc52))
+
+### ⚡ Performance Improvements
+
+* **metro:** reduce redundant bundling transforms and analyses ([2260b86](https://github.com/kuatsu/react-native-boost/commit/2260b86635abbbf096458e83b893183e0a709c90))
+* **native-activity-indicator:** remove text ancestry checks ([6a34d7a](https://github.com/kuatsu/react-native-boost/commit/6a34d7a9ca8247f91521e8aa705fb3a2681e1baa))
+* **native-image:** hoist static native image sources ([7c19af6](https://github.com/kuatsu/react-native-boost/commit/7c19af65d2e6908aed632e5043da41144e906fa7))
+* **native-image:** narrow text ancestry checks ([4e6b00d](https://github.com/kuatsu/react-native-boost/commit/4e6b00d7c0906bd09a0340501939ad53c7ba396b))
+* **native-image:** optimize static srcSet sources ([c280ac2](https://github.com/kuatsu/react-native-boost/commit/c280ac2435fb6f52406e38a36f755c0041fc20d7))
+* **native-text:** preprocess selectionColor ([04b72b6](https://github.com/kuatsu/react-native-boost/commit/04b72b66a410cc3107f0e95ffe23a9ccfcd79cac))
+* **plugin:** replace Object.assign with object spread ([2ac8ec5](https://github.com/kuatsu/react-native-boost/commit/2ac8ec5a98852a84f173800842121f4f64839b87))
+* **plugin:** resolve version-dependent behavior at build time ([21f60a2](https://github.com/kuatsu/react-native-boost/commit/21f60a2c9ca494ab2ee5d941de2c4f5bd53d73b2))
+
+### 🐛 Bug Fixes
+
+* fix type errors ([8c1298c](https://github.com/kuatsu/react-native-boost/commit/8c1298cffb53f83ec9a145267c126ce5fc6ba22c))
+* fix TypeScript 7 type errors ([9cd76d4](https://github.com/kuatsu/react-native-boost/commit/9cd76d479fda3ef0ec3dcc345fa97905fe96d583))
+* **native-text:** bail when runtime text context is unknown ([5778bb8](https://github.com/kuatsu/react-native-boost/commit/5778bb80c738fc01260d9e56eb481026bf63885a))
+* **platform-folding:** preserve select value evaluations ([8ab642e](https://github.com/kuatsu/react-native-boost/commit/8ab642eca3173e44dfc67c434b2c8059a8da8c98))
+* **plugin:** allow boost-force decorator more often ([601cb89](https://github.com/kuatsu/react-native-boost/commit/601cb89fd37b5bc761fa10f84e7e264b0d0d7bd9))
+* **plugin:** preserve text context through wrappers ([7568253](https://github.com/kuatsu/react-native-boost/commit/75682539dd86ef3b5681dd715f50bb5b7e97c418))
+* preserve ancestor safety before React Compiler lowering ([e712029](https://github.com/kuatsu/react-native-boost/commit/e712029e6f5c8f5f86d19671a3f97905ef4045d7))
+* restore React Native version matrix compatibility ([fb7c4fc](https://github.com/kuatsu/react-native-boost/commit/fb7c4fc12cd814f45d1fe1146778a0edd107ee30))
+* **text:** preserve React Native accessibility and style parity ([5e5477c](https://github.com/kuatsu/react-native-boost/commit/5e5477c7040c50907044e20ce6718b61fad075b0))
+
 ## [1.7.1](https://github.com/kuatsu/react-native-boost/compare/v1.7.0...v1.7.1) (2026-09-03)
 
 ### Bug Fixes
