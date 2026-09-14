@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1](https://github.com/kuatsu/react-native-boost/compare/v2.0.0...v2.0.1) (2026-09-14)
+
+### 🐛 Bug Fixes
+
+* **animated-wrapper-removal:** keep wrappers when parents may add ([a186c7f](https://github.com/kuatsu/react-native-boost/commit/a186c7f6523a55c9d85fc94376ee6bde11b0e3b4))
+
 ## [2.0.0](https://github.com/kuatsu/react-native-boost/compare/v1.7.1...v2.0.0) (2026-09-13)
 
 ### ⚠ BREAKING CHANGES
