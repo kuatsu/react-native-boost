@@ -9,6 +9,7 @@ const boostPlugin: PluginItem = [
   boost,
   {
     logLevel: 'silent',
+    optimizations: { 'animated-wrapper-removal': 'on' },
     target: { reactNative: { packageJson: requireFromTest.resolve('react-native/package.json') } },
   },
 ];
@@ -88,6 +89,31 @@ for (const compilerFirst of [true, false]) {
       expect(code).toContain('react/compiler-runtime');
       expect(code).toContain('<View testID="keep"');
       expect(code).not.toContain('react-native-boost/runtime');
+    });
+
+    it('preserves Animated wrappers that can receive props after compilation', () => {
+      const code = transform(
+        `
+        import { cloneElement } from 'react';
+        import { Animated, View } from 'react-native';
+        import Parent from './unknown';
+        function Inject({children}) { return cloneElement(children, {style: {opacity}}); }
+        export function Screen() {
+          return <View>
+            <Animated.View testID="safe" />
+            <Inject><Animated.View testID="cloned" /></Inject>
+            <Parent render={<Animated.View testID="render" />} />
+            <Parent render={() => <Animated.View testID="callback" />} />
+          </View>;
+        }
+      `,
+        plugins
+      );
+      expect(code).toContain('react/compiler-runtime');
+      expect(code).not.toContain('<Animated.View testID="safe"');
+      for (const testID of ['cloned', 'render', 'callback']) {
+        expect(code).toContain(`<Animated.View testID="${testID}"`);
+      }
     });
 
     it('keeps Text ancestry, prop guards, and ignore directives', () => {

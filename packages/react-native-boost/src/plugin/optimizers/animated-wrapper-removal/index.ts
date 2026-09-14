@@ -5,6 +5,7 @@ import { getFirstBailoutReason } from '../../utils/helpers';
 import { createJSXOptimizer } from '../../utils/optimizer';
 import {
   addFileImportHint,
+  hasUnresolvedChildProps,
   isForcedLine,
   isIgnoredLine,
   isStaticLiteralTree,
@@ -44,6 +45,10 @@ const optimizeAnimatedWrapperRemoval: JSXOptimizer = (path, { logger, platform }
       shouldBail: () => !hasStaticChildren(path.parent as t.JSXElement, path),
     },
     { reason: 'has a dynamic style', shouldBail: () => style === undefined },
+    {
+      reason: 'has unresolved parents or element usage that may supply animated props',
+      shouldBail: () => hasUnresolvedChildProps(path),
+    },
   ];
 
   const overriddenReason = forced ? getFirstBailoutReason(bailoutChecks) : undefined;

@@ -339,12 +339,12 @@ it('routes animation hooks missing from Uniwind through the native runtime', asy
 });
 
 it('retains classes when removing an eligible Animated wrapper', async () => {
-  const { code, Component } = await compile('<Animated.View className="box"/>', 'ios', {
+  const { code, Component } = await compile('<View><Animated.View className="box"/></View>', 'ios', {
     optimizations: { 'animated-wrapper-removal': 'on' },
   });
   expect(code).toContain('NativeView');
   expect(code).not.toContain('_jsx(Animated.View');
-  expect(capture(Component, {})[0].props.style.width).toBe(40);
+  expect(capture(Component, {})[1].props.style.width).toBe(40);
 });
 
 it('combines platform and stylesheet transforms with class styles', async () => {

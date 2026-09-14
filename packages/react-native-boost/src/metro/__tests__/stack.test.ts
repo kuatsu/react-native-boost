@@ -72,6 +72,44 @@ describe('Metro and Babel stack', () => {
     expect(getCode(await buildGraph(project, 1))).toContain('NativeText');
   });
 
+  it('removes Animated wrappers only after resolving a non-inspecting imported parent', async () => {
+    const project = createProject();
+    fs.writeFileSync(
+      project.reactNativePackageJson,
+      JSON.stringify({ name: 'react-native', version: '0.86.0', main: 'index.js' })
+    );
+    fs.writeFileSync(
+      path.join(project.root, 'Screen.js'),
+      `import { Animated } from 'react-native'; import { Card } from './Card'; export default () => <Card><Animated.View /></Card>;`
+    );
+    const cardPath = path.join(project.root, 'Card.js');
+    fs.writeFileSync(
+      cardPath,
+      `import { View } from 'react-native'; export const Card = ({ children }) => <View>{children}</View>;`
+    );
+
+    async function build(crossFileAncestorResolution = true) {
+      const { config, metro } = await createMetroConfig(project, 1, crossFileAncestorResolution);
+      return getCode(
+        await metro.buildGraph(config, {
+          entries: [path.join(project.root, 'Screen.js')],
+          platform: 'ios',
+          dev: false,
+          minify: false,
+        })
+      );
+    }
+
+    expect(await build()).toContain('NativeView');
+    expect(await build(false)).not.toContain('NativeView');
+
+    fs.writeFileSync(
+      cardPath,
+      `import { cloneElement } from 'react'; export const Card = ({ children }) => cloneElement(children, { style: { opacity } });`
+    );
+    expect(await build()).not.toContain('NativeView');
+  });
+
   it('keeps a reassigned wrapper unknown', async () => {
     const project = createProject();
     fs.writeFileSync(

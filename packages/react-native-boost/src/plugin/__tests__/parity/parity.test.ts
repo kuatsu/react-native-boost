@@ -328,11 +328,12 @@ describe('differential parity', () => {
     });
 
     it.each(ANIMATED_WRAPPER_REMOVAL_CASES)('Animated wrapper removal: %s', async (jsx) => {
-      const boost = await captureBoost(os, jsx);
+      const boost = await captureBoostHosts(os, `<View>${jsx}</View>`);
       if (!boost.optimized) throw new Error('expected animated wrapper removal case to optimize');
+      expect(boost.hosts).toHaveLength(2);
       const wrapper = await captureWrapper(os, jsx);
-      expect(boost.which).toEqual(wrapper.which);
-      expect(normalize(boost.props)).toEqual(normalize(wrapper.props));
+      expect(boost.hosts[1].which).toEqual(wrapper.which);
+      expect(normalize(boost.hosts[1].props)).toEqual(normalize(wrapper.props));
     });
 
     it.each(ACTIVITY_INDICATOR_CASES)('ActivityIndicator: %s', async (jsx, preamble = '') => {

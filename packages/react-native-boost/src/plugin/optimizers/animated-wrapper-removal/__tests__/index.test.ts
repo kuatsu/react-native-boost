@@ -36,11 +36,16 @@ function targetPackageJson(minor: number): string {
   return packageJson;
 }
 
-function transformWithBoost(source: string, reactNativeMinor = 86, animatedWrapperRemoval?: 'on' | 'off'): string {
+function transformWithBoost(
+  source: string,
+  reactNativeMinor = 86,
+  animatedWrapperRemoval?: 'on' | 'off',
+  platform = 'ios'
+): string {
   return transformSync(source, {
     configFile: false,
     babelrc: false,
-    caller: { name: 'test', platform: 'ios' } as TransformCaller,
+    caller: { name: 'test', platform } as TransformCaller,
     plugins: [
       '@babel/plugin-syntax-jsx',
       [
@@ -61,13 +66,15 @@ const source = (element: string) => `import { Animated } from 'react-native';\n$
 describe('animated wrapper removal integration', () => {
   it('feeds lowered components into the native host optimizers', () => {
     const output = transformWithBoost(`
-      import { Animated } from 'react-native';
+      import { Animated, View } from 'react-native';
       function Case() {
         return (
-          <Animated.View style={{ width: 12 }}>
-            <Animated.Text>Ready</Animated.Text>
-            <Animated.Image source={{ uri: 'logo.png' }} />
-          </Animated.View>
+          <View>
+            <Animated.View style={{ width: 12 }}>
+              <Animated.Text>Ready</Animated.Text>
+              <Animated.Image source={{ uri: 'logo.png' }} />
+            </Animated.View>
+          </View>
         );
       }
     `);
@@ -80,9 +87,9 @@ describe('animated wrapper removal integration', () => {
 
   it('keeps the Text context visible after lowering an outer Animated.Text', () => {
     const output = transformWithBoost(`
-      import { Animated, Text } from 'react-native';
+      import { Animated, Text, View } from 'react-native';
       function Case() {
-        return <Animated.Text><Text>nested</Text></Animated.Text>;
+        return <View><Animated.Text><Text>nested</Text></Animated.Text></View>;
       }
     `);
 
@@ -90,6 +97,32 @@ describe('animated wrapper removal integration', () => {
     expect(output).not.toContain('NativeVirtualText');
     expect(output).toContain('<_AnimatedWrapperRemovalText collapsable={false} style={undefined}>');
     expect(output).toContain('<Text>nested</Text>');
+  });
+
+  it.each(['ios', 'android'])('keeps injected props safe despite the text-context assumption on %s', (platform) => {
+    const output = transformWithBoost(
+      `import { cloneElement } from 'react';
+      import { Animated, View } from 'react-native';
+      import Parent from './parent';
+      function FadeIn({ children }) { return cloneElement(children, { style: { opacity } }); }
+      export function Case() {
+        return <View>
+          <FadeIn><Animated.View /></FadeIn>
+          <Parent asChild><Animated.Text>label</Animated.Text></Parent>
+          <Parent render={<Animated.Image source={{ uri: 'logo.png' }} />} />
+          <Parent render={() => <Animated.ScrollView />} />
+          {cloneElement(<Animated.View />, { style: { opacity } })}
+        </View>;
+      }`,
+      86,
+      undefined,
+      platform
+    );
+
+    for (const component of ['View', 'Text', 'Image', 'ScrollView']) {
+      expect(output).toContain(`<Animated.${component}`);
+    }
+    expect(output).not.toContain('AnimatedWrapperRemoval');
   });
 
   it('defaults on only for RN 0.83 through 0.86 and honors overrides', () => {

@@ -163,7 +163,13 @@ export function createTextContextSourceResolver(path: NodePath<t.JSXOpeningEleme
   return () => (source ??= getTextContextSource(path));
 }
 
-function getTextContextSource(path: NodePath<t.JSXOpeningElement>): TextContextSource {
+/** Calls, prop values, and unresolved parents can change an element before it renders. */
+export function hasUnresolvedChildProps(path: NodePath<t.JSXOpeningElement>): boolean {
+  const source = getTextContextSource(path, true);
+  return source !== 'safe' && source !== 'text';
+}
+
+function getTextContextSource(path: NodePath<t.JSXOpeningElement>, directChildrenOnly = false): TextContextSource {
   const file = (path.hub as unknown as { file: HubFile }).file;
   const context: AncestorAnalysisContext = {
     componentCache: new WeakMap<t.Node, AncestorSummary>(),
@@ -191,6 +197,14 @@ function getTextContextSource(path: NodePath<t.JSXOpeningElement>): TextContextS
     }
 
     if (ancestorPath.isFunction()) return 'runtime';
+
+    if (
+      directChildrenOnly &&
+      !ancestorPath.isJSXElement() &&
+      !ancestorPath.isJSXFragment() &&
+      !ancestorPath.isJSXExpressionContainer()
+    )
+      return 'unknown';
 
     childPath = ancestorPath;
     ancestorPath = ancestorPath.parentPath;

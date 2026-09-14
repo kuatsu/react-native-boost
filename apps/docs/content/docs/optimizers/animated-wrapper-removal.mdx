@@ -7,13 +7,17 @@ The Animated Wrapper Removal optimizer removes an `Animated` wrapper when its el
 
 ```tsx
 // Before
-<Animated.View style={{ opacity: 1 }}>
-  <Text>Hello</Text>
-</Animated.View>
+<View>
+  <Animated.View style={{ opacity: 1 }}>
+    <Text>Hello</Text>
+  </Animated.View>
+</View>
 
 // After, simplified
-<View style={{ opacity: 1 }} collapsable={false}>
-  <Text>Hello</Text>
+<View>
+  <View style={{ opacity: 1 }} collapsable={false}>
+    <Text>Hello</Text>
+  </View>
 </View>
 ```
 
@@ -37,6 +41,7 @@ The optimizer can remove a wrapper when:
 - Its props and expression children are known not to contain animated values or events.
 - Its style is absent, null, or a static object or array literal.
 - Any callbacks are inline functions or local functions that Boost can identify.
+- The element is a direct child of a known parent, such as React Native `View` or a simple wrapper around it.
 
 ## When it skips
 
@@ -47,6 +52,9 @@ Boost keeps the Animated wrapper when it finds:
 - Spread props or duplicate props.
 - A `ref` or Animated passthrough prop.
 - A `refreshControl` on `Animated.ScrollView`.
+- An unknown parent or a parent that inspects or clones its children.
+- An element passed through a prop such as `render`, a function call, or a variable.
+- A component or callback that returns the Animated element without a known parent.
 - An unknown or unsupported target platform.
 
 ## React Native version support
