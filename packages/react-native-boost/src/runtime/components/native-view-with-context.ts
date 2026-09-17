@@ -11,6 +11,6 @@ export const NativeViewWithContext: ComponentType<ComponentPropsWithRef<typeof V
     ? View
     : function NativeViewWithContext(props) {
         const hasTextAncestor = use(TextAncestorContext);
-        const view = jsx(NativeView, props);
+        const view = jsx(NativeView, __DEV__ ? { ...props } : props);
         return hasTextAncestor ? jsx(TextAncestorContext, { value: false, children: view }) : view;
       };

@@ -7,7 +7,7 @@ import { use } from 'react';
 import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { unstable_TextAncestorContext as TextAncestorContext } from 'react-native';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { NativeViewWithContext } from '../components/native-view-with-context';
 import { NativeView } from '../components/native-view';
 
@@ -24,7 +24,10 @@ vi.mock('../components/native-view', () => ({
   },
 }));
 
+beforeEach(() => vi.stubGlobal('__DEV__', true));
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   captures.length = 0;
   vi.doUnmock('react-native');
   vi.resetModules();
@@ -46,10 +49,33 @@ it.each([false, true])('preserves props and resets incoming Text context %s', (i
   expect(captures[0].props.ref).toBe(props.ref);
 });
 
+it('does not warn when a keyed View has children', () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    renderToStaticMarkup(
+      <NativeViewWithContext key="item" testID="item">
+        <span>label</span>
+      </NativeViewWithContext>
+    );
+    expect(captures).toHaveLength(1);
+    expect(consoleError).not.toHaveBeenCalled();
+  } finally {
+    consoleError.mockRestore();
+  }
+});
+
+it('reuses props in production', () => {
+  vi.stubGlobal('__DEV__', false);
+  const element = <NativeViewWithContext testID="item" />;
+  renderToStaticMarkup(element);
+  expect(captures[0].props).toBe(element.props);
+});
+
 it('renders the built CommonJS runtime without a global React variable', () => {
   const runtime = {} as typeof import('../index');
   runInNewContext(readFileSync(new URL('../../../dist/runtime/index.js', import.meta.url), 'utf8'), {
     exports: runtime,
+    __DEV__: true,
     require: (name: string) => {
       if (name === 'react') return React;
       if (name === 'react/jsx-runtime') return jsxRuntime;
