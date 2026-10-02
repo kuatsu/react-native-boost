@@ -65,6 +65,27 @@ const source = `
 `;
 
 describe('animated value initialization integration', () => {
+  it('preserves repeated hook references through the React Native module transform', () => {
+    const output = transformSync(
+      `import { useRef } from 'react';
+      import { Animated } from 'react-native';
+      function Example() {
+        const first = useRef(new Animated.Value(0)).current;
+        const second = useRef(new Animated.Value(1)).current;
+      }`,
+      {
+        configFile: false,
+        babelrc: false,
+        compact: false,
+        presets: ['@react-native/babel-preset'],
+        plugins: [generateTestPlugin(animatedValueInitializationOptimizer, {}, 'ios', 87)],
+      }
+    )!.code!;
+
+    expect(output).toContain('(0, _reactNative.useAnimatedValue)(0)');
+    expect(output).toContain('(0, _reactNative.useAnimatedValue)(1)');
+  });
+
   it.each(['on', 'off'] as const)('uses only available hooks with Uniwind %s', (uniwind) => {
     const output = transformWithOptimizer(source, 'ios', 84, uniwind);
 

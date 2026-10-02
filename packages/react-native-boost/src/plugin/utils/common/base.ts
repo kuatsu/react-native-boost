@@ -32,7 +32,7 @@ export function addFileImportHint({
         ? addDefault(path, moduleName, { nameHint })
         : addNamed(path, importName, moduleName, { nameHint });
   }
-  return file.__hasImports[nameHint];
+  return t.cloneNode(file.__hasImports[nameHint]);
 }
 
 /**
