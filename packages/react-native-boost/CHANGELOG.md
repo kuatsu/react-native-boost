@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.3](https://github.com/kuatsu/react-native-boost/compare/v2.0.2...v2.0.3) (2026-10-02)
+
+### 🐛 Bug Fixes
+
+* prevent shared import references from corrupting Babel output ([9a6f6b2](https://github.com/kuatsu/react-native-boost/commit/9a6f6b2120fdf9aeb36066d06a76b21e9f438b85)), closes [#115](https://github.com/kuatsu/react-native-boost/issues/115)
+
 ## [2.0.2](https://github.com/kuatsu/react-native-boost/compare/v2.0.1...v2.0.2) (2026-09-18)
 
 ### 🐛 Bug Fixes
