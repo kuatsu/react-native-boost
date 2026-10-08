@@ -11,11 +11,11 @@
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
-    "fumadocs-core": "16.15.5",
-    "fumadocs-mdx": "15.4.0",
-    "fumadocs-typescript": "^5.3.0",
-    "fumadocs-ui": "16.15.5",
-    "lucide-react": "^1.49.0",
+    "fumadocs-core": "16.16.1",
+    "fumadocs-mdx": "15.4.6",
+    "fumadocs-typescript": "^5.4.1",
+    "fumadocs-ui": "16.16.1",
+    "lucide-react": "^1.52.0",
     "mermaid": "^11.17.2",
     "next": "16.3.8",
     "react": "19.2.8",
