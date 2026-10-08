@@ -1,5 +1,14 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useMemo, useState } from 'react';
 import { startMarker } from 'react-native-time-to-render';
 import { Benchmark, BenchmarkStep } from '../types';
@@ -61,7 +70,8 @@ type ScheduledStep = { benchmarkIndex: number; step: BenchmarkStep };
 const SETTLE_DELAY_MS = 500;
 
 export default function BenchmarkScreen() {
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
   const [selectedBenchmarks, setSelectedBenchmarks] = useState(() => benchmarks.map(() => true));
   const [schedule, setSchedule] = useState<ScheduledStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -175,64 +185,65 @@ export default function BenchmarkScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.headerCard}>
-          <Text style={styles.title}>React Native Boost Benchmark</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
-
-        <View style={styles.tableCard}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, styles.benchmarkColumn, styles.tableHeaderText]}>Test</Text>
-            <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Unopt.</Text>
-            <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Opt.</Text>
-            <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Gain</Text>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.content, landscape && styles.contentLandscape]}>
+          <View style={[styles.headerCard, landscape && styles.headerCardLandscape]}>
+            <Text style={styles.title}>React Native Boost Benchmark</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
-          {resultRows.map((row, index) => (
-            <View
-              key={row.title}
-              style={[
-                styles.tableRow,
-                index % 2 === 0 ? styles.tableStripeLight : styles.tableStripeDark,
-                isRunning && index === activeStep?.benchmarkIndex && styles.tableActiveRow,
-                !selectedBenchmarks[index] && styles.tableRowDisabled,
-              ]}>
-              <Pressable
-                accessibilityLabel={`${row.title} benchmark`}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selectedBenchmarks[index], disabled: isRunning }}
-                disabled={isRunning}
-                hitSlop={8}
-                onPress={() => handleToggleBenchmark(index)}
-                style={[styles.tableCell, styles.benchmarkColumn, styles.benchmarkSelector]}>
-                <View style={[styles.checkbox, selectedBenchmarks[index] && styles.checkboxSelected]}>
-                  {selectedBenchmarks[index] && <View style={styles.checkboxMark} />}
-                </View>
-                <Text style={styles.benchmarkText}>{row.title}</Text>
-              </Pressable>
-              <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.unoptimizedText}</Text>
-              <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.optimizedText}</Text>
-              <Text
-                style={[
-                  styles.tableCell,
-                  styles.metricColumn,
-                  styles.metricText,
-                  row.gainPercent === null
-                    ? styles.gainNeutral
-                    : row.gainPercent >= 0
-                      ? styles.gainPositive
-                      : styles.gainNegative,
-                ]}>
-                {row.gain}
-              </Text>
+          <View style={[styles.tableCard, landscape && styles.tableCardLandscape]}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.tableCell, styles.benchmarkColumn, styles.tableHeaderText]}>Test</Text>
+              <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Unopt.</Text>
+              <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Opt.</Text>
+              <Text style={[styles.tableCell, styles.metricColumn, styles.tableHeaderText]}>Gain</Text>
             </View>
-          ))}
-        </View>
-      </View>
 
-      <View style={[styles.footer, { bottom: insets.bottom + 16 }]}>
+            {resultRows.map((row, index) => (
+              <View
+                key={row.title}
+                style={[
+                  styles.tableRow,
+                  index % 2 === 0 ? styles.tableStripeLight : styles.tableStripeDark,
+                  isRunning && index === activeStep?.benchmarkIndex && styles.tableActiveRow,
+                  !selectedBenchmarks[index] && styles.tableRowDisabled,
+                ]}>
+                <Pressable
+                  accessibilityLabel={`${row.title} benchmark`}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selectedBenchmarks[index], disabled: isRunning }}
+                  disabled={isRunning}
+                  hitSlop={8}
+                  onPress={() => handleToggleBenchmark(index)}
+                  style={[styles.tableCell, styles.benchmarkColumn, styles.benchmarkSelector]}>
+                  <View style={[styles.checkbox, selectedBenchmarks[index] && styles.checkboxSelected]}>
+                    {selectedBenchmarks[index] && <View style={styles.checkboxMark} />}
+                  </View>
+                  <Text style={styles.benchmarkText}>{row.title}</Text>
+                </Pressable>
+                <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.unoptimizedText}</Text>
+                <Text style={[styles.tableCell, styles.metricColumn, styles.metricText]}>{row.optimizedText}</Text>
+                <Text
+                  style={[
+                    styles.tableCell,
+                    styles.metricColumn,
+                    styles.metricText,
+                    row.gainPercent === null
+                      ? styles.gainNeutral
+                      : row.gainPercent >= 0
+                        ? styles.gainPositive
+                        : styles.gainNegative,
+                  ]}>
+                  {row.gain}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+      <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: isRunning || selectedCount === 0 }}
@@ -264,13 +275,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0b0e11',
-    alignItems: 'center',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    alignItems: 'center',
+    padding: 16,
   },
   content: {
     width: '100%',
-    maxWidth: 640,
+    maxWidth: 960,
+    gap: 12,
+  },
+  contentLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerCardLandscape: {
+    width: 220,
+  },
+  tableCardLandscape: {
+    flex: 1,
   },
   headerCard: {
     backgroundColor: '#141b22',
@@ -279,7 +307,6 @@ const styles = StyleSheet.create({
     borderColor: '#2a3139',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 12,
   },
   title: {
     fontSize: 20,
@@ -321,9 +348,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#12161c',
   },
   footer: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
     alignItems: 'center',
   },
   tableRow: {

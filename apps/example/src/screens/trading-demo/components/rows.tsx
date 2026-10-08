@@ -1,5 +1,5 @@
-import { Fragment, memo } from 'react';
-import { StyleSheet, Text, TextStyle, View } from 'react-native';
+import { Fragment, memo, useState } from 'react';
+import { StyleSheet, Text, TextStyle, useWindowDimensions, View } from 'react-native';
 
 export type StatTone = 'up' | 'down' | 'neutral';
 
@@ -47,67 +47,89 @@ export const PriceWall = function PriceWall({
   baseSymbol,
   quoteSymbol,
 }: PriceWallProperties) {
+  const { width, height: screenHeight } = useWindowDimensions();
+  const landscape = width > screenHeight;
+  const [bookHeight, setBookHeight] = useState(0);
+  // Reserve space for column labels, the spread, and the Controls button.
+  const ladderHeight = Math.min(
+    LADDER_HEIGHT,
+    Math.max(0, Math.floor((bookHeight - 96) / (landscape ? 1 : 2) / ROW_HEIGHT)) * ROW_HEIGHT
+  );
+  const header = (
+    <View style={styles.columnHeader}>
+      <Text style={styles.columnLabel} numberOfLines={1}>
+        Price ({quoteSymbol})
+      </Text>
+      <Text style={styles.columnLabelEnd} numberOfLines={1}>
+        Amount ({baseSymbol})
+      </Text>
+      <Text style={styles.columnLabelEnd} numberOfLines={1}>
+        Total ({quoteSymbol})
+      </Text>
+    </View>
+  );
+  const spread = (
+    <View style={styles.spread}>
+      <Text style={spreadToneStyle(lastTone)} numberOfLines={1}>
+        {directionArrow(lastTone)}
+        {lastPriceText}
+      </Text>
+      <Text style={styles.spreadLabel} numberOfLines={1}>
+        Last price · spread {spreadText}
+      </Text>
+    </View>
+  );
+
   return (
-    <View style={styles.book}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnLabel} numberOfLines={1}>
-          Price ({quoteSymbol})
-        </Text>
-        <Text style={styles.columnLabelEnd} numberOfLines={1}>
-          Amount ({baseSymbol})
-        </Text>
-        <Text style={styles.columnLabelEnd} numberOfLines={1}>
-          Total ({quoteSymbol})
-        </Text>
-      </View>
+    <View style={styles.book} onLayout={(event) => setBookHeight(event.nativeEvent.layout.height)}>
+      <View style={landscape && styles.laddersLandscape}>
+        <View style={landscape && styles.side}>
+          {header}
 
-      <View style={[styles.grid, styles.gridAsks]}>
-        {[...asks].reverse().map((level) => (
-          <Fragment key={level.key}>
-            {/* @boost-force */}
-            <Text style={styles.priceAsk} numberOfLines={1}>
-              {level.priceText}
-            </Text>
-            {/* @boost-force */}
-            <Text style={styles.amount} numberOfLines={1}>
-              {level.sizeText}
-            </Text>
-            {/* @boost-force */}
-            <Text style={styles.total} numberOfLines={1}>
-              {level.totalText}
-            </Text>
-          </Fragment>
-        ))}
-      </View>
+          <View style={[styles.grid, styles.gridAsks, { height: ladderHeight }]}>
+            {[...asks].reverse().map((level) => (
+              <Fragment key={level.key}>
+                {/* @boost-force */}
+                <Text style={styles.priceAsk} numberOfLines={1}>
+                  {level.priceText}
+                </Text>
+                {/* @boost-force */}
+                <Text style={styles.amount} numberOfLines={1}>
+                  {level.sizeText}
+                </Text>
+                {/* @boost-force */}
+                <Text style={styles.total} numberOfLines={1}>
+                  {level.totalText}
+                </Text>
+              </Fragment>
+            ))}
+          </View>
+        </View>
+        {!landscape && spread}
+        <View style={landscape && styles.side}>
+          {landscape && header}
 
-      <View style={styles.spread}>
-        <Text style={spreadToneStyle(lastTone)} numberOfLines={1}>
-          {directionArrow(lastTone)}
-          {lastPriceText}
-        </Text>
-        <Text style={styles.spreadLabel} numberOfLines={1}>
-          Last price · spread {spreadText}
-        </Text>
+          <View style={[styles.grid, styles.gridBids, { height: ladderHeight }]}>
+            {bids.map((level) => (
+              <Fragment key={level.key}>
+                {/* @boost-force */}
+                <Text style={styles.priceBid} numberOfLines={1}>
+                  {level.priceText}
+                </Text>
+                {/* @boost-force */}
+                <Text style={styles.amount} numberOfLines={1}>
+                  {level.sizeText}
+                </Text>
+                {/* @boost-force */}
+                <Text style={styles.total} numberOfLines={1}>
+                  {level.totalText}
+                </Text>
+              </Fragment>
+            ))}
+          </View>
+        </View>
       </View>
-
-      <View style={[styles.grid, styles.gridBids]}>
-        {bids.map((level) => (
-          <Fragment key={level.key}>
-            {/* @boost-force */}
-            <Text style={styles.priceBid} numberOfLines={1}>
-              {level.priceText}
-            </Text>
-            {/* @boost-force */}
-            <Text style={styles.amount} numberOfLines={1}>
-              {level.sizeText}
-            </Text>
-            {/* @boost-force */}
-            <Text style={styles.total} numberOfLines={1}>
-              {level.totalText}
-            </Text>
-          </Fragment>
-        ))}
-      </View>
+      {landscape && spread}
     </View>
   );
 };
@@ -135,10 +157,7 @@ export const HeaderStat = memo(function HeaderStat({ label, value, tone = 'neutr
 
 const tabular = { fontVariant: ['tabular-nums'] } satisfies TextStyle;
 
-// Each ladder shows a fixed whole number of rows; a fixed height that is an exact
-// multiple of the row height keeps the overflow clip on a row boundary, so the
-// topmost/bottommost visible row is never sliced in half. Extra levels stay mounted
-// (and reconciled every frame for the benchmark) but clip off cleanly.
+// Clip whole rows while keeping every price cell mounted for the benchmark.
 const ROW_HEIGHT = 18;
 const VISIBLE_LEVELS = 13;
 const LADDER_HEIGHT = ROW_HEIGHT * VISIBLE_LEVELS;
@@ -174,6 +193,13 @@ const styles = StyleSheet.create({
   book: {
     flex: 1,
   },
+  laddersLandscape: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  side: {
+    flex: 1,
+  },
   columnHeader: {
     flexDirection: 'row',
     paddingHorizontal: 8,
@@ -198,11 +224,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   gridAsks: {
-    height: LADDER_HEIGHT,
     alignContent: 'flex-end',
   },
   gridBids: {
-    height: LADDER_HEIGHT,
     alignContent: 'flex-start',
   },
   priceAsk: {

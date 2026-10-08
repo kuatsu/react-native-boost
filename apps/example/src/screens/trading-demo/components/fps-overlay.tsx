@@ -27,7 +27,7 @@ const average = (values: number[]): number => {
   return sum / values.length;
 };
 
-export function FpsOverlay() {
+export function FpsOverlay({ inline = false }: { inline?: boolean }) {
   const [fps, setFps] = useState(0);
   const [capturing, setCapturing] = useState(false);
   const [summary, setSummary] = useState<CaptureSummary | null>(null);
@@ -83,7 +83,7 @@ export function FpsOverlay() {
   };
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, inline && styles.inline]} pointerEvents="box-none">
       <View style={styles.badge}>
         <Text style={styles.fpsValue}>{fps}</Text>
         <Text style={styles.fpsUnit}>FPS</Text>
@@ -112,6 +112,15 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     alignItems: 'flex-end',
+  },
+  inline: {
+    position: 'relative',
+    top: 0,
+    right: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
   badge: {
     flexDirection: 'row',

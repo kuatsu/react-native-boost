@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DebugPanel } from './components/debug-panel';
 import { FpsOverlay } from './components/fps-overlay';
@@ -26,6 +26,8 @@ const directionTone = (direction: PriceDirection): StatTone => {
 };
 
 export default function TradingDemoScreen() {
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
   const quoteSymbol = benchmarkCoin.pair.split('/')[1] ?? 'USDT';
 
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -74,7 +76,7 @@ export default function TradingDemoScreen() {
   const Wall = boost ? optimizedRows.PriceWall : unoptimizedRows.PriceWall;
 
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom']}>
+    <SafeAreaView style={styles.screen} edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <Stat label="Last Price" value={snapshot.lastPriceText} tone={directionTone(snapshot.lastDirection)} />
         <Stat label="24h Change" value={stats.changeText} tone={benchmarkCoin.changePercent >= 0 ? 'up' : 'down'} />
@@ -82,27 +84,32 @@ export default function TradingDemoScreen() {
         <Stat label="24h Low" value={stats.low} />
       </View>
 
-      <Wall
-        asks={snapshot.asks}
-        bids={snapshot.bids}
-        lastPriceText={snapshot.lastPriceText}
-        lastTone={directionTone(snapshot.lastDirection)}
-        spreadText={spreadText}
-        baseSymbol={benchmarkCoin.symbol}
-        quoteSymbol={quoteSymbol}
-      />
+      <View style={[styles.workspace, landscape && styles.workspaceLandscape]}>
+        <Wall
+          asks={snapshot.asks}
+          bids={snapshot.bids}
+          lastPriceText={snapshot.lastPriceText}
+          lastTone={directionTone(snapshot.lastDirection)}
+          spreadText={spreadText}
+          baseSymbol={benchmarkCoin.symbol}
+          quoteSymbol={quoteSymbol}
+        />
 
-      {controlsOpen && <FpsOverlay />}
+        <View style={landscape && controlsOpen ? styles.controls : styles.overlay} pointerEvents="box-none">
+          {controlsOpen && <FpsOverlay inline={landscape} />}
 
-      <DebugPanel
-        open={controlsOpen}
-        onOpenChange={setControlsOpen}
-        levels={settledLevels}
-        onLevelsChange={handleLevelsChange}
-        onLevelsCommit={handleLevelsCommit}
-        boost={boost}
-        onBoostChange={setBoost}
-      />
+          <DebugPanel
+            inline={landscape}
+            open={controlsOpen}
+            onOpenChange={setControlsOpen}
+            levels={settledLevels}
+            onLevelsChange={handleLevelsChange}
+            onLevelsCommit={handleLevelsCommit}
+            boost={boost}
+            onBoostChange={setBoost}
+          />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -111,6 +118,20 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#0b0e11',
+  },
+  workspace: {
+    flex: 1,
+  },
+  workspaceLandscape: {
+    flexDirection: 'row',
+  },
+  controls: {
+    width: 260,
+    padding: 8,
+    gap: 12,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFill,
   },
   header: {
     flexDirection: 'row',

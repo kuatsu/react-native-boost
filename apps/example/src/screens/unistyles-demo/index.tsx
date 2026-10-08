@@ -1,5 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackScreenProps } from '../../navigation';
 
 /**
@@ -11,30 +12,40 @@ import { RootStackScreenProps } from '../../navigation';
 export default function UnistylesDemoScreen(_props: RootStackScreenProps<'UnistylesDemo'>) {
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Unistyles × Boost</Text>
-      <Text style={styles.subtitle}>
-        Every card below is a Boost-optimized host wired to a Unistyles stylesheet. Tap to toggle the theme — they
-        restyle instantly without re-rendering, which is only possible if their native registration survived
-        optimization. The breakpoint styles (column layout, accent color) resolve from the current screen width.
-      </Text>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+            <View style={styles.intro}>
+              <Text style={styles.title}>Unistyles × Boost</Text>
+              <Text style={styles.subtitle}>
+                Every card below is a Boost-optimized host wired to a Unistyles stylesheet. Tap to toggle the theme —
+                they restyle instantly without re-rendering, which is only possible if their native registration
+                survived optimization. The breakpoint styles (column layout, accent color) resolve from the current
+                screen width.
+              </Text>
 
-      <ThemeToggle />
-      <StatusReadout />
+              <ThemeToggle />
+              <StatusReadout />
+            </View>
+            <View style={styles.examples}>
+              <View style={styles.row}>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Card A</Text>
+                  <Text style={styles.cardBody}>background and text follow the theme</Text>
+                </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Card B</Text>
+                  <Text style={styles.cardBody}>row on wide screens, column on narrow</Text>
+                </View>
+              </View>
 
-      <View style={styles.row}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Card A</Text>
-          <Text style={styles.cardBody}>background and text follow the theme</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Card B</Text>
-          <Text style={styles.cardBody}>row on wide screens, column on narrow</Text>
-        </View>
-      </View>
-
-      <View style={styles.accentBox}>
-        <Text style={styles.accentText}>Accent box — background is accent on narrow, card on wide</Text>
-      </View>
+              <View style={styles.accentBox}>
+                <Text style={styles.accentText}>Accent box — background is accent on narrow, card on wide</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
@@ -61,11 +72,34 @@ function StatusReadout() {
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create((theme, rt) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flexGrow: 1,
     padding: theme.gap(2),
+    gap: theme.gap(2),
+    flexDirection: rt.screen.width >= 600 ? 'row' : 'column',
+    width: '100%',
+    maxWidth: 1000,
+    alignSelf: 'center',
+  },
+  intro: {
+    flexBasis: rt.screen.width >= 600 ? 0 : 'auto',
+    flexGrow: rt.screen.width >= 600 ? 1 : 0,
+    gap: theme.gap(1.5),
+  },
+  examples: {
+    flexBasis: rt.screen.width >= 600 ? 0 : 'auto',
+    flexGrow: rt.screen.width >= 600 ? 1 : 0,
     gap: theme.gap(1.5),
   },
   title: {
@@ -87,7 +121,7 @@ const styles = StyleSheet.create((theme) => ({
   toggleText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#ffffff',
+    color: theme.colors.background,
   },
   status: {
     flexDirection: 'row',
@@ -99,12 +133,12 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.muted,
   },
   row: {
-    flexDirection: { xs: 'column', md: 'row' },
+    flexDirection: rt.screen.width >= 600 ? 'row' : 'column',
     gap: theme.gap(1.5),
   },
   card: {
     flexGrow: 1,
-    flexBasis: 'auto',
+    flexBasis: rt.screen.width >= 600 ? 0 : 'auto',
     borderRadius: 16,
     padding: theme.gap(2),
     backgroundColor: theme.colors.card,
@@ -125,14 +159,11 @@ const styles = StyleSheet.create((theme) => ({
   accentBox: {
     borderRadius: 12,
     padding: theme.gap(2),
-    backgroundColor: {
-      xs: theme.colors.accent,
-      md: theme.colors.card,
-    },
+    backgroundColor: rt.screen.width >= 600 ? theme.colors.card : theme.colors.accent,
   },
   accentText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: rt.screen.width >= 600 ? theme.colors.text : theme.colors.background,
   },
 }));

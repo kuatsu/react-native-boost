@@ -21,6 +21,8 @@ function Segment<T extends string>({ options, value, onChange }: SegmentProperti
         return (
           <Pressable
             key={option.value}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
             style={[styles.option, active ? styles.optionActive : styles.optionIdle]}
             onPress={() => onChange(option.value)}>
             <Text style={active ? styles.optionTextActive : styles.optionTextIdle}>{option.label}</Text>
@@ -37,6 +39,7 @@ const boostOptions: Option<'on' | 'off'>[] = [
 ];
 
 interface DebugPanelProperties {
+  inline?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   levels: number;
@@ -47,6 +50,7 @@ interface DebugPanelProperties {
 }
 
 export function DebugPanel({
+  inline = false,
   open,
   onOpenChange,
   levels,
@@ -57,7 +61,7 @@ export function DebugPanel({
 }: DebugPanelProperties) {
   if (open) {
     return (
-      <View style={styles.panel}>
+      <View style={[styles.panel, inline && styles.inline]}>
         <View style={styles.headerRow}>
           <Text style={styles.heading}>Demo Controls</Text>
           <Pressable onPress={() => onOpenChange(false)} hitSlop={8}>
@@ -67,6 +71,8 @@ export function DebugPanel({
         <View style={styles.sliderRow}>
           <Text style={styles.sliderLabel}>Load</Text>
           <Slider
+            accessible
+            accessibilityLabel="Render load"
             style={styles.slider}
             minimumValue={minLevels}
             maximumValue={maxLevels}
@@ -108,6 +114,12 @@ const styles = StyleSheet.create({
     borderColor: '#2a3139',
     padding: 8,
     gap: 6,
+  },
+  inline: {
+    position: 'relative',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   headerRow: {
     flexDirection: 'row',
