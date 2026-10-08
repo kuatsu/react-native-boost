@@ -46,6 +46,7 @@ function chartPicture(base: string, alt: string): string {
 
 const reductionPct = (off: number, on: number): number => (off === 0 ? 0 : ((off - on) / off) * 100);
 const fmtPct = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+const fmtGain = (value: number | undefined): string => (value === undefined ? '—' : fmtPct(value));
 const round1 = (value: number): number => Math.round(value * 10) / 10;
 
 /** Both book sides render (and reconcile every frame) a row per level, so total rows = 2× the per-side load. */
@@ -383,7 +384,6 @@ function archiveIndexMarkdown(runs: RunResult[], hasTrend: boolean): string {
   // A run with both profiles widens every gain cell to `boost / core`; with none it stays the original
   // single-number layout — so legacy archives render byte-for-byte as before the core profile existed.
   const anyCore = runs.some((run) => runHasCore(run));
-  const fmtGain = (value: number | undefined): string => (value === undefined ? '—' : fmtPct(value));
   const cell = (result: FpsResult | undefined): string => {
     if (!result) return '—';
     const boost = fmtGain(peakBoostGain(result));
