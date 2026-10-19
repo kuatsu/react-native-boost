@@ -3,6 +3,8 @@ packages:
   - packages/*
   - tooling/*
 
+nodeLinker: hoisted
+
 pmOnFail: download
 minimumReleaseAgeStrict: true
 

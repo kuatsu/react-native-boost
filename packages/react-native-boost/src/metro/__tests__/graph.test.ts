@@ -419,7 +419,7 @@ function createGraph(
         ast: true,
         caller: { name: 'metro', platform: 'ios' } as TransformCaller,
         plugins: [
-          '@babel/plugin-syntax-jsx',
+          requireFromTest.resolve('@babel/plugin-syntax-jsx'),
           ...babelPlugins,
           [
             boostPlugin,

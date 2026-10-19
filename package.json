@@ -15,7 +15,7 @@
     "format": "oxfmt .",
     "prepare": "husky"
   },
-  "packageManager": "pnpm@12.3.1",
+  "packageManager": "pnpm@12.14.0",
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",

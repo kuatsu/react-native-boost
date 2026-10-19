@@ -51,7 +51,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "pnpm clean && rollup -c",
+    "build": "pnpm run clean && rollup -c",
     "build:watch": "rollup -c -w",
     "dev": "pnpm build:watch",
     "pretest": "pnpm build",
@@ -79,7 +79,7 @@
     "url": "https://github.com/kuatsu/react-native-boost/issues"
   },
   "homepage": "https://github.com/kuatsu/react-native-boost#readme",
-  "packageManager": "pnpm@12.3.1",
+  "packageManager": "pnpm@12.14.0",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },

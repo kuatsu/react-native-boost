@@ -4,15 +4,13 @@ description: Setup Node.js and install dependencies
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@v6
-
     - name: Setup Node.js
       uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
-        cache: pnpm
-        cache-dependency-path: pnpm-lock.yaml
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-      shell: bash
+    - uses: pnpm/setup@v3
+      with:
+        node-version-file: false
+        cache: true
+        require-lockfile: true
