@@ -78,6 +78,7 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
     `import { View } from 'react-native'; import { ScopedTheme } from 'uniwind'; export function Shell({ children }) { return <View className="p-2"><ScopedTheme theme="dark">{children}</ScopedTheme></View>; }`
   );
   const { getDefaultConfig } = metroRequire('metro-config');
+  const { buildGraph } = require('metro');
   const base: ConfigT = await getDefaultConfig(root);
   const uniwind = withUniwindConfig(
     {
@@ -88,6 +89,8 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
         resolverMainFields: ['react-native', 'browser', 'main'],
         unstable_conditionNames: ['require', 'react-native'],
         extraNodeModules: { 'react-native-boost': packageRoot },
+        resolveRequest: (context, name, platform) =>
+          context.resolveRequest(context, name === 'react-native' ? require.resolve('react-native') : name, platform),
       },
       watchFolders: [packageRoot, path.resolve(packageRoot, '../../node_modules')],
       transformer: {
@@ -97,7 +100,7 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
         ),
         babelTransformerPath: metroRequire.resolve('metro-babel-transformer'),
       },
-    },
+    } satisfies ConfigT,
     {
       cssEntryFile: path.relative(process.cwd(), path.join(root, 'global.css')),
       dtsFile: path.join(root, 'uniwind.d.ts'),
@@ -107,7 +110,7 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
     logLevel: 'silent',
     integrations: { unistyles: 'off' },
   });
-  const graph = await require('metro').buildGraph(built, {
+  const graph = await buildGraph(built, {
     entries: [path.join(root, 'Screen.tsx')],
     platform: 'ios',
     dev: true,
