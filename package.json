@@ -21,8 +21,8 @@
     "@commitlint/config-conventional": "^21.2.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.4.1",
-    "oxfmt": "^0.66.0",
-    "oxlint": "^1.81.0",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
     "typescript": "~7.0.2"
   }
 }
