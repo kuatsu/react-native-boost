@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.4](https://github.com/kuatsu/react-native-boost/compare/v2.0.3...v2.0.4) (2026-10-26)
+
+### ✨ Features
+
+* **example:** support landscape mode ([45d496a](https://github.com/kuatsu/react-native-boost/commit/45d496ab1ebd600b9eb95e4a5433a6925bf90c3a))
+
+### 🐛 Bug Fixes
+
+* restore Uniwind 1.13.x compatibility ([83fb970](https://github.com/kuatsu/react-native-boost/commit/83fb9709904750531744a2a734dff5375222b195))
+
 ## [2.0.3](https://github.com/kuatsu/react-native-boost/compare/v2.0.2...v2.0.3) (2026-10-02)
 
 ### 🐛 Bug Fixes
