@@ -3,7 +3,7 @@ title: Uniwind Support
 description: Keep Uniwind styling working on Boost-optimized components.
 ---
 
-React Native Boost supports Uniwind version 1.6.2 and up through its Metro integration. Uniwind Pro has not been tested and is not supported.
+React Native Boost supports Uniwind versions `>=1.6.2 <2` through its Metro integration. Uniwind Pro has not been tested and is not supported.
 
 Optimized components retain `className` styles and Uniwind subscriptions.
 
@@ -35,6 +35,6 @@ Wrapper order matters. Boost must keep Uniwind's worker and resolver inside its 
 ## Limits
 
 - The integration requires Metro. A Babel-only setup does not install required runtime components.
-- Uniwind 1.6.1 and lower are not supported. Boost uses version-specific Uniwind hooks for component state and accent colors. The Metro config rejects other package versions and will disable the integration.
+- Uniwind 1.6.1 and lower are not supported. Boost uses internal Uniwind hooks for component state and accent colors that are not available in these versions.
 - Uniwind Pro has not been tested and is not supported.
 - Elements with Unistyles styles keep their original wrappers when both integrations are active at the same time.

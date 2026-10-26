@@ -133,9 +133,35 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
   expect(css).toContain('text-red-500');
 }, 60_000);
 
+it.each(['1.6.2', '1.6.10', '1.7.0', '1.12.0', '1.12.1', '1.12.2', '1.13.0', '1.13.0+build.1', '1.99.99'])(
+  'accepts free Uniwind %s',
+  (version) => {
+    const projectRoot = fs.mkdtempSync(path.join(root, 'supported-'));
+    const directory = path.join(projectRoot, 'node_modules/uniwind');
+    const hooks = path.join(directory, 'src/components/native');
+    fs.mkdirSync(hooks, { recursive: true });
+    fs.writeFileSync(
+      path.join(directory, 'package.json'),
+      JSON.stringify({ name: 'uniwind', version, license: 'MIT' })
+    );
+    for (const hook of ['useStyle', 'useAccentColor']) fs.writeFileSync(path.join(hooks, `${hook}.ts`), '');
+    expect(() =>
+      withBoostConfig(
+        { ...config(), projectRoot, transformer: { ...config().transformer, uniwind: {} } },
+        { crossFileAncestorResolution: false, logLevel: 'silent' }
+      )
+    ).not.toThrow();
+  }
+);
+
 it.each([
-  { name: 'uniwind', version: '1.13.0', license: 'MIT' },
-  { name: '@uniwind/pro', version: '1.12.0', license: 'UNLICENSED' },
+  ...['0.99.0', '1.5.99', '1.6.0', '1.6.1', '2.0.0', '1.13.0-rc.0', 'invalid'].map((version) => ({
+    name: 'uniwind',
+    version,
+    license: 'MIT',
+  })),
+  { name: '@uniwind/pro', version: '1.13.0', license: 'UNLICENSED' },
+  { name: 'uniwind', version: '1.13.0', license: 'UNLICENSED' },
 ])('rejects an unchecked Uniwind package: $name $version', (manifest) => {
   const projectRoot = fs.mkdtempSync(path.join(root, 'unsupported-'));
   const directory = path.join(projectRoot, 'node_modules/uniwind');
@@ -146,5 +172,5 @@ it.each([
       { ...config(), projectRoot, transformer: { ...config().transformer, uniwind: {} } },
       { logLevel: 'silent' }
     )
-  ).toThrow('free Uniwind 1.12.x');
+  ).toThrow('free Uniwind >=1.6.2 <2');
 });

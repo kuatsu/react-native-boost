@@ -39,18 +39,12 @@ const { default: ActivityIndicator } = await load('components/native/ActivityInd
 const original = { NativeView: View, NativeText: Text, NativeImage: Image, NativeActivityIndicator: ActivityIndicator };
 const style = (values: Record<string, unknown>, condition = {}) => ({
   entries: Object.entries(values).map(([key, value]) => [key, typeof value === 'function' ? value : () => value]),
-  minWidth: 0,
-  maxWidth: Infinity,
-  theme: null,
-  orientation: null,
-  rtl: null,
-  active: null,
-  focus: null,
-  disabled: null,
-  dataAttributes: null,
+  matches: () => true,
+  hasDataAttributes: false,
   dependencies: null,
   importantProperties: [],
   complexity: 0,
+  importantComplexity: 0,
   ...condition,
 });
 UniwindStore.reinit(
@@ -61,7 +55,14 @@ UniwindStore.reinit(
       box: [style({ width: 40, padding: 8 })],
       themed: [
         style({ backgroundColor: 'red' }),
-        style({ backgroundColor: 'blue' }, { theme: 'dark', dependencies: [StyleDependency.Theme] }),
+        style(
+          { backgroundColor: 'blue' },
+          {
+            matches: (runtime: { currentThemeName: string }, context: { scopedTheme: string | null }) =>
+              (context.scopedTheme ?? runtime.currentThemeName) === 'dark',
+            dependencies: [StyleDependency.Theme],
+          }
+        ),
       ],
       variable: [
         style(
@@ -69,7 +70,16 @@ UniwindStore.reinit(
           { dependencies: [StyleDependency.Variables] }
         ),
       ],
-      selected: [style({ opacity: 0.5 }, { dataAttributes: { 'data-selected': 'true' } })],
+      selected: [
+        style(
+          { opacity: 0.5 },
+          {
+            matches: (_runtime: unknown, _context: unknown, props: Record<string, unknown>) =>
+              String(props['data-selected']) === 'true',
+            hasDataAttributes: true,
+          }
+        ),
+      ],
       text: [
         style({
           fontWeight: 700,
@@ -79,7 +89,15 @@ UniwindStore.reinit(
           overflow: 'visible',
         }),
       ],
-      disabled: [style({ color: 'blue' }, { disabled: true })],
+      disabled: [
+        style(
+          { color: 'blue' },
+          {
+            matches: (_runtime: unknown, _context: unknown, _props: unknown, state?: { isDisabled: boolean }) =>
+              state?.isDisabled === true,
+          }
+        ),
+      ],
       accent: [style({ accentColor: '#ff0000' })],
       image: [style({ objectFit: 'contain', width: 70 })],
     },

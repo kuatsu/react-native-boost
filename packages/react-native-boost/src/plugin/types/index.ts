@@ -52,7 +52,7 @@ export type IntegrationState = 'auto' | 'on' | 'off';
 
 export interface PluginIntegrationOptions {
   /**
-   * Preserves free Uniwind 1.12.x styles on optimized components. Requires Metro.
+   * Preserves free Uniwind >=1.6.2 <2 styles on optimized components. Requires Metro.
    * `auto` detects an active `withUniwindConfig`. Apply `withBoostConfig` after it.
    * `on` requires that configuration. Use `off` only when transformed code does not use Uniwind.
    * @default 'auto'

@@ -326,8 +326,13 @@ function createUniwindResolver(config: MetroConfig, projectRoot: string, target?
     version: string;
     license: string;
   };
-  if (manifest.name !== 'uniwind' || !manifest.version.startsWith('1.12.') || manifest.license !== 'MIT') {
-    throw new Error('[react-native-boost] The Uniwind integration supports free Uniwind 1.12.x. Pro is not supported.');
+  const version = /^(\d+)\.(\d+)\.(\d+)(?:\+[0-9A-Za-z.-]+)?$/.exec(manifest.version);
+  const [major, minor, patch] = version?.slice(1).map(Number) ?? [];
+  const supportedVersion = major === 1 && (minor > 6 || (minor === 6 && patch >= 2));
+  if (manifest.name !== 'uniwind' || !supportedVersion || manifest.license !== 'MIT') {
+    throw new Error(
+      '[react-native-boost] The Uniwind integration supports free Uniwind >=1.6.2 <2. Pro is not supported.'
+    );
   }
   if (!target) throw new Error('[react-native-boost] Uniwind requires a resolved React Native target.');
   const root = path.dirname(packageJson);
