@@ -84,10 +84,10 @@
     "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^7.29.13",
     "@babel/helper-module-imports": "^7.29.7",
     "@babel/helper-plugin-utils": "^7.29.7",
-    "minimatch": "^11.0.3"
+    "minimatch": "^11.0.5"
   },
   "devDependencies": {
     "@babel/plugin-syntax-jsx": "^7.29.7",
@@ -118,7 +118,7 @@
     "rollup-plugin-dts": "^6.5.1",
     "rollup-plugin-esbuild": "^6.2.1",
     "typescript": "~7.0.2",
-    "uniwind": "1.13.1",
+    "uniwind": "1.13.2",
     "vitest": "^5.0.5"
   },
   "peerDependencies": {
