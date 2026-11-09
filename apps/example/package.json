@@ -30,16 +30,16 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-boost": "workspace:*",
-    "react-native-nitro-modules": "0.37.1",
+    "react-native-nitro-modules": "0.37.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.26.2",
     "react-native-time-to-render": "workspace:*",
-    "react-native-unistyles": "3.7.0",
+    "react-native-unistyles": "3.8.1",
     "react-native-web": "~0.21.0",
-    "uniwind": "1.13.1"
+    "uniwind": "1.13.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^7.29.13",
     "@types/react": "~19.2.18",
     "typescript": "~7.0.2"
   },
