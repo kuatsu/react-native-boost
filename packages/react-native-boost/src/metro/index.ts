@@ -15,7 +15,7 @@ export type { PluginOptions } from '../plugin/types';
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const requireFromMetro = createRequire(import.meta.url);
 const transformerDirectory = path.join(os.tmpdir(), 'react-native-boost');
-const supportedMetroMinors = new Set([83, 84, 87]);
+const minimumMetroMinor = 83;
 
 type CacheStore = {
   name?: string;
@@ -277,7 +277,7 @@ function findPackage(filename: string, name: string): { packageJson: string; ver
 
 function isSupportedMetro(version: string): boolean {
   const match = /^0\.(\d+)\./.exec(version);
-  return Boolean(match && supportedMetroMinors.has(Number(match[1])));
+  return Boolean(match && Number(match[1]) >= minimumMetroMinor);
 }
 
 function initializeSnapshot(snapshotPath: string): void {
