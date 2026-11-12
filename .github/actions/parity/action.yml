@@ -1,0 +1,69 @@
+name: Parity
+description: Test the package against a React Native and Metro version
+
+inputs:
+  react-native:
+    description: React Native version or dist-tag
+    required: true
+  metro:
+    description: Metro version or dist-tag
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Select React Native and Metro versions
+      shell: bash
+      env:
+        METRO_VERSION: ${{ inputs.metro }}
+        REACT_NATIVE_VERSION: ${{ inputs.react-native }}
+      run: |
+        node <<'NODE'
+        const fs = require('node:fs');
+        const path = 'packages/react-native-boost/package.json';
+        const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
+        const metroVersion = process.env.METRO_VERSION;
+        const reactNativeVersion = process.env.REACT_NATIVE_VERSION;
+
+        packageJson.devDependencies['metro'] = metroVersion;
+        packageJson.devDependencies['metro-config'] = metroVersion;
+        packageJson.devDependencies['react-native'] = reactNativeVersion;
+        packageJson.devDependencies['@react-native/babel-preset'] = reactNativeVersion;
+        fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+        NODE
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+
+    - uses: pnpm/setup@v3
+      with:
+        node-version-file: false
+        cache: true
+        cache-dependency-path: |
+          pnpm-lock.yaml
+          packages/react-native-boost/package.json
+        install: false
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --no-frozen-lockfile
+
+    - name: Typecheck package
+      shell: bash
+      run: pnpm package typecheck
+
+    - name: Build package
+      shell: bash
+      run: pnpm package build
+
+    - name: Test Metro integration
+      id: metro
+      shell: bash
+      run: pnpm --filter react-native-boost exec vitest run --project unit src/metro/__tests__ --reporter=default --reporter=github-actions --reporter=json --outputFile.json="$GITHUB_WORKSPACE/test-results/metro.json"
+
+    - name: Test runtime parity
+      if: success() || steps.metro.outcome == 'failure'
+      shell: bash
+      run: pnpm package test --run --project parity --reporter=default --reporter=github-actions --reporter=json --outputFile.json="$GITHUB_WORKSPACE/test-results/parity.json"

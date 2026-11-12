@@ -40,3 +40,37 @@ jobs:
         with:
           name: fuzz-census
           path: packages/react-native-boost/fuzz-census.txt
+
+  report:
+    name: Report
+    needs: discovery
+    if: ${{ failure() && (github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download census
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: fuzz-census
+
+      - name: Report divergences
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LABEL: fuzz-divergence
+          TITLE: Parity fuzz discovery finds divergences
+          FAILURES_FILE: failures.txt
+          DETAILS: |-
+            The nightly parity fuzz discovery fails.
+
+            - Seed: ${{ inputs.seed || github.run_id }}
+            - Samples: ${{ inputs.samples || '50000' }}
+        run: |
+          sed -n 's/^[[:space:]]*### [0-9]*× //p' fuzz-census.txt > failures.txt || true
+          node .github/ci/report-failures.mjs

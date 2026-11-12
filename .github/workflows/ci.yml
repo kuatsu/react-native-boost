@@ -79,50 +79,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Select React Native and Metro versions
-        env:
-          METRO_VERSION: ${{ matrix.metro }}
-          REACT_NATIVE_VERSION: ${{ matrix.react-native }}
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = 'packages/react-native-boost/package.json';
-          const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const metroVersion = process.env.METRO_VERSION;
-          const reactNativeVersion = process.env.REACT_NATIVE_VERSION;
-
-          packageJson.devDependencies['metro'] = metroVersion;
-          packageJson.devDependencies['metro-config'] = metroVersion;
-          packageJson.devDependencies['react-native'] = reactNativeVersion;
-          packageJson.devDependencies['@react-native/babel-preset'] = reactNativeVersion;
-          fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
-          NODE
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Run parity
+        uses: ./.github/actions/parity
         with:
-          node-version-file: .nvmrc
-
-      - uses: pnpm/setup@v3
-        with:
-          node-version-file: false
-          cache: true
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            packages/react-native-boost/package.json
-          install: false
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Typecheck package
-        run: pnpm package typecheck
-
-      - name: Build package
-        run: pnpm package build
-
-      - name: Test Metro integration
-        run: pnpm --filter react-native-boost exec vitest run --project unit src/metro/__tests__
-
-      - name: Test runtime parity
-        run: pnpm package test --run --project parity
+          react-native: ${{ matrix.react-native }}
+          metro: ${{ matrix.metro }}
