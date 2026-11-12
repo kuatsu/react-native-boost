@@ -218,7 +218,7 @@ const DYNAMIC_IMAGE_CASES: Array<[string, string]> = [
 
 const getFirstImageSource = (props: Record<string, unknown>) => {
   const source = props.source;
-  if (!Array.isArray(source)) throw new Error('expected Image source to be normalized to an array');
+  if (!Array.isArray(source)) throw new TypeError('expected Image source to be normalized to an array');
   return source[0] as Record<string, unknown>;
 };
 

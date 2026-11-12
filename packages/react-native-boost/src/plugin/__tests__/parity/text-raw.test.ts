@@ -379,7 +379,7 @@ for (const platform of ['ios', 'android'] as const) {
         expect(calls).toStrictEqual([400, '400']);
       }
       StyleSheet.setStyleAttributePreprocessor('fontWeight', (value) => {
-        if (typeof value === 'number') throw new Error('raw weight');
+        if (typeof value === 'number') throw new TypeError('raw weight');
         return value;
       });
       expect(() => create(expected, validAttributes)).toThrow('raw weight');
