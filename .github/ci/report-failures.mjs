@@ -31,7 +31,7 @@ const details = `${DETAILS}\n- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/ac
 const body = `${details}\n\nFailures in the last failed run:\n\n${list(failures)}\n\n<!-- seen:${[...seen, ...added.map((failure) => digest(failure))].join(',')} -->`;
 
 if (issue) {
-  gh('issue', 'edit', String(issue.number), '--body', body);
+  gh('issue', 'edit', String(issue.number), '--title', TITLE, '--body', body);
   if (added.length > 0) {
     gh('issue', 'comment', String(issue.number), '--body', `New failures:\n\n${list(added)}\n\n${details}`);
   }

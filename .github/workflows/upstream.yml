@@ -59,12 +59,12 @@ jobs:
       - name: Report failures
         if: needs.parity.result == 'failure'
         env:
-          TITLE: Parity fails against React Native next
           FAILURES_FILE: failures.txt
         run: |
-          DETAILS="The scheduled parity run against React Native \`next\` and Metro \`latest\` fails.
+          version=$(npm view react-native@next version)
+          TITLE="Parity fails against React Native next (${version%%-*})" DETAILS="The scheduled parity run against React Native \`next\` and Metro \`latest\` fails.
 
-          - React Native: $(npm view react-native@next version)
+          - React Native: $version
           - Metro: $(npm view metro@latest version)" node .github/ci/report-failures.mjs
 
       - name: Close issue
