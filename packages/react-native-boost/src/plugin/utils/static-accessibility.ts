@@ -55,7 +55,7 @@ export function foldAccessibility(
   platform?: string,
   minor?: number
 ): t.JSXAttribute[] | undefined {
-  if ((platform !== 'ios' && platform !== 'android') || minor === undefined || minor < 83 || minor > 88) return;
+  if ((platform !== 'ios' && platform !== 'android') || minor === undefined || minor < 83 || minor > 89) return;
   const names = new Set<string>();
   for (const attribute of path.node.attributes) {
     if (!t.isJSXAttribute(attribute) || !t.isJSXIdentifier(attribute.name) || names.has(attribute.name.name)) return;
@@ -154,6 +154,12 @@ function textProps(props: Props, platform: string, minor: number): Props {
     result.accessibilityElementsHidden = minor < 85 ? (hidden ?? props.accessibilityElementsHidden) : hidden;
   if (minor < 85 || hidden === true)
     result.importantForAccessibility = hidden === true ? 'no-hide-descendants' : props.importantForAccessibility;
+  // The caller passes `aria-live` only for RN 0.89+, where Text translates it.
+  if ('aria-live' in props) {
+    delete result['aria-live'];
+    if (props['aria-live'] !== undefined)
+      result.accessibilityLiveRegion = props['aria-live'] === 'off' ? 'none' : props['aria-live'];
+  }
   return result;
 }
 
@@ -170,6 +176,8 @@ function viewProps(props: Props): Props | undefined {
     result.accessibilityLiveRegion = props['aria-live'] === 'off' ? 'none' : props['aria-live'];
   if (props['aria-hidden'] !== undefined) result.accessibilityElementsHidden = props['aria-hidden'];
   if (props['aria-hidden'] === true) result.importantForAccessibility = 'no-hide-descendants';
+  // The caller passes `aria-modal` only for RN 0.89+, where View translates it.
+  if (props['aria-modal'] !== undefined) result.accessibilityViewIsModal = props['aria-modal'];
   if (props.tabIndex !== undefined) result.focusable = !props.tabIndex;
   for (const [name, keys, prefix] of [
     ['accessibilityState', stateKeys, 'aria-'],

@@ -38,11 +38,13 @@ const VIEW_SPREAD_GUARD_KEYS = new Set([
   'aria-label',
   'aria-labelledby',
   'aria-live',
+  'aria-modal',
   'aria-selected',
   'aria-valuemax',
   'aria-valuemin',
   'aria-valuenow',
   'aria-valuetext',
+  'experimental_onSafeAreaInsetsChange',
   'id',
   'tabIndex',
 ]);
@@ -110,6 +112,15 @@ const optimizeNativeView: JSXOptimizer = (path, { logger, options, unistylesEnab
     {
       reason: 'has an unresolved style source that may be a Unistyles style',
       shouldBail: () => getStyleOrigin() === 'unknown',
+    },
+    {
+      reason: 'has a safe area handler that View instruments in development',
+      shouldBail: () =>
+        path.node.attributes.some(
+          (attribute) =>
+            t.isJSXAttribute(attribute) &&
+            t.isJSXIdentifier(attribute.name, { name: 'experimental_onSafeAreaInsetsChange' })
+        ),
     },
     {
       reason: 'has both a dynamic `id` and a `nativeID` (ambiguous precedence)',
@@ -279,6 +290,18 @@ function processViewProps(
       const value = getAttributeValueExpression(attribute);
       if (t.isNumericLiteral(value) || t.isBooleanLiteral(value)) {
         literalReplacements.push(makeAttribute('focusable', t.booleanLiteral(!value.value)));
+      } else {
+        helperBag.push(attribute);
+      }
+      consumed.add(attribute);
+      continue;
+    }
+
+    // RN 0.89+ translates `aria-modal`. An unknown target leaves the decision to the runtime helper.
+    if (name === 'aria-modal' && (reactNativeMinor === undefined || reactNativeMinor >= 89)) {
+      const value = getAttributeValueExpression(attribute);
+      if (reactNativeMinor !== undefined && t.isBooleanLiteral(value)) {
+        literalReplacements.push(makeAttribute('accessibilityViewIsModal', value));
       } else {
         helperBag.push(attribute);
       }

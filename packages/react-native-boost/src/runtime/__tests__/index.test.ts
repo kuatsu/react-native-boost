@@ -826,3 +826,20 @@ describe('clampNumberOfLines', () => {
     expect(clampNumberOfLines()).toBeUndefined();
   });
 });
+
+describe('ARIA aliases added in RN 0.89', () => {
+  afterEach(restorePlatformMock);
+
+  it.each([88, 89, undefined])('translates Text aria-live only from RN 0.89 (minor=%s)', async (minor) => {
+    const runtime = await loadRuntime(minor);
+    const result = runtime.processTextAccessibilityProps({ 'aria-live': 'off', 'accessibilityLiveRegion': 'polite' });
+    expect(result['aria-live']).toBe(minor === 88 ? 'off' : undefined);
+    expect(result.accessibilityLiveRegion).toBe(minor === 88 ? 'polite' : 'none');
+  });
+
+  it.each([88, 89, undefined])('translates View aria-modal only from RN 0.89 (minor=%s)', async (minor) => {
+    const runtime = await loadRuntime(minor);
+    const result = runtime.processViewAccessibilityProps({ 'aria-modal': true });
+    expect(result).toEqual(minor === 88 ? { 'aria-modal': true } : { accessibilityViewIsModal: true });
+  });
+});

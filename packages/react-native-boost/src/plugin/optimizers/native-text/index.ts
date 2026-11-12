@@ -73,6 +73,7 @@ const NORMALIZED_PROPERTIES = new Set([
  */
 const TEXT_SPREAD_GUARD_KEYS = new Set([
   ...NORMALIZED_PROPERTIES,
+  'aria-live',
   'children',
   'style',
   'numberOfLines',
@@ -86,6 +87,28 @@ const TEXT_SPREAD_GUARD_KEYS = new Set([
  */
 const isNormalizedProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
   t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name) && NORMALIZED_PROPERTIES.has(attribute.name.name);
+
+/**
+ * Type guard for the role props. `Text` reconciles them with the accessibility props, so they join the
+ * normalization whenever it runs.
+ */
+const isRoleProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
+  t.isJSXAttribute(attribute) &&
+  t.isJSXIdentifier(attribute.name) &&
+  (attribute.name.name === 'role' || attribute.name.name === 'accessibilityRole');
+
+/** Type guard for the live region props, which `Text` reconciles from RN 0.89. */
+const isLiveRegionProperty = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
+  t.isJSXAttribute(attribute) &&
+  t.isJSXIdentifier(attribute.name) &&
+  (attribute.name.name === 'aria-live' || attribute.name.name === 'accessibilityLiveRegion');
+
+/** `Text` drops a nullish `accessibilityRole`, so only a string literal can skip the normalization. */
+const mayBeNullishAccessibilityRole = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): boolean =>
+  t.isJSXAttribute(attribute) &&
+  t.isJSXIdentifier(attribute.name, { name: 'accessibilityRole' }) &&
+  !t.isStringLiteral(attribute.value) &&
+  !(t.isJSXExpressionContainer(attribute.value) && t.isStringLiteral(attribute.value.expression));
 
 const optimizeNativeText: JSXOptimizer = (
   path,
@@ -349,11 +372,22 @@ function processProps(
   // `accessibilityState.disabled`. When any accessibility prop or `disabled` is present we hand the
   // element off to `processTextAccessibilityProps` (which also performs the aria/label merges); otherwise
   // only the `accessible` default is needed, so we inject it directly to keep the common path cheap.
+  // RN 0.89+ translates `aria-live`. An unknown target leaves the decision to the runtime helper.
+  const translatesAriaLive = reactNativeMinor === undefined || reactNativeMinor >= 89;
   const shouldNormalize =
     hasAccessibilityProperty(path, currentAttributes) ||
     currentAttributes.some(
-      (attribute) => t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'disabled' })
+      (attribute) =>
+        (t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'disabled' })) ||
+        (translatesAriaLive &&
+          t.isJSXAttribute(attribute) &&
+          t.isJSXIdentifier(attribute.name, { name: 'aria-live' })) ||
+        mayBeNullishAccessibilityRole(attribute)
     );
+  const isNormalized = (attribute: t.JSXAttribute | t.JSXSpreadAttribute): attribute is t.JSXAttribute =>
+    isNormalizedProperty(attribute) ||
+    isRoleProperty(attribute) ||
+    (translatesAriaLive && isLiveRegionProperty(attribute));
 
   // ============================================
   // 1. Prepare the accessibility & style transforms
@@ -364,22 +398,9 @@ function processProps(
 
   // --- Accessibility & `disabled` ---
   if (shouldNormalize) {
-    const normalizedAttributes = currentAttributes.filter((attribute) => isNormalizedProperty(attribute));
+    const normalizedAttributes = currentAttributes.filter((attribute) => isNormalized(attribute));
 
-    accessibilityAttributes = foldAccessibility(
-      path,
-      currentAttributes.filter(
-        (attribute): attribute is t.JSXAttribute =>
-          t.isJSXAttribute(attribute) &&
-          t.isJSXIdentifier(attribute.name) &&
-          (NORMALIZED_PROPERTIES.has(attribute.name.name) ||
-            attribute.name.name === 'role' ||
-            attribute.name.name === 'accessibilityRole')
-      ),
-      'Text',
-      platform,
-      reactNativeMinor
-    );
+    accessibilityAttributes = foldAccessibility(path, normalizedAttributes, 'Text', platform, reactNativeMinor);
     if (!accessibilityAttributes) {
       const normalizeIdentifier = addFileImportHint({
         file,
@@ -525,14 +546,7 @@ function processProps(
     if (!passStyleByIdentity && styleAttribute && attribute === styleAttribute) continue;
 
     // Skip the props we routed through `processTextAccessibilityProps`
-    if (shouldNormalize && isNormalizedProperty(attribute)) continue;
-    if (
-      accessibilityAttributes &&
-      t.isJSXAttribute(attribute) &&
-      t.isJSXIdentifier(attribute.name) &&
-      (attribute.name.name === 'role' || attribute.name.name === 'accessibilityRole')
-    )
-      continue;
+    if (shouldNormalize && isNormalized(attribute)) continue;
 
     // Skip the selectionColor attribute after preparing its replacement.
     if (selectionColorAttribute && attribute === selectionColorAttribute) continue;

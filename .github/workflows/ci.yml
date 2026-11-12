@@ -75,6 +75,8 @@ jobs:
             metro: '0.87.0'
           - react-native: '0.88'
             metro: '0.88.0'
+          - react-native: '0.89.0-rc.1'
+            metro: '0.88.0'
     steps:
       - name: Checkout
         uses: actions/checkout@v7

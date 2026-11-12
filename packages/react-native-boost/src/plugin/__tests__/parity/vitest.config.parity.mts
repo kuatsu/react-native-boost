@@ -47,6 +47,7 @@ const basenameRedirects: Array<[RegExp, string]> = [
   [/(^|[./])NativeAnimatedHelper$/, u('./mocks/NativeAnimatedHelper.ts')],
   [/(^|[./])RendererProxy$/, u('./mocks/RendererProxy.ts')],
   [/(^|[./])ReactNativePrivateInterface$/, u('./mocks/ReactNativePrivateInterface.ts')],
+  [/(^|[./])ReactFabricPublicInstance$/, u('./mocks/ReactNativePrivateInterface.ts')],
   [/(^|[./])StyleSheet$/, u('./mocks/StyleSheet.ts')],
   [/(^|[./])resolveAssetSource$/, u('./mocks/resolveAssetSource.ts')],
   [/(^|[./])Platform$/, u('./mocks/Platform.ts')],

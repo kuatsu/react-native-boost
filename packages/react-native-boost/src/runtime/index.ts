@@ -352,6 +352,8 @@ function applyAriaHidden(
  * - Translates `aria-hidden` into `accessibilityElementsHidden` / `importantForAccessibility` (see
  *   {@link applyAriaHidden}); `aria-hidden` wins over an explicitly-passed value
  * - Resolves the platform-specific `accessible` default (see {@link getDefaultTextAccessible})
+ * - Drops a nullish `accessibilityRole` and an undefined `role`
+ * - Translates `aria-live` into `accessibilityLiveRegion` (`'off'` → `'none'`) on RN 0.89+
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function processTextAccessibilityProps(props: Record<string, any>): Record<string, any> {
@@ -450,6 +452,17 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
   if (legacy || ariaHidden === true) {
     result.importantForAccessibility = normalizedImportant;
   }
+  // RN 0.84+ never forwards a nullish accessibilityRole or an undefined role.
+  if (minor === null || minor >= 84) {
+    if (result.accessibilityRole == null) delete result.accessibilityRole;
+    if (result.role === undefined) delete result.role;
+  }
+  // RN 0.89+ translates aria-live. Older versions forward it unchanged.
+  if ((minor === null || minor >= 89) && 'aria-live' in result) {
+    const ariaLive = result['aria-live'];
+    delete result['aria-live'];
+    if (ariaLive !== undefined) result.accessibilityLiveRegion = ariaLive === 'off' ? 'none' : ariaLive;
+  }
   return result;
 }
 
@@ -467,6 +480,7 @@ export function processTextAccessibilityProps(props: Record<string, any>): Recor
  * - `aria-label` → `accessibilityLabel`
  * - `aria-live` → `accessibilityLiveRegion` (`'off'` → `'none'`)
  * - `aria-hidden` → `accessibilityElementsHidden` (+ `importantForAccessibility` when strictly `true`)
+ * - `aria-modal` → `accessibilityViewIsModal` on RN 0.89+
  * - `tabIndex` → `focusable` (`!tabIndex`)
  * - ARIA state fields aggregated into `accessibilityState` (`ariaX ?? accessibilityState?.x`)
  * - ARIA value fields aggregated into `accessibilityValue` (`ariaX ?? accessibilityValue?.x`)
@@ -506,6 +520,14 @@ export function processViewAccessibilityProps(props: Record<string, any>): Recor
     if (ariaHidden === true) result.importantForAccessibility = 'no-hide-descendants';
   }
   if (tabIndex !== undefined) result.focusable = !tabIndex;
+
+  // RN 0.89+ translates aria-modal. Older versions forward it unchanged.
+  const minor = getReactNativeMinor();
+  if ((minor === null || minor >= 89) && 'aria-modal' in result) {
+    const ariaModal = result['aria-modal'];
+    delete result['aria-modal'];
+    if (ariaModal !== undefined) result.accessibilityViewIsModal = ariaModal;
+  }
 
   if (
     accessibilityState != null ||

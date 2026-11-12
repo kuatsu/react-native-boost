@@ -8,6 +8,7 @@ import { processTextAccessibilityProps, processTextStyle } from '../../../runtim
 import { renderAndCaptureSingle } from './capture';
 import { captureBoostHosts } from './boost';
 import { captureWrapper, captureWrapperHosts } from './wrapper';
+import { normalize } from './normalize';
 import { reactNativeVersion, setPlatformOS } from './mocks/Platform';
 
 vi.mock('../../../runtime/components/native-text', async () => {
@@ -82,6 +83,7 @@ for (const platform of ['ios', 'android'] as const) {
                   'disabled={false} accessibilityState={null}',
                   'aria-busy={true} accessibilityRole={null} role={undefined}',
                   'aria-busy={true} accessibilityRole="button" role="link"',
+                  'aria-busy={true} aria-live="off" accessibilityLiveRegion="assertive"',
                 ]
               : []),
             ...(component === 'Image'
@@ -102,6 +104,7 @@ for (const platform of ['ios', 'android'] as const) {
               ? [
                   'aria-valuenow={0} aria-valuetext={null} accessibilityValue={{min:0,max:10,text:"fallback"}}',
                   'aria-valuenow={undefined} accessibilityValue={null}',
+                  'aria-modal={true} accessibilityViewIsModal={false}',
                 ]
               : []),
           ];
@@ -132,6 +135,50 @@ for (const platform of ['ios', 'android'] as const) {
       },
       30_000
     );
+
+    it('matches role and ARIA alias props on the static and runtime paths', async () => {
+      const validAttributes = {
+        accessible: true,
+        accessibilityRole: true,
+        role: true,
+        accessibilityState: true,
+        accessibilityLiveRegion: true,
+        accessibilityViewIsModal: true,
+      };
+      const cases: Array<(value: (literal: string) => string) => string> = [
+        (value) => `<Text aria-live={${value('"polite"')}} />`,
+        (value) => `<Text aria-live={${value('"off"')}} accessibilityLiveRegion="assertive" />`,
+        (value) => `<Text aria-live={${value('undefined')}} accessibilityLiveRegion="polite" />`,
+        (value) => `<View aria-modal={${value('true')}} />`,
+        (value) => `<View aria-modal={${value('undefined')}} accessibilityViewIsModal={true} />`,
+      ];
+      for (const [accessibilityRole, role] of [
+        ['null', 'undefined'],
+        ['undefined', 'null'],
+        ['"button"', 'undefined'],
+        ['null', '"link"'],
+        ['"button"', '"link"'],
+      ]) {
+        for (const state of ['', 'aria-busy={true}'])
+          cases.push(
+            (value) => `<Text ${state} accessibilityRole={${value(accessibilityRole)}} role={${value(role)}} />`
+          );
+      }
+      for (const build of cases) {
+        for (const dynamic of [false, true]) {
+          const constants: string[] = [];
+          const jsx = build((literal) => (dynamic ? `constant${constants.push(literal)}` : literal));
+          const preamble = constants.map((literal, index) => `const constant${index + 1} = ${literal};`).join(' ');
+          const expectedHosts = await captureWrapperHosts(platform, jsx, preamble);
+          const expected = expectedHosts[0].props;
+          const result = await captureBoostHosts(platform, jsx, preamble);
+          if (!result.optimized) throw new Error(`must optimize: ${jsx}`);
+          const actual = result.hosts[0].props;
+          expect(normalize(accessibilityProps(actual)), jsx).toStrictEqual(normalize(accessibilityProps(expected)));
+          expect(create(actual, validAttributes), jsx).toStrictEqual(create(expected, validAttributes));
+        }
+      }
+    });
 
     it('keeps dynamic state identity and prop evaluation order', async () => {
       const state = { busy: false, disabled: false };
