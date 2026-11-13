@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.1.0](https://github.com/kuatsu/react-native-boost/compare/v2.0.4...v2.1.0) (2026-11-13)
+
+### ✨ Features
+
+* add support for React Native 0.89 ([fdb4ad5](https://github.com/kuatsu/react-native-boost/commit/fdb4ad5893a1f008079e6066344b54f7c1534256))
+
+### 🐛 Bug Fixes
+
+* **metro:** support metro 0.83 and later ([fa4cb32](https://github.com/kuatsu/react-native-boost/commit/fa4cb320add6d067391a8f11fa1a7082e2858dce))
+
 ## [2.0.4](https://github.com/kuatsu/react-native-boost/compare/v2.0.3...v2.0.4) (2026-10-26)
 
 ### ✨ Features
