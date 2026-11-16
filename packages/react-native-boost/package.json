@@ -87,7 +87,7 @@
     "@babel/core": "^7.29.13",
     "@babel/helper-module-imports": "^7.29.7",
     "@babel/helper-plugin-utils": "^7.29.7",
-    "minimatch": "^11.0.5"
+    "minimatch": "^11.0.8"
   },
   "devDependencies": {
     "@babel/plugin-syntax-jsx": "^7.29.7",
