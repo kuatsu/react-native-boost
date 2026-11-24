@@ -16,6 +16,7 @@ export default defineConfig({
       enforce: 'pre' as const,
       resolveId(source: string) {
         if (source === 'react-native-boost/uniwind') return local('../../../../runtime/uniwind.ts');
+        if (source === 'react-native-boost/uniwind/package.json') return join(root, 'package.json');
         if (source.startsWith('react-native-boost/uniwind/'))
           return join(root, 'src/components/native', source.split('/').at(-1) + '.ts');
         if (source.startsWith('@babel/runtime/'))

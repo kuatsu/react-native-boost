@@ -40,7 +40,9 @@ const original = { NativeView: View, NativeText: Text, NativeImage: Image, Nativ
 const style = (values: Record<string, unknown>, condition = {}) => ({
   entries: Object.entries(values).map(([key, value]) => [key, typeof value === 'function' ? value : () => value]),
   matches: () => true,
+  // Uniwind 1.14 replaced hasDataAttributes with dataAttributeNames.
   hasDataAttributes: false,
+  dataAttributeNames: null,
   dependencies: null,
   importantProperties: [],
   complexity: 0,
@@ -77,6 +79,7 @@ UniwindStore.reinit(
             matches: (_runtime: unknown, _context: unknown, props: Record<string, unknown>) =>
               String(props['data-selected']) === 'true',
             hasDataAttributes: true,
+            dataAttributeNames: ['data-selected'],
           }
         ),
       ],
@@ -99,6 +102,8 @@ UniwindStore.reinit(
         ),
       ],
       accent: [style({ accentColor: '#ff0000' })],
+      breaks: [style({ lineBreak: 'strict', wordBreak: 'auto-phrase' })],
+      invalidBreaks: [style({ lineBreak: 'anywhere', wordBreak: 'keep-all' })],
       image: [style({ objectFit: 'contain', width: 70 })],
     },
   }),
@@ -188,6 +193,8 @@ describe('free Uniwind native parity', () => {
       },
     ],
     ['NativeText', { 'className': 'disabled', 'aria-disabled': true, 'selectionColor': null, 'children': 'hello' }],
+    ['NativeText', { className: 'breaks', wordBreak: 'normal', children: 'hello' }],
+    ['NativeText', { className: 'invalidBreaks', children: 'hello' }],
     [
       'NativeImage',
       {

@@ -5,7 +5,7 @@ declare module 'react-native-boost/uniwind/useStyle' {
     state?: { isPressed: boolean; isDisabled: boolean }
   ): import('react-native').ViewStyle &
     import('react-native').TextStyle &
-    import('react-native').ImageStyle & { WebkitLineClamp?: number };
+    import('react-native').ImageStyle & { WebkitLineClamp?: number; lineBreak?: string; wordBreak?: string };
 }
 declare module 'react-native-boost/uniwind/useAccentColor' {
   export function useAccentColor(
@@ -13,4 +13,7 @@ declare module 'react-native-boost/uniwind/useAccentColor' {
     props: object,
     state?: { isPressed: boolean; isDisabled: boolean }
   ): import('react-native').ColorValue | undefined;
+}
+declare module 'react-native-boost/uniwind/package.json' {
+  export const version: string;
 }
