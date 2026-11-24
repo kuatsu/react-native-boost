@@ -24,7 +24,7 @@ afterEach(() => {
 
 describe('NativeActivityIndicator', () => {
   it.each([
-    ['ios', 'RCTActivityIndicatorView'],
+    ['ios', 'ActivityIndicatorView'],
     ['android', 'AndroidProgressBar'],
   ])('loads React Native ActivityIndicator to register and use the %s host', async (os, host) => {
     const { NativeActivityIndicator, loadActivityIndicator } = await importNativeActivityIndicator(os);

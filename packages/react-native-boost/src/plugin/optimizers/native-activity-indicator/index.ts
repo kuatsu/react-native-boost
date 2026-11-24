@@ -27,7 +27,10 @@ const CONSUMED_PROPS = new Set([
   'style',
 ]);
 
-const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform, unistylesEnabled, options }) => {
+const optimizeNativeActivityIndicator: JSXOptimizer = (
+  path,
+  { logger, platform, unistylesEnabled, options, reactNativeMinor }
+) => {
   if (platform === 'web') return;
   if (!isReactNativeComponent(path, 'ActivityIndicator')) return;
 
@@ -35,6 +38,17 @@ const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform,
     logger.skipped({ target: 'ActivityIndicator', path, reason: 'target platform is unknown' });
     return;
   }
+
+  if (platform === 'ios' && reactNativeMinor === undefined) {
+    logger.skipped({ target: 'ActivityIndicator', path, reason: 'target React Native version is unknown' });
+    return;
+  }
+
+  // RN 0.88 registers the iOS view config without the legacy `RCT` prefix.
+  const hostName =
+    platform === 'ios' && reactNativeMinor !== undefined && reactNativeMinor < 88
+      ? 'LegacyNativeActivityIndicator'
+      : 'NativeActivityIndicator';
 
   const parent = path.parent as t.JSXElement;
   const forced = isForcedLine(path);
@@ -87,7 +101,7 @@ const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform,
   if (!file) throw new PluginError('No file found in Babel hub');
 
   if (options?.integrations?.uniwind === 'on') {
-    replaceWithNativeComponent(path, parent, file, 'NativeActivityIndicator', {
+    replaceWithNativeComponent(path, parent, file, hostName, {
       moduleName: 'react-native-boost/uniwind',
     });
     logger.optimized({ target: 'ActivityIndicator', path });
@@ -96,7 +110,7 @@ const optimizeNativeActivityIndicator: JSXOptimizer = (path, { logger, platform,
 
   const view = addRuntimeImport(path, file, 'NativeView');
   const styles = addRuntimeImport(path, file, 'activityIndicatorStyles');
-  const host = addRuntimeImport(path, file, 'NativeActivityIndicator');
+  const host = addRuntimeImport(path, file, hostName);
   const attributes = path.node.attributes;
   const animating = buildDefaultedAttribute(path, file, attributes, 'animating', t.booleanLiteral(true));
   const color = buildDefaultedAttribute(

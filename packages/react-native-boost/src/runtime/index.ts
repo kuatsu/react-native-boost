@@ -669,4 +669,4 @@ export * from './components/native-text';
 export * from './components/native-view';
 export { NativeViewWithContext } from './components/native-view-with-context';
 export { NativeImage } from './components/native-image';
-export { NativeActivityIndicator } from './components/native-activity-indicator';
+export { NativeActivityIndicator, LegacyNativeActivityIndicator } from './components/native-activity-indicator';

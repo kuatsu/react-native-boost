@@ -23,6 +23,7 @@ vi.mock('../../../../runtime/components/native-image', () =>
 vi.mock('../../../../runtime/components/native-activity-indicator', () =>
   import('../capture').then(({ NativeActivityIndicatorCapturer }) => ({
     NativeActivityIndicator: NativeActivityIndicatorCapturer,
+    LegacyNativeActivityIndicator: NativeActivityIndicatorCapturer,
   }))
 );
 

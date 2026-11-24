@@ -50,7 +50,12 @@ export interface NativeComponentSource {
 }
 
 /** The native hosts Boost rewrites elements into; the local-name basis for each injected import. */
-type NativeComponentName = 'NativeText' | 'NativeView' | 'NativeImage' | 'NativeActivityIndicator';
+type NativeComponentName =
+  | 'NativeText'
+  | 'NativeView'
+  | 'NativeImage'
+  | 'NativeActivityIndicator'
+  | 'LegacyNativeActivityIndicator';
 
 /** The public component whose render context each native host preserves. */
 const COMPONENT_BY_HOST: Record<NativeComponentName, ReactNativeComponentName> = {
@@ -58,6 +63,7 @@ const COMPONENT_BY_HOST: Record<NativeComponentName, ReactNativeComponentName> =
   NativeView: 'View',
   NativeImage: 'Image',
   NativeActivityIndicator: 'View',
+  LegacyNativeActivityIndicator: 'View',
 };
 
 /**

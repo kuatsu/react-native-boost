@@ -7,7 +7,7 @@ import { formatTestResult } from '../../../utils/format-test-result';
 const babelOptions = { plugins: ['@babel/plugin-syntax-jsx'] };
 
 pluginTester({
-  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, {}, 'ios'),
+  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, {}, 'ios', 88),
   title: 'activity indicator ios',
   fixtures: path.resolve(import.meta.dirname, 'fixtures'),
   babelOptions,
@@ -39,7 +39,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, { integrations: { unistyles: 'on' } }, 'ios'),
+  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, { integrations: { unistyles: 'on' } }, 'ios', 88),
   title: 'activity indicator unistyles',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unistyles'),
   babelOptions,
@@ -47,7 +47,7 @@ pluginTester({
 });
 
 pluginTester({
-  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, {}, 'ios'),
+  plugin: generateTestPlugin(nativeActivityIndicatorOptimizer, {}, 'ios', 88),
   title: 'activity indicator unknown ancestor',
   fixtures: path.resolve(import.meta.dirname, 'fixtures-unknown-ancestor'),
   babelOptions,

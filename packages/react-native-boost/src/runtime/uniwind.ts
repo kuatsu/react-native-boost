@@ -10,6 +10,7 @@ import {
   NativeText as TextHost,
   NativeImage as ImageHost,
   NativeActivityIndicator as ActivityHost,
+  LegacyNativeActivityIndicator as LegacyActivityHost,
   processViewAccessibilityProps,
   processTextAccessibilityProps,
   processTextStyle,
@@ -83,7 +84,9 @@ export function NativeImage(props: ImageProps & ClassProps & { tintColorClassNam
   });
 }
 
-export function NativeActivityIndicator(props: ActivityIndicatorProps & ClassProps & { colorClassName?: string }) {
+type ActivityIndicatorClassProps = ActivityIndicatorProps & ClassProps & { colorClassName?: string };
+
+function useActivityIndicator(host: typeof ActivityHost, props: ActivityIndicatorClassProps) {
   const generatedStyle = useStyle(props.className, props);
   const accent = useAccentColor(props.colorClassName, props);
   const { style, color, size, animating = true, hidesWhenStopped = true, onLayout, ...rest } = props;
@@ -91,7 +94,7 @@ export function NativeActivityIndicator(props: ActivityIndicatorProps & ClassPro
   return jsx(ViewHost, {
     style: processActivityIndicatorStyle([generatedStyle, style]),
     onLayout,
-    children: jsx(ActivityHost, {
+    children: jsx(host, {
       ...rest,
       animating,
       hidesWhenStopped,
@@ -101,3 +104,8 @@ export function NativeActivityIndicator(props: ActivityIndicatorProps & ClassPro
     }),
   });
 }
+
+export const NativeActivityIndicator = (props: ActivityIndicatorClassProps) =>
+  useActivityIndicator(ActivityHost, props);
+export const LegacyNativeActivityIndicator = (props: ActivityIndicatorClassProps) =>
+  useActivityIndicator(LegacyActivityHost, props);

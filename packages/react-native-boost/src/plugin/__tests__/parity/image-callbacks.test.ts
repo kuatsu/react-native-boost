@@ -25,7 +25,10 @@ vi.mock('../../../runtime/components/native-image', async () => {
 });
 vi.mock('../../../runtime/components/native-activity-indicator', async () => {
   const { NativeActivityIndicatorCapturer } = await import('./capture');
-  return { NativeActivityIndicator: NativeActivityIndicatorCapturer };
+  return {
+    NativeActivityIndicator: NativeActivityIndicatorCapturer,
+    LegacyNativeActivityIndicator: NativeActivityIndicatorCapturer,
+  };
 });
 
 afterEach(() => vi.unstubAllGlobals());
