@@ -3,6 +3,7 @@ import type { ActivityIndicatorProps, ImageProps, TextProps, ViewProps } from 'r
 import { Platform } from 'react-native';
 import { useStyle } from 'react-native-boost/uniwind/useStyle';
 import { useAccentColor } from 'react-native-boost/uniwind/useAccentColor';
+import { version } from 'react-native-boost/uniwind/package.json';
 import {
   NativeView as ViewHost,
   NativeViewWithContext as ContextViewHost,
@@ -26,6 +27,11 @@ export { useAnimatedValueXY, useAnimatedColor } from 'react-native';
 
 type ClassProps = { className?: string };
 
+// Uniwind 1.14 started to forward these style values as Text props.
+const forwardsLineBreak = Number(version.split('.')[1]) >= 14;
+const lineBreaks = new Set(['auto', 'loose', 'normal', 'strict']);
+const wordBreaks = new Set(['normal', 'auto-phrase']);
+
 export function NativeView(props: ViewProps & ClassProps) {
   const style = useStyle(props.className, props);
   const { id, nativeID, ...rest } = processViewAccessibilityProps(props);
@@ -46,6 +52,12 @@ export function NativeText(props: TextProps & ClassProps & { selectionColorClass
   const { id, nativeID, selectionColor, ...rest } = processTextAccessibilityProps(props);
   const lines = style.WebkitLineClamp ?? props.numberOfLines;
   return jsx(TextHost, {
+    ...(forwardsLineBreak && style.lineBreak !== undefined && lineBreaks.has(style.lineBreak)
+      ? { lineBreak: style.lineBreak }
+      : {}),
+    ...(forwardsLineBreak && style.wordBreak !== undefined && wordBreaks.has(style.wordBreak)
+      ? { wordBreak: style.wordBreak }
+      : {}),
     ...rest,
     ...processTextStyle([style, props.style]),
     ...processSelectionColor(selectionColor ?? accent),

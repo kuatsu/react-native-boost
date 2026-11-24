@@ -341,6 +341,7 @@ function createUniwindResolver(config: MetroConfig, projectRoot: string, target?
   const hooks: Record<string, string> = {
     'react-native-boost/uniwind/useStyle': path.join(root, 'src/components/native/useStyle.ts'),
     'react-native-boost/uniwind/useAccentColor': path.join(root, 'src/components/native/useAccentColor.ts'),
+    'react-native-boost/uniwind/package.json': packageJson,
   };
   for (const filename of Object.values(hooks)) {
     if (!fs.existsSync(filename)) throw new Error(`[react-native-boost] Missing Uniwind runtime hook: ${filename}`);
