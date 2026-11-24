@@ -1,0 +1,35 @@
+{
+  "name": "react-native-boost-harness",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "ios": "rm -rf ios && expo run:ios --no-bundler",
+    "android": "rm -rf android && expo run:android --no-bundler",
+    "pretest:ios": "pnpm --filter react-native-boost build",
+    "test:ios": "react-native-harness --harnessRunner ios",
+    "pretest:android": "pnpm --filter react-native-boost build",
+    "test:android": "react-native-harness --harnessRunner android",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "~58.0.26",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-boost": "workspace:*",
+    "react-native-nitro-modules": "0.37.2",
+    "react-native-unistyles": "3.8.2",
+    "uniwind": "1.14.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.13",
+    "@react-native-harness/platform-android": "1.7.0",
+    "@react-native-harness/platform-apple": "1.7.0",
+    "@react-native-harness/ui": "1.7.0",
+    "@types/react": "~19.2.18",
+    "jest": "^30.2.0",
+    "react-native-harness": "1.7.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~7.0.2"
+  }
+}

@@ -1,0 +1,182 @@
+name: Device tests
+
+on:
+  push:
+    branches:
+      - main
+    paths: &paths
+      - 'apps/harness/**'
+      - 'packages/react-native-boost/**'
+      - 'pnpm-lock.yaml'
+      - '.github/actions/setup/**'
+      - '.github/workflows/harness.yml'
+  pull_request:
+    branches:
+      - main
+    paths: *paths
+
+concurrency:
+  group: harness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Prebuild iOS project
+        working-directory: apps/harness
+        run: npx expo prebuild --platform ios
+
+      - name: Build iOS app
+        working-directory: apps/harness/ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace RNBoostHarness.xcworkspace \
+            -scheme RNBoostHarness \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: Archive iOS app
+        working-directory: apps/harness/ios/build/Build/Products/Debug-iphonesimulator
+        run: tar -cf "$RUNNER_TEMP/harness-ios.tar" RNBoostHarness.app
+
+      - name: Upload iOS app
+        uses: actions/upload-artifact@v7
+        with:
+          name: harness-ios
+          path: ${{ runner.temp }}/harness-ios.tar
+          retention-days: 1
+
+  test-ios:
+    name: iOS (${{ matrix.mode }})
+    needs: build-ios
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [default, unistyles, uniwind]
+    env:
+      HARNESS_MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build package
+        run: pnpm run package build
+
+      - name: Download iOS app
+        uses: actions/download-artifact@v8
+        with:
+          name: harness-ios
+          path: ${{ runner.temp }}
+
+      - name: Extract iOS app
+        run: |
+          mkdir -p apps/harness/ios/build
+          tar -xf "$RUNNER_TEMP/harness-ios.tar" -C apps/harness/ios/build
+
+      - name: Create simulator
+        run: |
+          runtime=$(xcrun simctl list runtimes --json | jq -c '[.runtimes[] | select(.platform == "iOS" and .isAvailable)] | last')
+          identifier=$(jq -r '.identifier' <<< "$runtime")
+          device=$(jq -r '[.supportedDeviceTypes[] | select(.productFamily == "iPhone")] | last | .identifier' <<< "$runtime")
+          xcrun simctl create 'Boost Harness' "$device" "$identifier"
+          version=${identifier##*iOS-}
+          echo "HARNESS_IOS_DEVICE=Boost Harness" >> "$GITHUB_ENV"
+          echo "HARNESS_IOS_VERSION=${version//-/.}" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        uses: callstackincubator/react-native-harness@v1.7.0
+        with:
+          app: ios/build/RNBoostHarness.app
+          runner: ios
+          projectRoot: apps/harness
+          packageManager: pnpm
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Setup JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Prebuild Android project
+        working-directory: apps/harness
+        run: npx expo prebuild --platform android
+
+      - name: Build Android app
+        working-directory: apps/harness/android
+        run: ./gradlew :app:assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
+
+      - name: Upload Android app
+        uses: actions/upload-artifact@v7
+        with:
+          name: harness-android
+          path: apps/harness/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+
+  test-android:
+    name: Android (${{ matrix.mode }})
+    needs: build-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [default, unistyles, uniwind]
+    env:
+      HARNESS_MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build package
+        run: pnpm run package build
+
+      - name: Download Android app
+        uses: actions/download-artifact@v8
+        with:
+          name: harness-android
+          path: apps/harness/android/build
+
+      - name: Run tests
+        uses: callstackincubator/react-native-harness@v1.7.0
+        with:
+          app: android/build/app-debug.apk
+          runner: android
+          projectRoot: apps/harness
+          packageManager: pnpm

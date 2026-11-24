@@ -9,5 +9,6 @@ pmOnFail: download
 minimumReleaseAgeStrict: true
 
 allowBuilds:
+  '@parcel/watcher': false
   core-js: true
   esbuild: true

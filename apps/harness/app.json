@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "RN Boost Harness",
+    "slug": "react-native-boost-harness",
+    "version": "0.0.1",
+    "ios": {
+      "bundleIdentifier": "com.kuatsu-mkrause.react-native-boost-harness"
+    },
+    "android": {
+      "package": "com.kuatsumkrause.reactnativeboostharness"
+    }
+  }
+}

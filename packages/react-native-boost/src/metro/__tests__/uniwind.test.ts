@@ -92,7 +92,12 @@ it('builds class styles and native adapters through the real Metro and Uniwind w
         resolveRequest: (context, name, platform) =>
           context.resolveRequest(context, name === 'react-native' ? require.resolve('react-native') : name, platform),
       },
-      watchFolders: [packageRoot, path.resolve(packageRoot, '../../node_modules')],
+      watchFolders: [
+        packageRoot,
+        path.resolve(packageRoot, '../../node_modules'),
+        // pnpm can place React Native in another workspace project.
+        path.resolve(require.resolve('react-native/package.json'), '../..'),
+      ],
       transformer: {
         ...base.transformer,
         assetRegistryPath: createRequire(require.resolve('react-native/package.json')).resolve(

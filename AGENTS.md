@@ -29,6 +29,8 @@ Running a single test: Vitest runs from `packages/react-native-boost`. Use `pnpm
 
 Example app (`apps/example`, Expo): `pnpm run example start` / `pnpm run example ios` / `pnpm run example android`.
 
+Device tests (`apps/harness`, Expo): `pnpm run harness ios` / `pnpm run harness android` builds and installs the app, then `pnpm run harness test:ios` / `pnpm run harness test:android` runs the tests. Set `HARNESS_MODE=unistyles` or `HARNESS_MODE=uniwind` to test those integrations.
+
 Commit messages follow Conventional Commits.
 
 ## Architecture
@@ -40,6 +42,7 @@ Commit messages follow Conventional Commits.
   - `react-native-boost/runtime` — the runtime helper library (`src/runtime`), imported into user code by the plugin
 - `packages/react-native-time-to-render` — a private RN TurboModule used by the example app to measure render time for benchmarking
 - `apps/example` — Expo benchmark and example app
+- `apps/harness` — Expo app for `react-native-harness` tests that mount Boost-optimized components on a device
 - `apps/docs` — Fumadocs documentation site
 
 ### Plugin pipeline (`src/plugin`)

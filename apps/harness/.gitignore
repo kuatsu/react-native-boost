@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+.harness/
+expo-env.d.ts
+/ios
+/android
+*.tsbuildinfo
