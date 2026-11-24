@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.2](https://github.com/kuatsu/react-native-boost/compare/v2.1.1...v2.1.2) (2026-11-24)
+
+### 🐛 Bug Fixes
+
+* use the unprefixed ActivityIndicator host on iOS for React Native 0.88+ ([b33fbaf](https://github.com/kuatsu/react-native-boost/commit/b33fbaf5283bbc36fd7ff216b530ade01439b0c9))
+
 ## [2.1.1](https://github.com/kuatsu/react-native-boost/compare/v2.1.0...v2.1.1) (2026-11-24)
 
 ### 🐛 Bug Fixes
