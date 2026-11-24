@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1](https://github.com/kuatsu/react-native-boost/compare/v2.1.0...v2.1.1) (2026-11-24)
+
+### 🐛 Bug Fixes
+
+* make plugin compatible with Uniwind 1.14 ([26f4581](https://github.com/kuatsu/react-native-boost/commit/26f458132aa9884e338440fc7753d15af131fefe))
+
 ## [2.1.0](https://github.com/kuatsu/react-native-boost/compare/v2.0.4...v2.1.0) (2026-11-13)
 
 ### ✨ Features
